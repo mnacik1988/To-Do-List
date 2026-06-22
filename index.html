@@ -401,12 +401,12 @@ function loadStorage(){
   }catch(e){}
 }
 
-/* ── Claude API ── */
+/* ── Claude API via Cloudflare Worker proxy ── */
+var WORKER_URL='https://autumn-violet-bb31.mnacik1988.workers.dev';
 function callClaude(prompt, cb){
-  var key=state.apiKey; if(!key){cb(new Error('no-key'),null);return;}
-  fetch('https://api.anthropic.com/v1/messages',{
+  fetch(WORKER_URL,{
     method:'POST',
-    headers:{'x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true','content-type':'application/json'},
+    headers:{'content-type':'application/json'},
     body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:256,messages:[{role:'user',content:prompt}]})
   })
   .then(function(r){return r.json();})
@@ -443,17 +443,14 @@ function renderTaskRow(task,secKey){
 
 function renderAiBlock(mode){
   var idle=!state.aiRec&&!state.aiProc;
-  var hasKey=!!state.apiKey;
   var sub=idle
-    ?(hasKey
-      ?(mode==='view'?'Наговорите правку голосом — ИИ применит изменения':'Продиктуйте задачу — ИИ заполнит поля за вас')
-      :'Добавьте API ключ в настройках ⚙')
+    ?(mode==='view'?'Наговорите правку голосом — ИИ применит изменения':'Продиктуйте задачу — ИИ заполнит поля за вас')
     :state.aiRec?'Слушаю… нажмите, чтобы остановить':'Обрабатываю через Claude…';
   var ns=anim.aiNote?' style="animation:fadein .25s ease both"':'';
   return '<div class="ai-block"><div class="ai-block-inner">'+
     '<div class="ai-mic-wrap">'+(state.aiRec?'<span class="ai-mic-pulse"></span>':'')+
     '<button class="ai-mic-btn" data-role="ai-mic">'+(state.aiRec?'<span class="ai-mic-stop"></span>':state.aiProc?IC.spin(18):IC.mic(20,20))+'</button></div>'+
-    '<div class="ai-text-col"><div class="ai-text-title">ИИ-помощник'+(hasKey?' ✓':'')+'</div>'+
+    '<div class="ai-text-col"><div class="ai-text-title">ИИ-помощник ✓</div>'+
     '<div class="'+(idle?'ai-text-sub':'ai-text-st')+'">'+esc(sub)+'</div></div></div>'+
     (state.aiNote?'<div class="ai-note"'+ns+'>'+IC.spark('style="color:var(--accent);flex:none"')+'<span class="ai-note-text">'+esc(state.aiNote)+'</span></div>':'')+
   '</div>';
@@ -584,7 +581,6 @@ function renderDaySheet(){
 
 function renderSettings(){
   if(!state.settings) return '';
-  var hasKey=!!state.apiKey;
   var hasSpeech=!!SpeechRec;
   return '<div class="overlay" style="z-index:40">'+
     '<div class="scrim" data-role="settings-close"></div>'+
@@ -593,21 +589,13 @@ function renderSettings(){
       '<div class="sheet-body">'+
         '<div style="font-size:17px;font-weight:800;color:var(--text)">Настройки</div>'+
 
-        '<div><div class="field-label">Claude API Key</div>'+
-          '<input id="settings-key" type="password" class="form-pass" placeholder="sk-ant-…" value="'+escA(state.apiKey)+'">'+
-          '<div style="font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.55">'+
-            'Ключ хранится только в вашем браузере. Нужен для умной обработки голоса через Claude.'+(hasKey?' <strong>Ключ добавлен.</strong>':'')+
-          '</div>'+
-        '</div>'+
+        '<div class="info-box ok">✓ Claude ИИ подключён через Cloudflare Worker</div>'+
 
         '<div class="info-box '+(hasSpeech?'ok':'err')+'">'+
-          (hasSpeech?'✓ Голосовой ввод доступен (Chrome / Edge)':'✗ Голосовой ввод недоступен. Используйте Chrome или Edge.')+
+          (hasSpeech?'✓ Голосовой ввод доступен':'✗ Голосовой ввод недоступен — используйте Safari на iPhone')+
         '</div>'+
 
-        '<div class="modal-actions">'+
-          '<button class="btn-outline" data-role="settings-clear">Очистить все данные</button>'+
-          '<button class="btn-primary" data-role="settings-save">Сохранить</button>'+
-        '</div>'+
+        '<button class="btn-outline" style="width:100%" data-role="settings-clear">Очистить все данные</button>'+
       '</div>'+
     '</div></div>';
 }
@@ -702,7 +690,7 @@ function render(){
     '<div class="screen-header">'+
       '<div><div class="screen-title">Мои задачи</div><div class="screen-subtitle">'+todayLabel()+'</div></div>'+
       '<div class="hdr-btns">'+
-        '<button class="icon-btn'+(state.apiKey?' active':'')+'" data-role="toggle-settings" title="Настройки">'+IC.gear+'</button>'+
+        '<button class="icon-btn active" data-role="toggle-settings" title="Настройки">'+IC.gear+'</button>'+
         '<button class="icon-btn" data-role="toggle-theme">'+(state.theme==='light'?IC.moon:IC.sun)+'</button>'+
       '</div>'+
     '</div>'+
@@ -820,16 +808,59 @@ function onFabMic(){
   }
 }
 
+/* ── Local date + text parser (runs even without Claude) ── */
+var DOW_RU_MAP={'понедельник':1,'вторник':2,'среда':3,'среду':3,'четверг':4,'пятница':5,'пятницу':5,'суббота':6,'субботу':6,'воскресенье':0};
+function fmtDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function localParseDate(text){
+  var t=text.toLowerCase(); var d=new Date(todayStr());
+  if(t.indexOf('послезавтра')>=0){ d.setDate(d.getDate()+2); return fmtDate(d); }
+  if(t.indexOf('завтра')>=0){ d.setDate(d.getDate()+1); return fmtDate(d); }
+  if(t.indexOf('сегодня')>=0){ return todayStr(); }
+  var m=t.match(/через\s+(\d+)\s+дн/);
+  if(m){ d.setDate(d.getDate()+parseInt(m[1])); return fmtDate(d); }
+  var dm=t.match(/\b(\d{1,2})\s*[-–]?\s*(?:го|е|ое|числа)/);
+  if(dm){
+    var day=parseInt(dm[1]); var cur=d.getDate();
+    var target=new Date(d.getFullYear(),d.getMonth(),day);
+    if(day<cur) target.setMonth(target.getMonth()+1);
+    return fmtDate(target);
+  }
+  for(var dow in DOW_RU_MAP){
+    if(t.indexOf(dow)>=0){
+      var tDow=DOW_RU_MAP[dow]; var cDow=d.getDay();
+      var diff=(tDow-cDow+7)%7; if(diff===0) diff=7;
+      d.setDate(d.getDate()+diff); return fmtDate(d);
+    }
+  }
+  return todayStr();
+}
+function localCleanText(text){
+  var t=text;
+  t=t.replace(/\d{1,2}\s*[-–]?\s*(?:го|е|ое)(?:\s+числа)?/gi,' ');
+  t=t.replace(/числа/gi,' ');
+  t=t.replace(/через\s+\d+\s+\S+/gi,' ');
+  t=t.replace(/(?:послезавтра|завтра|сегодня)/gi,' ');
+  t=t.replace(/в\s+(?:понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)/gi,' ');
+  t=t.replace(/(?:понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)/gi,' ');
+  t=t.replace(/\s+/g,' ').trim();
+  t=t.replace(/^(?:я\s+)/i,'');
+  t=t.replace(/^(?:мне\s+(?:нужно|надо)\s+|нужно\s+|надо\s+)/i,'');
+  t=t.trim();
+  return t.charAt(0).toUpperCase()+t.slice(1);
+}
+
 function processTranscript(transcript){
+  var localDate=localParseDate(transcript);
+  var localText=localCleanText(transcript)||transcript;
   if(state.apiKey){
     var today=todayStr();
-    var prompt='Из голосовой записи на русском языке извлеки задачу. Сегодня '+today+'. Верни ТОЛЬКО JSON без лишнего текста: {"text":"название задачи","priority":"high|mid|low","date":"YYYY-MM-DD или пустая строка если дата не указана"}. Запись: "'+transcript+'"';
+    var prompt='Из голосовой записи на русском языке извлеки задачу. Сегодня '+today+'. Верни ТОЛЬКО JSON без лишнего текста: {"text":"краткое название задачи (без дат и слов вроде я/мне надо)","priority":"high|mid|low","date":"YYYY-MM-DD или пустая строка если дата не указана"}. Запись: "'+transcript+'"';
     callClaude(prompt,function(err,data){
-      if(err||!data) addNewTask(transcript,'mid',td);
-      else addNewTask(data.text||transcript, data.priority||'mid', data.date||td);
+      if(err||!data) addNewTask(localText,'mid',localDate);
+      else addNewTask(data.text||localText, data.priority||'mid', data.date||localDate);
     });
   } else {
-    addNewTask(transcript,'mid',td);
+    addNewTask(localText,'mid',localDate);
   }
 }
 
