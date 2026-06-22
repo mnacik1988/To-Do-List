@@ -810,15 +810,24 @@ function onFabMic(){
 
 /* ── Local date + text parser (runs even without Claude) ── */
 var DOW_RU_MAP={'понедельник':1,'вторник':2,'среда':3,'среду':3,'четверг':4,'пятница':5,'пятницу':5,'суббота':6,'субботу':6,'воскресенье':0};
+var NUM_RU={'один':1,'одну':1,'два':2,'две':2,'три':3,'четыре':4,'пять':5,'шесть':6,'семь':7,'восемь':8,'девять':9,'десять':10};
 function fmtDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function ruNumToInt(s){ var n=parseInt(s); return isNaN(n)?(NUM_RU[s]||1):n; }
+/* matches any Russian word */
+var RU_WORD='[а-яёА-ЯЁ]+';
 function localParseDate(text){
   var t=text.toLowerCase(); var d=new Date(todayStr());
   if(t.indexOf('послезавтра')>=0){ d.setDate(d.getDate()+2); return fmtDate(d); }
   if(t.indexOf('завтра')>=0){ d.setDate(d.getDate()+1); return fmtDate(d); }
   if(t.indexOf('сегодня')>=0){ return todayStr(); }
-  var m=t.match(/через\s+(\d+)\s+дн/);
-  if(m){ d.setDate(d.getDate()+parseInt(m[1])); return fmtDate(d); }
-  var dm=t.match(/\b(\d{1,2})\s*[-–]?\s*(?:го|е|ое|числа)/);
+  if(t.indexOf('через две недели')>=0||t.indexOf('через 2 недели')>=0){ d.setDate(d.getDate()+14); return fmtDate(d); }
+  if(t.indexOf('через неделю')>=0||t.indexOf('через 1 неделю')>=0){ d.setDate(d.getDate()+7); return fmtDate(d); }
+  if(t.indexOf('через месяц')>=0){ d.setDate(d.getDate()+30); return fmtDate(d); }
+  /* "через N дней/дня" — digit or word */
+  var m=t.match(/через\s+(\d+|[а-яё]+)\s+дн/);
+  if(m){ d.setDate(d.getDate()+ruNumToInt(m[1])); return fmtDate(d); }
+  /* "24-го числа", "24 числа" */
+  var dm=t.match(/(\d{1,2})\s*[-–]?\s*(?:го|е|ое|числа)/);
   if(dm){
     var day=parseInt(dm[1]); var cur=d.getDate();
     var target=new Date(d.getFullYear(),d.getMonth(),day);
@@ -838,12 +847,13 @@ function localCleanText(text){
   var t=text;
   t=t.replace(/\d{1,2}\s*[-–]?\s*(?:го|е|ое)(?:\s+числа)?/gi,' ');
   t=t.replace(/числа/gi,' ');
-  t=t.replace(/через\s+\d+\s+\S+/gi,' ');
+  t=t.replace(/через\s+(?:две\s+недели|\d+\s+недели|неделю|месяц|\d+\s+дн[а-яё]*|[а-яё]+\s+дн[а-яё]*)/gi,' ');
   t=t.replace(/(?:послезавтра|завтра|сегодня)/gi,' ');
   t=t.replace(/в\s+(?:понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)/gi,' ');
   t=t.replace(/(?:понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)/gi,' ');
   t=t.replace(/\s+/g,' ').trim();
-  t=t.replace(/^(?:я\s+)/i,'');
+  t=t.replace(/^у\s+меня\s+/i,'');
+  t=t.replace(/^я\s+/i,'');
   t=t.replace(/^(?:мне\s+(?:нужно|надо)\s+|нужно\s+|надо\s+)/i,'');
   t=t.trim();
   return t.charAt(0).toUpperCase()+t.slice(1);
