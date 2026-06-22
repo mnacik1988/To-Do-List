@@ -132,6 +132,7 @@ html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webki
 .fab-btn:hover { filter:brightness(1.06); }
 .fab-stop { width:18px; height:18px; background:#fff; border-radius:4px; }
 .fab-timer { position:absolute; bottom:-22px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:700; color:var(--text); white-space:nowrap; }
+.fab-transcript { position:absolute; bottom:-52px; left:50%; transform:translateX(-50%); font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; max-width:260px; overflow:hidden; text-overflow:ellipsis; background:var(--surface); padding:5px 10px; border-radius:20px; box-shadow:0 2px 10px rgba(0,0,0,.12); }
 
 .bottom-nav {
   position:absolute; bottom:0; left:0; right:0; height:56px;
@@ -649,10 +650,12 @@ function renderCalendar(){
 
 function renderFab(){
   var r=state.recording,p=state.processing;
+  var hasPartial=r&&recTranscript;
   return '<div class="fab-wrap">'+
     (r?'<span class="fab-pulse"></span><span class="fab-pulse" style="animation-delay:.6s"></span>':'')+
     '<button class="fab-btn" data-role="fab-mic">'+(r?'<span class="fab-stop"></span>':p?IC.spin(22):IC.mic(26,26))+'</button>'+
-    (r?'<span class="fab-timer">'+fmtT(state.timer)+'</span>':'')+
+    (r&&!hasPartial?'<span class="fab-timer">'+fmtT(state.timer)+'</span>':'')+
+    (hasPartial?'<span class="fab-transcript">'+esc(recTranscript)+'</span>':'')+
   '</div>';
 }
 
@@ -773,22 +776,44 @@ function onFabMic(){
     if(SpeechRec){
       recTranscript='';
       var rec=new SpeechRec();
-      rec.lang='ru-RU'; rec.continuous=false; rec.interimResults=false;
-      rec.onresult=function(e){ recTranscript=e.results[0][0].transcript; };
-      rec.onerror=function(){};
-      rec.onend=function(){
+      rec.lang='ru-RU'; rec.continuous=true; rec.interimResults=true;
+      rec.onresult=function(e){
+        var interim='', final='';
+        for(var i=0;i<e.results.length;i++){
+          if(e.results[i].isFinal) final+=e.results[i][0].transcript;
+          else interim+=e.results[i][0].transcript;
+        }
+        recTranscript=(final||interim).trim();
+        /* live update timer label without full re-render */
+        var el=document.querySelector('.fab-timer,.fab-transcript');
+        if(el){ el.className='fab-transcript'; el.textContent=recTranscript; }
+      };
+      rec.onerror=function(e){
+        if(e.error==='no-speech'||e.error==='aborted') return;
         clearInterval(timerIv); timerIv=null;
-        state.recording=false; recObj=null;
-        if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); }
-        else render();
+        state.recording=false; recObj=null; render();
+      };
+      rec.onend=function(){
+        if(state.recording){
+          /* iOS auto-stopped mid-recording — restart to keep listening */
+          try{ rec.start(); }catch(e){}
+        } else {
+          /* user pressed stop — process whatever we captured */
+          recObj=null;
+          if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); }
+          else render();
+        }
       };
       rec.start(); recObj=rec;
     }
     render();
   } else {
     clearInterval(timerIv); timerIv=null;
-    if(recObj){ recObj.stop(); recObj=null; }
-    else{
+    if(recObj){
+      /* mark stopped BEFORE .stop() so onend knows to process and not restart */
+      state.recording=false;
+      recObj.stop();
+    } else {
       state.recording=false; state.processing=true; render();
       setTimeout(function(){ var pick=PARSE_POOL[poolIdx%PARSE_POOL.length]; poolIdx++; addNewTask(pick.text,pick.priority,td); },1900);
     }
