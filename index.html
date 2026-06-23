@@ -368,7 +368,7 @@ var state={
   calSelected:null,
   daySheet:null,
   dsAddText:'', dsAddPri:'mid', dsAiRec:false, dsAiProc:false, dsShowAdd:false,
-  selectMode:false, selected:{}, aiAnswer:null, dueReminders:null,
+  selectMode:false, selected:{}, aiAnswer:null, dueReminders:null, pushStatus:'',
 };
 
 var timerIv=null, aiTimeout=null, poolIdx=0, drag=null, dsAiTimeout=null, swReg=null;
@@ -649,8 +649,10 @@ function renderSettings(){
         '</div>'+
         (!('Notification' in window) ? '' :
           Notification.permission==='granted' ?
-            '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-push">📲 Подключить push-уведомления</button>' :
-            '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-notif">🔔 Разрешить уведомления (шаг 1)</button>'
+            '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-push">'+
+              (state.pushStatus==='ok'?'✓ Push-уведомления подключены':state.pushStatus==='loading'?'⏳ Подключение...':state.pushStatus==='error'?'⚠️ Ошибка подключения — нажмите ещё раз':'📲 Подключить push-уведомления')+
+            '</button>' :
+            '<div class="info-box" style="margin-bottom:10px">🔔 Разрешение на уведомления запросится автоматически когда вы установите напоминание на задачу</div>'
         )+
         '<button class="btn-outline" style="width:100%" data-role="settings-clear">Очистить все данные</button>'+
       '</div>'+
@@ -855,6 +857,7 @@ function saveEdit(){
     }
   }
   state.modalMode='view'; state.edit=null; render(); scheduleReminders(); syncRemindersToServer();
+  if(e && e.reminderTime) ensureNotifPermission();
 }
 function setPri(pri){ syncEdit(); if(state.edit) state.edit.priority=pri; render(); }
 function toggleDoneModal(){ var m=state.modal; if(m) toggleDone(m.section,m.id); else render(); }
@@ -961,6 +964,7 @@ function addTasksBatch(tasks){
   if(tasks.length===1) state.summary='Добавлена задача «'+tasks[0].text+'».';
   else state.summary='Добавлено '+tasks.length+' задач(и) — каждая в нужный день.';
   anim.summary=true; state.tab=lastSec; state.view='list'; render(); scheduleReminders(); syncRemindersToServer();
+  if(tasks.some(function(t){return t.reminderTime;})) ensureNotifPermission();
 }
 
 /* ── Modal AI ── */
@@ -1149,7 +1153,7 @@ appEl.addEventListener('click',function(e){
     case 'settings-close':      closeSettings(); break;
     case 'settings-clear':      clearAllData(); break;
     case 'settings-notif':      requestNotifPermission(); break;
-    case 'settings-push':       subscribePush(); render(); break;
+    case 'settings-push':       subscribePush(); break;
     case 'set-tab':             setTab(el.dataset.tab); break;
     case 'toggle-done':         toggleDone(sec,id); break;
     case 'cycle-pri':           cyclePri(sec,id); break;
@@ -1211,19 +1215,21 @@ function getDeviceId(){
 }
 function subscribePush(){
   if(!VAPID_PUBLIC_KEY||!('PushManager' in window)||!('serviceWorker' in navigator)) return;
+  state.pushStatus='loading'; render();
   navigator.serviceWorker.ready.then(function(reg){
     reg.pushManager.getSubscription().then(function(existing){
       var send=function(sub){
         fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},
           body:JSON.stringify({userId:getDeviceId(),subscription:sub.toJSON()})
-        }).catch(function(){});
+        }).then(function(){ state.pushStatus='ok'; render(); })
+          .catch(function(){ state.pushStatus='error'; render(); });
       };
       if(existing){ send(existing); return; }
-      if(Notification.permission!=='granted') return;
+      if(Notification.permission!=='granted'){ state.pushStatus=''; render(); return; }
       reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64toUint8(VAPID_PUBLIC_KEY)})
-        .then(send).catch(function(e){ console.log('Push subscribe:',e); });
+        .then(send).catch(function(e){ console.log('Push subscribe error:',e.message); state.pushStatus='error'; render(); });
     });
-  });
+  }).catch(function(e){ state.pushStatus='error'; render(); });
 }
 function syncRemindersToServer(){
   if(!VAPID_PUBLIC_KEY||!navigator.onLine) return;
@@ -1246,10 +1252,17 @@ var FIRED_KEY = 'vtodo-fired';
 
 function requestNotifPermission(){
   if(!('Notification' in window)) return;
-  if(Notification.permission==='granted'){ subscribePush(); render(); return; }
+  if(Notification.permission==='granted'){ subscribePush(); return; }
   if(Notification.permission==='default'){
-    Notification.requestPermission().then(function(p){ if(p==='granted'){ subscribePush(); render(); } });
+    Notification.requestPermission().then(function(p){ if(p==='granted') subscribePush(); });
   }
+}
+
+/* Вызывается когда задача имеет reminderTime — запрашивает разрешение автоматически */
+function ensureNotifPermission(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='granted'){ subscribePush(); return; }
+  if(Notification.permission==='default') requestNotifPermission();
 }
 
 function getFired(){ try{ return JSON.parse(localStorage.getItem(FIRED_KEY)||'{}'); }catch(e){ return {}; } }
