@@ -1,8 +1,56 @@
 'use strict';
-var pending = {};
+var CACHE = 'vtodo-shell-v1';
+var SHELL = ['./index.html', './manifest.json', './icon.png', './sw.js'];
 
-self.addEventListener('install', function(){ self.skipWaiting(); });
-self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim()); });
+/* ── Install: кешируем приложение ── */
+self.addEventListener('install', function(e){
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(function(c){ return c.addAll(SHELL); })
+      .then(function(){ return self.skipWaiting(); })
+  );
+});
+
+/* ── Activate: удаляем старые кеши ── */
+self.addEventListener('activate', function(e){
+  e.waitUntil(
+    caches.keys().then(function(keys){
+      return Promise.all(
+        keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); })
+      );
+    }).then(function(){ return self.clients.claim(); })
+  );
+});
+
+/* ── Fetch: отдаём из кеша, обновляем в фоне ── */
+self.addEventListener('fetch', function(e){
+  if(e.request.method !== 'GET') return;
+  var url = new URL(e.request.url);
+  /* API-запросы к Cloudflare — всегда через сеть */
+  if(url.hostname.indexOf('workers.dev') >= 0) return;
+  /* Шрифты Google — через сеть, без кеширования */
+  if(url.hostname.indexOf('googleapis.com') >= 0 || url.hostname.indexOf('gstatic.com') >= 0) return;
+
+  e.respondWith(
+    caches.match(e.request).then(function(cached){
+      /* Возвращаем кеш сразу, параллельно обновляем */
+      var networkFetch = fetch(e.request).then(function(response){
+        if(response && response.status === 200 && response.type === 'basic'){
+          var clone = response.clone();
+          caches.open(CACHE).then(function(c){ c.put(e.request, clone); });
+        }
+        return response;
+      }).catch(function(){
+        /* Офлайн и нет кеша — возвращаем index.html */
+        if(e.request.mode === 'navigate') return caches.match('./index.html');
+      });
+      return cached || networkFetch;
+    })
+  );
+});
+
+/* ── Уведомления: планировщик напоминаний ── */
+var pending = {};
 
 self.addEventListener('message', function(e){
   if(!e.data || e.data.type !== 'SCHEDULE') return;
@@ -26,8 +74,10 @@ self.addEventListener('message', function(e){
 
 self.addEventListener('notificationclick', function(e){
   e.notification.close();
-  e.waitUntil(clients.matchAll({type:'window'}).then(function(list){
-    for(var i=0;i<list.length;i++) if('focus' in list[i]) return list[i].focus();
-    if(clients.openWindow) return clients.openWindow('./');
-  }));
+  e.waitUntil(
+    clients.matchAll({type:'window'}).then(function(list){
+      for(var i=0;i<list.length;i++) if('focus' in list[i]) return list[i].focus();
+      if(clients.openWindow) return clients.openWindow('./');
+    })
+  );
 });

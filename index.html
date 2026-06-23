@@ -427,6 +427,16 @@ function localParseDate(text){
   for(var dow in DOW_RU_MAP){ if(t.indexOf(dow)>=0){ var tDow=DOW_RU_MAP[dow]; var cDow=d.getDay(); var diff=(tDow-cDow+7)%7; if(diff===0) diff=7; d.setDate(d.getDate()+diff); return fmtDate(d); } }
   return todayStr();
 }
+function localParseTime(text){
+  var t=text.toLowerCase();
+  var m=t.match(/в\s+(\d{1,2})[:.](\d{2})/);
+  if(m) return pad(parseInt(m[1]))+':'+m[2];
+  m=t.match(/в\s+(\d{1,2})\s*(?:час|утра|дня|вечера|ночи)/);
+  if(m){ var h=parseInt(m[1]); if(t.indexOf('вечера')>=0&&h<12) h+=12; return pad(h)+':00'; }
+  if(t.indexOf('полдень')>=0) return '12:00';
+  if(t.indexOf('полночь')>=0) return '00:00';
+  return '';
+}
 function localCleanText(text){
   var t=text;
   t=t.replace(/\d{1,2}\s*[-–]?\s*(?:го|е|ое)(?:\s+числа)?/gi,' ');
@@ -435,6 +445,8 @@ function localCleanText(text){
   t=t.replace(/(?:послезавтра|завтра|сегодня)/gi,' ');
   t=t.replace(/в\s+(?:понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)/gi,' ');
   t=t.replace(/(?:понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)/gi,' ');
+  t=t.replace(/в\s+\d{1,2}[:.]?\d{0,2}\s*(?:час[а-яё]*|утра|дня|вечера|ночи)?/gi,' ');
+  t=t.replace(/в\s+(?:полдень|полночь)/gi,' ');
   t=t.replace(/\s+/g,' ').trim();
   t=t.replace(/^у\s+меня\s+/i,'');
   t=t.replace(/^я\s+/i,'');
@@ -876,7 +888,7 @@ function processTranscript(transcript){
     'Задачи пользователя: '+JSON.stringify(existingTasks)+'.\n\n'+
     'Определи: это добавление задач (одной или нескольких) — или вопрос/поиск по существующим задачам?\n\n'+
     'Если ДОБАВЛЕНИЕ — извлеки ВСЕ задачи из текста (их может быть несколько, разбей по датам).\n'+
-    'Верни: {"type":"add","tasks":[{"text":"название без дат и вводных слов","priority":"high|mid|low","date":"YYYY-MM-DD"}]}\n\n'+
+    'Верни: {"type":"add","tasks":[{"text":"название без дат, времени и вводных слов","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM или пустая строка если время не указано"}]}\n\n'+
     'Если ВОПРОС/ПОИСК — найди ответ в задачах пользователя и дай краткий ответ.\n'+
     'Верни: {"type":"query","answer":"текст ответа по-русски","section":"day|week|month или пусто"}\n\n'+
     'Верни ТОЛЬКО JSON, без лишнего текста.';
@@ -885,7 +897,8 @@ function processTranscript(transcript){
     if(err||!data||!data.type){
       var localDate=localParseDate(transcript);
       var localText=localCleanText(transcript)||transcript;
-      addTasksBatch([{text:localText,priority:'mid',date:localDate}]);
+      var localTime=localParseTime(transcript);
+      addTasksBatch([{text:localText,priority:'mid',date:localDate,reminderTime:localTime}]);
       return;
     }
     if(data.type==='add'&&data.tasks&&data.tasks.length){
@@ -898,7 +911,8 @@ function processTranscript(transcript){
     } else {
       var localDate=localParseDate(transcript);
       var localText=localCleanText(transcript)||transcript;
-      addTasksBatch([{text:localText,priority:'mid',date:localDate}]);
+      var localTime=localParseTime(transcript);
+      addTasksBatch([{text:localText,priority:'mid',date:localDate,reminderTime:localTime}]);
     }
   });
 }
@@ -908,7 +922,7 @@ function addTasksBatch(tasks){
   var today=todayStr(); var lastSec='day';
   tasks.forEach(function(t){
     var date=t.date||today; var sec=dateToSection(date);
-    var newTask=T(t.text,t.priority||'mid',false,'',date);
+    var newTask=T(t.text,t.priority||'mid',false,'',date,t.reminderTime||'');
     state.sections[sec]=[newTask].concat(state.sections[sec]);
     anim.taskIds[newTask.id]=true; lastSec=sec;
   });
@@ -1151,30 +1165,56 @@ document.addEventListener('keydown',function(e){
 });
 
 /* ── Notifications + Service Worker ── */
+var FIRED_KEY = 'vtodo-fired';
+
 function requestNotifPermission(){
   if(!('Notification' in window)) return;
-  if(Notification.permission==='default'){
-    Notification.requestPermission();
-  }
+  if(Notification.permission==='default') Notification.requestPermission();
 }
 
+function getFired(){ try{ return JSON.parse(localStorage.getItem(FIRED_KEY)||'{}'); }catch(e){ return {}; } }
+function markFired(taskId, rt){ var f=getFired(); f[taskId+':'+rt]=Date.now(); try{ localStorage.setItem(FIRED_KEY,JSON.stringify(f)); }catch(e){} }
+
+/* Проверка напоминаний в главном потоке (надёжно когда приложение открыто) */
+function checkReminders(){
+  if(Notification.permission!=='granted') return;
+  var now=Date.now(); var fired=getFired();
+  allTasks().forEach(function(task){
+    if(!task.reminderTime||!task.date||task.done) return;
+    var key=task.id+':'+task.reminderTime;
+    if(fired[key]) return;
+    var ts=new Date(task.date+'T'+task.reminderTime).getTime();
+    if(ts<=now && ts>now-120000){
+      markFired(task.id,task.reminderTime);
+      try{ new Notification(task.text,{body:'Напоминание • '+dateLabel(task.date),icon:'icon.png',tag:task.id}); }catch(e){}
+    }
+  });
+}
+
+/* Проверяем каждые 30 секунд и при возврате в приложение */
+setInterval(checkReminders, 30000);
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') checkReminders(); });
+
+/* Передаём напоминания в SW для фонового режима */
 function scheduleReminders(){
-  if(!swReg||!swReg.active) return;
-  var list=allTasks()
-    .filter(function(t){ return t.reminderTime&&t.date&&!t.done; })
-    .map(function(t){
-      var dt=new Date(t.date+'T'+t.reminderTime);
-      var d=new Date(t.date); var dateStr=d.getDate()+' '+['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][d.getMonth()];
-      return {id:t.id, text:t.text, sub:'Напоминание • '+dateStr, ts:dt.getTime()};
-    })
-    .filter(function(r){ return r.ts>Date.now(); });
-  swReg.active.postMessage({type:'SCHEDULE', list:list});
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(function(reg){
+    if(!reg.active) return;
+    var list=allTasks()
+      .filter(function(t){ return t.reminderTime&&t.date&&!t.done; })
+      .map(function(t){
+        var dt=new Date(t.date+'T'+t.reminderTime);
+        var d=new Date(t.date); var ds=d.getDate()+' '+['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][d.getMonth()];
+        return {id:t.id,text:t.text,sub:'Напоминание • '+ds,ts:dt.getTime()};
+      })
+      .filter(function(r){ return r.ts>Date.now(); });
+    reg.active.postMessage({type:'SCHEDULE',list:list});
+  });
 }
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(function(reg){
     swReg=reg;
-    reg.addEventListener('updatefound',function(){ swReg=reg; });
     navigator.serviceWorker.ready.then(function(r){ swReg=r; scheduleReminders(); });
   }).catch(function(){});
 }
@@ -1183,6 +1223,7 @@ if('serviceWorker' in navigator){
 loadStorage();
 render();
 requestNotifPermission();
+checkReminders();
 </script>
 </body>
 </html>
