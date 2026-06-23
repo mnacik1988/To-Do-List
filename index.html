@@ -1072,7 +1072,8 @@ function dsAddTask(){
   var newTask=T(text,state.dsAddPri,false,'',date);
   anim.taskIds[newTask.id]=true;
   state.sections[sec]=[newTask].concat(state.sections[sec]);
-  state.dsAddText=''; state.dsAddPri='mid'; state.dsShowAdd=false; render();
+  state.dsAddText=''; state.dsAddPri='mid'; state.dsShowAdd=false;
+  saveStorage(); scheduleReminders(); syncRemindersToServer(); render();
 }
 function onDsAiMic(){
   if(state.dsAiProc) return; syncDsInput();
@@ -1101,7 +1102,7 @@ function dsFillFromTranscript(transcript){
       state.dsAiProc=false;
       if(err||!data){ state.dsAddText=localCleanText(transcript)||transcript; }
       else{ state.dsAddText=data.text||localCleanText(transcript)||transcript; state.dsAddPri=data.priority||state.dsAddPri; }
-      render();
+      dsAddTask();
     });
   } else {
     state.dsAiProc=false; render();
