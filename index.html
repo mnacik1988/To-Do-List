@@ -1078,19 +1078,24 @@ function dsAddTask(){
 function onDsAiMic(){
   if(state.dsAiProc) return; syncDsInput();
   if(!state.dsAiRec){
+    if(!SpeechRec) return;
+    dsTranscript='';
+    var rec=new SpeechRec();
+    rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
+    rec.onresult=function(e){
+      var fin='';
+      for(var i=0;i<e.results.length;i++){ if(e.results[i].isFinal) fin+=e.results[i][0].transcript; }
+      if(fin) dsTranscript=fin;
+    };
+    rec.onerror=function(ev){ if(ev.error==='no-speech'||ev.error==='aborted') return; state.dsAiRec=false; state.dsAiProc=false; dsRecObj=null; render(); };
+    rec.onend=function(){
+      if(state.dsAiRec){ try{ rec.start(); }catch(e){ state.dsAiRec=false; state.dsAiProc=true; dsRecObj=null; render(); dsFillFromTranscript(dsTranscript); } }
+    };
+    rec.start(); dsRecObj=rec;
     state.dsAiRec=true; render();
-    if(SpeechRec){
-      dsTranscript='';
-      var rec=new SpeechRec();
-      rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=false; rec.interimResults=false;
-      rec.onresult=function(e){ dsTranscript=e.results[0][0].transcript; };
-      rec.onerror=function(){ state.dsAiRec=false; state.dsAiProc=false; dsRecObj=null; render(); };
-      rec.onend=function(){ if(state.dsAiRec){ state.dsAiRec=false; state.dsAiProc=true; dsRecObj=null; render(); dsFillFromTranscript(dsTranscript); } };
-      rec.start(); dsRecObj=rec;
-    }
   } else {
     state.dsAiRec=false; state.dsAiProc=true;
-    if(dsRecObj){dsRecObj.stop();dsRecObj=null;}
+    if(dsRecObj){ dsRecObj.stop(); dsRecObj=null; }
     render(); dsFillFromTranscript(dsTranscript);
   }
 }
