@@ -339,7 +339,7 @@ function addDays(base,n){ var d=new Date(base); d.setDate(d.getDate()+n); return
 function todayLabel(){ var d=new Date(); return DOW_FULL[d.getDay()]+', '+d.getDate()+' '+MON_RU_G[d.getMonth()]; }
 function dateLabel(str){ if(!str) return ''; var p=str.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return DOW_FULL[d.getDay()]+', '+d.getDate()+' '+MON_RU_G[d.getMonth()]; }
 function dateToSection(str){ if(!str) return 'month'; var today=new Date(todayStr()); var d=new Date(str); var diff=Math.floor((d-today)/86400000); if(diff<=0) return 'day'; if(diff<=6) return 'week'; return 'month'; }
-function T(text,priority,done,desc,date){ return {id:uid(),text:text,priority:priority,done:!!done,desc:desc||'',date:date||''}; }
+function T(text,priority,done,desc,date,reminderTime){ return {id:uid(),text:text,priority:priority,done:!!done,desc:desc||'',date:date||'',reminderTime:reminderTime||''}; }
 
 /* ── Speech ── */
 var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -364,7 +364,7 @@ var state={
   selectMode:false, selected:{}, aiAnswer:null,
 };
 
-var timerIv=null, aiTimeout=null, poolIdx=0, drag=null, dsAiTimeout=null;
+var timerIv=null, aiTimeout=null, poolIdx=0, drag=null, dsAiTimeout=null, swReg=null;
 var anim={taskIds:{},summary:false,modal:false,aiNote:false,daySheet:false};
 function clearAnim(){ requestAnimationFrame(function(){ anim.taskIds={};anim.summary=anim.modal=anim.aiNote=anim.daySheet=false; }); }
 
@@ -522,7 +522,7 @@ function renderModal(){
       '<button class="close-btn" data-role="modal-close">'+IC.close+'</button>'+
     '</div>'+
     '<div class="modal-task-title">'+esc(task.text)+'</div>'+
-    (task.date?'<div style="font-size:12px;font-weight:700;color:var(--muted)">📅 '+dateLabel(task.date)+'</div>':'')+
+    (task.date?'<div style="font-size:12px;font-weight:700;color:var(--muted)">📅 '+dateLabel(task.date)+(task.reminderTime?' &nbsp;🔔 '+task.reminderTime:'')+'</div>':'')+
     '<div><div class="field-label">Описание</div>'+
       (hasDesc?'<p class="modal-desc">'+esc(task.desc)+'</p>':'<p class="modal-no-desc">Описание не добавлено</p>')+
     '</div>'+
@@ -543,6 +543,13 @@ function renderModal(){
     '<div><div class="field-label">Название</div><input id="edit-text" class="form-input" value="'+escA(editText)+'"></div>'+
     '<div><div class="field-label">Описание</div><textarea id="edit-desc" class="form-textarea" rows="3">'+esc(editDesc)+'</textarea></div>'+
     '<div><div class="field-label">Дата</div><input id="edit-date" type="date" class="form-date" value="'+escA(editDate)+'"></div>'+
+    '<div><div class="field-label">Напомнить в</div>'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<input id="edit-reminder" type="time" class="form-date" style="flex:1" value="'+escA(ed.reminderTime||task.reminderTime||'')+'">'+
+        (ed.reminderTime||task.reminderTime?'<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="clear-reminder">Убрать</button>':'')+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:5px">Уведомление придёт в выбранное время в день задачи</div>'+
+    '</div>'+
     '<div><div class="field-label">Приоритет</div><div class="pri-picker">'+priBtns+'</div></div>'+
     renderAiBlock('edit')+
     '<div class="modal-actions">'+
@@ -757,10 +764,11 @@ function render(){
     renderSettings();
 
   /* wire inputs */
-  var te=document.getElementById('edit-text'),de=document.getElementById('edit-desc'),dte=document.getElementById('edit-date');
+  var te=document.getElementById('edit-text'),de=document.getElementById('edit-desc'),dte=document.getElementById('edit-date'),dre=document.getElementById('edit-reminder');
   if(te) te.addEventListener('input',function(e){if(state.edit) state.edit.text=e.target.value;});
   if(de) de.addEventListener('input',function(e){if(state.edit) state.edit.desc=e.target.value;});
   if(dte) dte.addEventListener('input',function(e){if(state.edit) state.edit.date=e.target.value;});
+  if(dre) dre.addEventListener('input',function(e){if(state.edit) state.edit.reminderTime=e.target.value;});
   var dsi=document.getElementById('ds-input');
   if(dsi) dsi.addEventListener('input',function(e){state.dsAddText=e.target.value;});
 
@@ -771,7 +779,7 @@ function render(){
 }
 
 /* ── Actions ── */
-function syncEdit(){ if(state.modalMode!=='edit'||!state.edit) return; var t=document.getElementById('edit-text'),d=document.getElementById('edit-desc'),dt=document.getElementById('edit-date'); if(t) state.edit.text=t.value; if(d) state.edit.desc=d.value; if(dt) state.edit.date=dt.value; }
+function syncEdit(){ if(state.modalMode!=='edit'||!state.edit) return; var t=document.getElementById('edit-text'),d=document.getElementById('edit-desc'),dt=document.getElementById('edit-date'),dr=document.getElementById('edit-reminder'); if(t) state.edit.text=t.value; if(d) state.edit.desc=d.value; if(dt) state.edit.date=dt.value; if(dr) state.edit.reminderTime=dr.value; }
 function syncDsInput(){ var el=document.getElementById('ds-input'); if(el) state.dsAddText=el.value; }
 
 function toggleTheme(){ state.theme=state.theme==='light'?'dark':'light'; render(); }
@@ -786,23 +794,24 @@ function closeModal(){
   state.modal=null; state.modalMode='view'; state.edit=null;
   state.aiRec=false; state.aiProc=false; state.aiNote=''; state.confirmDelete=false; render();
 }
-function startEdit(){ var task=currentTask(); if(!task) return; syncEdit(); state.modalMode='edit'; state.edit={text:task.text,desc:task.desc||'',priority:task.priority,date:task.date||''}; state.aiNote=''; render(); var el=document.getElementById('edit-text'); if(el) el.focus(); }
+function startEdit(){ var task=currentTask(); if(!task) return; syncEdit(); state.modalMode='edit'; state.edit={text:task.text,desc:task.desc||'',priority:task.priority,date:task.date||'',reminderTime:task.reminderTime||''}; state.aiNote=''; render(); var el=document.getElementById('edit-text'); if(el) el.focus(); }
 function cancelEdit(){ syncEdit(); state.modalMode='view'; state.edit=null; render(); }
 function saveEdit(){
   syncEdit(); var m=state.modal,e=state.edit;
   if(m&&e){
     var text=(e.text||'').trim()||'Без названия';
     var newSec=e.date?dateToSection(e.date):m.section;
+    var patch={text:text,desc:e.desc,priority:e.priority,date:e.date,reminderTime:e.reminderTime||''};
     if(newSec!==m.section){
       var updated=null;
-      state.sections[m.section]=state.sections[m.section].filter(function(t){if(t.id===m.id){updated=Object.assign({},t,{text:text,desc:e.desc,priority:e.priority,date:e.date});return false;}return true;});
+      state.sections[m.section]=state.sections[m.section].filter(function(t){if(t.id===m.id){updated=Object.assign({},t,patch);return false;}return true;});
       if(updated) state.sections[newSec]=[updated].concat(state.sections[newSec]);
       state.modal=null;
     } else {
-      state.sections[m.section]=state.sections[m.section].map(function(t){return t.id===m.id?Object.assign({},t,{text:text,desc:e.desc,priority:e.priority,date:e.date}):t;});
+      state.sections[m.section]=state.sections[m.section].map(function(t){return t.id===m.id?Object.assign({},t,patch):t;});
     }
   }
-  state.modalMode='view'; state.edit=null; render();
+  state.modalMode='view'; state.edit=null; render(); scheduleReminders();
 }
 function setPri(pri){ syncEdit(); if(state.edit) state.edit.priority=pri; render(); }
 function toggleDoneModal(){ var m=state.modal; if(m) toggleDone(m.section,m.id); else render(); }
@@ -1125,6 +1134,7 @@ appEl.addEventListener('click',function(e){
     case 'select-task':         toggleSelectTask(id,sec); break;
     case 'bulk-delete':         bulkDelete(); break;
     case 'close-answer':        state.aiAnswer=null; render(); break;
+    case 'clear-reminder':      syncEdit(); if(state.edit) state.edit.reminderTime=''; render(); break;
     case 'drag-handle':         break; /* handled by touch/drag events */
   }
 });
@@ -1140,9 +1150,39 @@ document.addEventListener('keydown',function(e){
   }
 });
 
+/* ── Notifications + Service Worker ── */
+function requestNotifPermission(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+}
+
+function scheduleReminders(){
+  if(!swReg||!swReg.active) return;
+  var list=allTasks()
+    .filter(function(t){ return t.reminderTime&&t.date&&!t.done; })
+    .map(function(t){
+      var dt=new Date(t.date+'T'+t.reminderTime);
+      var d=new Date(t.date); var dateStr=d.getDate()+' '+['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][d.getMonth()];
+      return {id:t.id, text:t.text, sub:'Напоминание • '+dateStr, ts:dt.getTime()};
+    })
+    .filter(function(r){ return r.ts>Date.now(); });
+  swReg.active.postMessage({type:'SCHEDULE', list:list});
+}
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(function(reg){
+    swReg=reg;
+    reg.addEventListener('updatefound',function(){ swReg=reg; });
+    navigator.serviceWorker.ready.then(function(r){ swReg=r; scheduleReminders(); });
+  }).catch(function(){});
+}
+
 /* ── Init ── */
 loadStorage();
 render();
+requestNotifPermission();
 </script>
 </body>
 </html>
