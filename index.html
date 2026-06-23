@@ -330,6 +330,28 @@ var DOW_RU    = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 var MON_RU    = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 var MON_RU_G  = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 var DOW_FULL  = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+var EMPTY_HINTS = {day:'Сегодня задач нет — нажмите микрофон, чтобы добавить голосом',week:'Задач на эту неделю нет',month:'Задач на этот месяц нет'};
+
+/* ── Переводы ── */
+var TRANSLATIONS = {
+ru:{app_name:'Мои задачи',months_full:['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],months_gen:['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],days_full:['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'],days_short:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],tab_day:'Сегодня',tab_week:'Эта неделя',tab_month:'Этот месяц',pri_high:'Высокий',pri_mid:'Средний',pri_low:'Низкий',empty_day:'Сегодня задач нет — нажмите микрофон, чтобы добавить голосом',empty_week:'Задач на эту неделю нет',empty_month:'Задач на этот месяц нет',select_hd:'Выбор задач',select_hint:'Удерживайте или нажмите',select_done:'Готово',nav_list:'Список',nav_cal:'Календарь',ai_title:'ИИ-помощник ✓',ai_hint_view:'Наговорите правку голосом — ИИ применит изменения',ai_hint_add:'Продиктуйте задачу — ИИ заполнит поля за вас',ai_listen:'Слушаю… нажмите, чтобы остановить',ai_proc:'Обрабатываю через Claude…',ai_label:'ИИ-РЕЗЮМЕ',ai_ans_label:'ИИ-ОТВЕТ',tasks_word:'задач',ai_proc_long:'Обрабатываю через Claude — это займёт пару секунд…',desc:'Описание',no_desc:'Описание не добавлено',btn_undone:'Снять отметку',btn_done:'Отметить выполненной',btn_edit:'Редактировать',btn_del_task:'Удалить задачу',edit_hd:'Редактирование',field_name:'Название',field_date:'Дата',field_remind:'Напомнить в',btn_clear_rem:'Убрать',remind_hint:'Уведомление придёт в выбранное время в день задачи',priority:'Приоритет',btn_cancel:'Отмена',btn_save:'Сохранить',confirm_del:'Удалить задачу?',confirm_suffix:' будет удалена без возможности восстановления.',btn_delete:'Удалить',no_tasks_day:'Задач на этот день нет',task_ph:'Название задачи…',btn_add:'Добавить задачу',selected:'Выбрано: ',tap_sel:'Нажмите на задачи',del_n:'Удалить ',rem_single:'НАПОМИНАНИЕ',rem_multi:'НАПОМИНАНИЯ',rem_now:' — СЕЙЧАС',settings:'Настройки',ai_conn:'✓ Claude ИИ подключён через Cloudflare Worker',voice_ok:'✓ Голосовой ввод доступен',voice_err:'✗ Голосовой ввод недоступен — используйте Safari на iPhone',notif_auto:'🔔 Разрешение на уведомления запросится автоматически когда вы установите напоминание на задачу',push_ok:'✓ Push-уведомления подключены',push_loading:'⏳ Подключение…',push_err:'⚠️ Ошибка подключения — нажмите ещё раз',push_connect:'📲 Подключить push-уведомления',btn_clear_data:'Очистить все данные',lang_label:'Язык',summary_default:'Добавьте первую задачу — нажмите на микрофон или откройте день в календаре.',summary_1:'Добавлена задача «',summary_1e:'».',summary_n_pre:'Добавлено ',summary_n_suf:' задач(и) — каждая в нужный день.',untitled:'Без названия'},
+en:{app_name:'My Tasks',months_full:['January','February','March','April','May','June','July','August','September','October','November','December'],months_gen:['January','February','March','April','May','June','July','August','September','October','November','December'],days_full:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],days_short:['Mo','Tu','We','Th','Fr','Sa','Su'],tab_day:'Today',tab_week:'This week',tab_month:'This month',pri_high:'High',pri_mid:'Medium',pri_low:'Low',empty_day:'No tasks today — tap the microphone to add by voice',empty_week:'No tasks this week',empty_month:'No tasks this month',select_hd:'Select tasks',select_hint:'Hold or tap',select_done:'Done',nav_list:'List',nav_cal:'Calendar',ai_title:'AI Assistant ✓',ai_hint_view:'Dictate edits by voice — AI will apply changes',ai_hint_add:'Dictate a task — AI will fill the fields for you',ai_listen:'Listening… tap to stop',ai_proc:'Processing via Claude…',ai_label:'AI SUMMARY',ai_ans_label:'AI ANSWER',tasks_word:'tasks',ai_proc_long:'Processing via Claude — this will take a moment…',desc:'Description',no_desc:'No description added',btn_undone:'Mark as incomplete',btn_done:'Mark as done',btn_edit:'Edit',btn_del_task:'Delete task',edit_hd:'Edit task',field_name:'Title',field_date:'Date',field_remind:'Remind at',btn_clear_rem:'Remove',remind_hint:'Notification will arrive at the set time on the task day',priority:'Priority',btn_cancel:'Cancel',btn_save:'Save',confirm_del:'Delete task?',confirm_suffix:' will be permanently deleted.',btn_delete:'Delete',no_tasks_day:'No tasks for this day',task_ph:'Task name…',btn_add:'Add task',selected:'Selected: ',tap_sel:'Tap tasks to select',del_n:'Delete ',rem_single:'REMINDER',rem_multi:'REMINDERS',rem_now:' — NOW',settings:'Settings',ai_conn:'✓ Claude AI connected via Cloudflare Worker',voice_ok:'✓ Voice input available',voice_err:'✗ Voice input unavailable — use Safari on iPhone',notif_auto:'🔔 Notification permission will be requested automatically when you set a reminder',push_ok:'✓ Push notifications connected',push_loading:'⏳ Connecting…',push_err:'⚠️ Connection error — tap again',push_connect:'📲 Connect push notifications',btn_clear_data:'Clear all data',lang_label:'Language',summary_default:'Add your first task — tap the microphone or open a day in the calendar.',summary_1:'Task added: «',summary_1e:'».',summary_n_pre:'',summary_n_suf:' tasks added — each on the right day.',untitled:'Untitled'},
+uk:{app_name:'Мої завдання',months_full:['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'],months_gen:['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'],days_full:['Неділя','Понеділок','Вівторок','Середа','Четвер','Пятниця','Субота'],days_short:['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],tab_day:'Сьогодні',tab_week:'Цей тиждень',tab_month:'Цей місяць',pri_high:'Високий',pri_mid:'Середній',pri_low:'Низький',empty_day:'Сьогодні завдань немає — натисніть мікрофон, щоб додати голосом',empty_week:'Завдань на цей тиждень немає',empty_month:'Завдань на цей місяць немає',select_hd:'Вибір завдань',select_hint:'Утримуйте або натисніть',select_done:'Готово',nav_list:'Список',nav_cal:'Календар',ai_title:'ІІ-помічник ✓',ai_hint_view:'Надиктуйте правку голосом — ІІ застосує зміни',ai_hint_add:'Надиктуйте завдання — ІІ заповнить поля за вас',ai_listen:'Слухаю… натисніть, щоб зупинити',ai_proc:'Обробляю через Claude…',ai_label:'ІІ-РЕЗЮМЕ',ai_ans_label:'ВІДПОВІДЬ ІІ',tasks_word:'завдань',ai_proc_long:'Обробляю через Claude — це займе кілька секунд…',desc:'Опис',no_desc:'Опис не додано',btn_undone:'Зняти відмітку',btn_done:'Відмітити виконаним',btn_edit:'Редагувати',btn_del_task:'Видалити завдання',edit_hd:'Редагування',field_name:'Назва',field_date:'Дата',field_remind:'Нагадати о',btn_clear_rem:'Прибрати',remind_hint:'Сповіщення прийде у вибраний час у день завдання',priority:'Пріоритет',btn_cancel:'Скасувати',btn_save:'Зберегти',confirm_del:'Видалити завдання?',confirm_suffix:' буде видалено без можливості відновлення.',btn_delete:'Видалити',no_tasks_day:'Завдань на цей день немає',task_ph:'Назва завдання…',btn_add:'Додати завдання',selected:'Вибрано: ',tap_sel:'Натисніть на завдання',del_n:'Видалити ',rem_single:'НАГАДУВАННЯ',rem_multi:'НАГАДУВАННЯ',rem_now:' — ЗАРАЗ',settings:'Налаштування',ai_conn:'✓ Claude ІІ підключено через Cloudflare Worker',voice_ok:'✓ Голосовий ввід доступний',voice_err:'✗ Голосовий ввід недоступний — використовуйте Safari на iPhone',notif_auto:'🔔 Дозвіл на сповіщення запитається автоматично коли ви встановите нагадування',push_ok:'✓ Push-сповіщення підключено',push_loading:'⏳ Підключення…',push_err:'⚠️ Помилка підключення — натисніть ще раз',push_connect:'📲 Підключити push-сповіщення',btn_clear_data:'Очистити всі дані',lang_label:'Мова',summary_default:'Додайте перше завдання — натисніть мікрофон або відкрийте день у календарі.',summary_1:'Додано завдання «',summary_1e:'».',summary_n_pre:'Додано ',summary_n_suf:' завдань — кожне у потрібний день.',untitled:'Без назви'},
+de:{app_name:'Meine Aufgaben',months_full:['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],months_gen:['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],days_full:['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'],days_short:['Mo','Di','Mi','Do','Fr','Sa','So'],tab_day:'Heute',tab_week:'Diese Woche',tab_month:'Dieser Monat',pri_high:'Hoch',pri_mid:'Mittel',pri_low:'Niedrig',empty_day:'Heute keine Aufgaben — tippen Sie auf das Mikrofon, um per Sprache hinzuzufügen',empty_week:'Keine Aufgaben diese Woche',empty_month:'Keine Aufgaben diesen Monat',select_hd:'Aufgaben auswählen',select_hint:'Halten oder tippen',select_done:'Fertig',nav_list:'Liste',nav_cal:'Kalender',ai_title:'KI-Assistent ✓',ai_hint_view:'Diktieren Sie Änderungen per Sprache — KI übernimmt sie',ai_hint_add:'Diktieren Sie eine Aufgabe — KI füllt die Felder aus',ai_listen:'Ich höre… tippen zum Stoppen',ai_proc:'Verarbeite mit Claude…',ai_label:'KI-ZUSAMMENFASSUNG',ai_ans_label:'KI-ANTWORT',tasks_word:'Aufgaben',ai_proc_long:'Verarbeite mit Claude — das dauert einen Moment…',desc:'Beschreibung',no_desc:'Keine Beschreibung hinzugefügt',btn_undone:'Als unerledigt markieren',btn_done:'Als erledigt markieren',btn_edit:'Bearbeiten',btn_del_task:'Aufgabe löschen',edit_hd:'Aufgabe bearbeiten',field_name:'Titel',field_date:'Datum',field_remind:'Erinnern um',btn_clear_rem:'Entfernen',remind_hint:'Benachrichtigung kommt zur eingestellten Zeit am Tag der Aufgabe',priority:'Priorität',btn_cancel:'Abbrechen',btn_save:'Speichern',confirm_del:'Aufgabe löschen?',confirm_suffix:' wird unwiderruflich gelöscht.',btn_delete:'Löschen',no_tasks_day:'Keine Aufgaben für diesen Tag',task_ph:'Aufgabenname…',btn_add:'Aufgabe hinzufügen',selected:'Ausgewählt: ',tap_sel:'Tippen Sie auf Aufgaben',del_n:'Löschen ',rem_single:'ERINNERUNG',rem_multi:'ERINNERUNGEN',rem_now:' — JETZT',settings:'Einstellungen',ai_conn:'✓ Claude KI verbunden über Cloudflare Worker',voice_ok:'✓ Spracheingabe verfügbar',voice_err:'✗ Spracheingabe nicht verfügbar — verwenden Sie Safari auf dem iPhone',notif_auto:'🔔 Benachrichtigungserlaubnis wird automatisch angefordert wenn Sie eine Erinnerung setzen',push_ok:'✓ Push-Benachrichtigungen verbunden',push_loading:'⏳ Verbinde…',push_err:'⚠️ Verbindungsfehler — erneut tippen',push_connect:'📲 Push-Benachrichtigungen verbinden',btn_clear_data:'Alle Daten löschen',lang_label:'Sprache',summary_default:'Fügen Sie die erste Aufgabe hinzu — tippen Sie auf das Mikrofon oder öffnen Sie einen Tag im Kalender.',summary_1:'Aufgabe hinzugefügt: «',summary_1e:'».',summary_n_pre:'',summary_n_suf:' Aufgaben hinzugefügt — jede am richtigen Tag.',untitled:'Ohne Titel'},
+fr:{app_name:'Mes tâches',months_full:['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],months_gen:['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],days_full:['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],days_short:['Lu','Ma','Me','Je','Ve','Sa','Di'],tab_day:"Aujourd'hui",tab_week:'Cette semaine',tab_month:'Ce mois',pri_high:'Élevé',pri_mid:'Moyen',pri_low:'Faible',empty_day:"Aucune tâche aujourd'hui — appuyez sur le microphone pour ajouter par la voix",empty_week:'Aucune tâche cette semaine',empty_month:'Aucune tâche ce mois',select_hd:'Sélectionner des tâches',select_hint:'Maintenez ou appuyez',select_done:'Terminé',nav_list:'Liste',nav_cal:'Calendrier',ai_title:'Assistant IA ✓',ai_hint_view:"Dictez des modifications par la voix — l'IA les appliquera",ai_hint_add:"Dictez une tâche — l'IA remplira les champs pour vous",ai_listen:"J'écoute… appuyez pour arrêter",ai_proc:'Traitement via Claude…',ai_label:'RÉSUMÉ IA',ai_ans_label:'RÉPONSE IA',tasks_word:'tâches',ai_proc_long:'Traitement via Claude — cela prendra un moment…',desc:'Description',no_desc:'Aucune description ajoutée',btn_undone:'Marquer comme non fait',btn_done:'Marquer comme fait',btn_edit:'Modifier',btn_del_task:'Supprimer la tâche',edit_hd:'Modifier la tâche',field_name:'Titre',field_date:'Date',field_remind:'Rappeler à',btn_clear_rem:'Supprimer',remind_hint:"La notification arrivera à l'heure définie le jour de la tâche",priority:'Priorité',btn_cancel:'Annuler',btn_save:'Enregistrer',confirm_del:'Supprimer la tâche?',confirm_suffix:' sera supprimée définitivement.',btn_delete:'Supprimer',no_tasks_day:'Aucune tâche pour ce jour',task_ph:'Nom de la tâche…',btn_add:'Ajouter une tâche',selected:'Sélectionné: ',tap_sel:'Appuyez sur les tâches',del_n:'Supprimer ',rem_single:'RAPPEL',rem_multi:'RAPPELS',rem_now:' — MAINTENANT',settings:'Paramètres',ai_conn:'✓ Claude IA connecté via Cloudflare Worker',voice_ok:'✓ Saisie vocale disponible',voice_err:'✗ Saisie vocale indisponible — utilisez Safari sur iPhone',notif_auto:"🔔 L'autorisation de notification sera demandée automatiquement quand vous définissez un rappel",push_ok:'✓ Notifications push connectées',push_loading:'⏳ Connexion…',push_err:'⚠️ Erreur de connexion — appuyez à nouveau',push_connect:'📲 Connecter les notifications push',btn_clear_data:'Effacer toutes les données',lang_label:'Langue',summary_default:"Ajoutez votre première tâche — appuyez sur le microphone ou ouvrez un jour dans le calendrier.",summary_1:'Tâche ajoutée: «',summary_1e:'».',summary_n_pre:'',summary_n_suf:' tâches ajoutées — chacune au bon jour.',untitled:'Sans titre'},
+};
+var LANG_BCP={ru:'ru-RU',en:'en-US',uk:'uk-UA',de:'de-DE',fr:'fr-FR'};
+var L = TRANSLATIONS.ru;
+function applyLang(lang, noRender){
+  if(!TRANSLATIONS[lang]) lang='ru';
+  state.lang=lang; L=TRANSLATIONS[lang];
+  PRI_LABEL={high:L.pri_high,mid:L.pri_mid,low:L.pri_low};
+  TAB_META=[{key:'day',title:L.tab_day},{key:'week',title:L.tab_week},{key:'month',title:L.tab_month}];
+  DOW_RU=L.days_short; DOW_FULL=L.days_full; MON_RU=L.months_full; MON_RU_G=L.months_gen;
+  EMPTY_HINTS={day:L.empty_day,week:L.empty_week,month:L.empty_month};
+  try{ localStorage.setItem('vtodo-lang',lang); }catch(e){}
+  if(!noRender){ state.summary=L.summary_default; render(); }
+}
 var STORE_KEY = 'vtodo-v2';
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
@@ -358,6 +380,7 @@ var dsRecObj=null, dsTranscript='';
 var state={
   theme:'light', view:'list', tab:'day',
   recording:false, processing:false, timer:0,
+  lang:'ru',
   summary:'Добавьте первую задачу — нажмите на микрофон или откройте день в календаре.',
   sections:{ day:[], week:[], month:[] },
   modal:null, modalMode:'view', edit:null,
@@ -387,6 +410,7 @@ function loadStorage(){
     if(s.summary) state.summary=s.summary;
     if(s.theme)   state.theme=s.theme;
   }catch(e){}
+  try{ var savedLang=localStorage.getItem('vtodo-lang'); if(savedLang&&TRANSLATIONS[savedLang]) state.lang=savedLang; }catch(e){}
 }
 
 /* ── Claude API ── */
@@ -495,13 +519,13 @@ function renderTaskRow(task,secKey){
 function renderAiBlock(mode){
   var idle=!state.aiRec&&!state.aiProc;
   var sub=idle
-    ?(mode==='view'?'Наговорите правку голосом — ИИ применит изменения':'Продиктуйте задачу — ИИ заполнит поля за вас')
-    :state.aiRec?'Слушаю… нажмите, чтобы остановить':'Обрабатываю через Claude…';
+    ?(mode==='view'?L.ai_hint_view:L.ai_hint_add)
+    :state.aiRec?L.ai_listen:L.ai_proc;
   var ns=anim.aiNote?' style="animation:fadein .25s ease both"':'';
   return '<div class="ai-block"><div class="ai-block-inner">'+
     '<div class="ai-mic-wrap">'+(state.aiRec?'<span class="ai-mic-pulse"></span>':'')+
     '<button class="ai-mic-btn" data-role="ai-mic">'+(state.aiRec?'<span class="ai-mic-stop"></span>':state.aiProc?IC.spin(18):IC.mic(20,20))+'</button></div>'+
-    '<div class="ai-text-col"><div class="ai-text-title">ИИ-помощник ✓</div>'+
+    '<div class="ai-text-col"><div class="ai-text-title">'+L.ai_title+'</div>'+
     '<div class="'+(idle?'ai-text-sub':'ai-text-st')+'">'+esc(sub)+'</div></div></div>'+
     (state.aiNote?'<div class="ai-note"'+ns+'>'+IC.spark('style="color:var(--accent);flex:none"')+'<span class="ai-note-text">'+esc(state.aiNote)+'</span></div>':'')+
   '</div>';
@@ -511,7 +535,7 @@ function renderModal(){
   if(!state.modal) return '';
   var task=currentTask(); if(!task) return '';
   var section=state.modal.section;
-  var secTitle={day:'Сегодня',week:'Эта неделя',month:'Этот месяц'}[section];
+  var secTitle={day:L.tab_day,week:L.tab_week,month:L.tab_month}[section];
   var isEdit=state.modalMode==='edit';
   var ed=state.edit||{};
   var hasDesc=!!(task.desc&&task.desc.trim());
@@ -523,11 +547,11 @@ function renderModal(){
   var sha=anim.modal?' style="animation:sheetup .3s cubic-bezier(.2,.8,.2,1) both"':'';
 
   var confirmBody=
-    '<div style="font-size:17px;font-weight:800;color:var(--text)">Удалить задачу?</div>'+
-    '<div style="font-size:14px;color:var(--muted);line-height:1.55">«'+esc(task.text)+'» будет удалена без возможности восстановления.</div>'+
+    '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.confirm_del+'</div>'+
+    '<div style="font-size:14px;color:var(--muted);line-height:1.55">«'+esc(task.text)+'»'+L.confirm_suffix+'</div>'+
     '<div class="modal-actions" style="margin-top:4px">'+
-      '<button class="btn-outline" data-role="confirm-delete-no">Отмена</button>'+
-      '<button class="btn-primary" style="background:var(--pri-high-ink)" data-role="confirm-delete-yes">'+IC.trash+' Удалить</button>'+
+      '<button class="btn-outline" data-role="confirm-delete-no">'+L.btn_cancel+'</button>'+
+      '<button class="btn-primary" style="background:var(--pri-high-ink)" data-role="confirm-delete-yes">'+IC.trash+' '+L.btn_delete+'</button>'+
     '</div>';
 
   var priBtns=PRI_ORDER.map(function(k){
@@ -542,38 +566,38 @@ function renderModal(){
     '</div>'+
     '<div class="modal-task-title">'+esc(task.text)+'</div>'+
     (task.date?'<div style="font-size:12px;font-weight:700;color:var(--muted)">📅 '+dateLabel(task.date)+(task.reminderTime?' &nbsp;🔔 '+task.reminderTime:'')+'</div>':'')+
-    '<div><div class="field-label">Описание</div>'+
-      (hasDesc?'<p class="modal-desc">'+esc(task.desc)+'</p>':'<p class="modal-no-desc">Описание не добавлено</p>')+
+    '<div><div class="field-label">'+L.desc+'</div>'+
+      (hasDesc?'<p class="modal-desc">'+esc(task.desc)+'</p>':'<p class="modal-no-desc">'+L.no_desc+'</p>')+
     '</div>'+
     renderAiBlock('view')+
     '<div class="modal-actions">'+
-      '<button class="btn-outline" data-role="toggle-done-modal">'+(task.done?'Снять отметку':'Отметить выполненной')+'</button>'+
-      '<button class="btn-primary" data-role="start-edit">'+IC.edit+' Редактировать</button>'+
+      '<button class="btn-outline" data-role="toggle-done-modal">'+(task.done?L.btn_undone:L.btn_done)+'</button>'+
+      '<button class="btn-primary" data-role="start-edit">'+IC.edit+' '+L.btn_edit+'</button>'+
     '</div>'+
     '<div class="modal-actions" style="margin-top:0">'+
-      '<button class="btn-danger" data-role="delete-task">'+IC.trash+' Удалить задачу</button>'+
+      '<button class="btn-danger" data-role="delete-task">'+IC.trash+' '+L.btn_del_task+'</button>'+
     '</div>';
 
   var editBody=
     '<div class="modal-hd">'+
-      '<span class="edit-hd-title">Редактирование</span>'+
+      '<span class="edit-hd-title">'+L.edit_hd+'</span>'+
       '<button class="close-btn" data-role="modal-close" style="margin-left:auto">'+IC.close+'</button>'+
     '</div>'+
-    '<div><div class="field-label">Название</div><input id="edit-text" class="form-input" value="'+escA(editText)+'"></div>'+
-    '<div><div class="field-label">Описание</div><textarea id="edit-desc" class="form-textarea" rows="3">'+esc(editDesc)+'</textarea></div>'+
-    '<div><div class="field-label">Дата</div><input id="edit-date" type="date" class="form-date" value="'+escA(editDate)+'"></div>'+
-    '<div><div class="field-label">Напомнить в</div>'+
+    '<div><div class="field-label">'+L.field_name+'</div><input id="edit-text" class="form-input" value="'+escA(editText)+'"></div>'+
+    '<div><div class="field-label">'+L.desc+'</div><textarea id="edit-desc" class="form-textarea" rows="3">'+esc(editDesc)+'</textarea></div>'+
+    '<div><div class="field-label">'+L.field_date+'</div><input id="edit-date" type="date" class="form-date" value="'+escA(editDate)+'"></div>'+
+    '<div><div class="field-label">'+L.field_remind+'</div>'+
       '<div style="display:flex;align-items:center;gap:10px">'+
         '<input id="edit-reminder" type="time" class="form-date" style="flex:1" value="'+escA(ed.reminderTime||task.reminderTime||'')+'">'+
-        (ed.reminderTime||task.reminderTime?'<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="clear-reminder">Убрать</button>':'')+
+        (ed.reminderTime||task.reminderTime?'<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="clear-reminder">'+L.btn_clear_rem+'</button>':'')+
       '</div>'+
-      '<div style="font-size:11px;color:var(--muted);margin-top:5px">Уведомление придёт в выбранное время в день задачи</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:5px">'+L.remind_hint+'</div>'+
     '</div>'+
-    '<div><div class="field-label">Приоритет</div><div class="pri-picker">'+priBtns+'</div></div>'+
+    '<div><div class="field-label">'+L.priority+'</div><div class="pri-picker">'+priBtns+'</div></div>'+
     renderAiBlock('edit')+
     '<div class="modal-actions">'+
-      '<button class="btn-outline" data-role="cancel-edit">Отмена</button>'+
-      '<button class="btn-primary" data-role="save-edit">Сохранить</button>'+
+      '<button class="btn-outline" data-role="cancel-edit">'+L.btn_cancel+'</button>'+
+      '<button class="btn-primary" data-role="save-edit">'+L.btn_save+'</button>'+
     '</div>';
 
   var body=state.confirmDelete?confirmBody:isEdit?editBody:viewBody;
@@ -603,12 +627,12 @@ function renderDaySheet(){
       '</div>';
     }
   } else {
-    taskRows='<p class="day-empty-hint">Задач на этот день нет</p>';
+    taskRows='<p class="day-empty-hint">'+L.no_tasks_day+'</p>';
   }
 
   var addForm=state.dsShowAdd
     ?'<div style="display:flex;gap:10px;align-items:center">'+
-        '<input id="ds-input" class="day-add-input" placeholder="Название задачи…" value="'+escA(state.dsAddText)+'">'+
+        '<input id="ds-input" class="day-add-input" placeholder="'+escA(L.task_ph)+'" value="'+escA(state.dsAddText)+'">'+
         '<div style="position:relative;width:48px;height:48px;flex:none">'+
           (state.dsAiRec?'<span style="position:absolute;inset:0;border-radius:50%;background:var(--accent);animation:pulse 1.8s ease-out infinite;pointer-events:none"></span>':'')+
           '<button class="day-add-mic" data-role="ds-ai-mic">'+(state.dsAiRec?'<span class="ai-mic-stop"></span>':state.dsAiProc?IC.spin(16):IC.mic(18,18))+'</button>'+
@@ -617,8 +641,8 @@ function renderDaySheet(){
       '<div><div class="field-label">Приоритет</div><div class="pri-picker">'+
         PRI_ORDER.map(function(k){ return '<button class="pri-pick-btn'+(state.dsAddPri===k?' sel':'')+'" data-pri="'+k+'" data-role="ds-set-pri">'+PRI_LABEL[k]+'</button>'; }).join('')+
       '</div></div>'+
-      '<button class="btn-primary" style="width:100%" data-role="ds-add-task">Добавить задачу</button>'
-    :'<button class="btn-outline" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" data-role="ds-toggle-add">'+IC.plus+' Добавить задачу</button>';
+      '<button class="btn-primary" style="width:100%" data-role="ds-add-task">'+L.btn_add+'</button>'
+    :'<button class="btn-outline" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" data-role="ds-toggle-add">'+IC.plus+' '+L.btn_add+'</button>';
 
   return '<div class="overlay">'+
     '<div class="scrim" data-role="day-close"'+sa+'></div>'+
@@ -637,24 +661,34 @@ function renderDaySheet(){
 function renderSettings(){
   if(!state.settings) return '';
   var hasSpeech=!!SpeechRec;
+  var langs=[['ru','RU 🇷🇺'],['en','EN 🇬🇧'],['uk','UA 🇺🇦'],['de','DE 🇩🇪'],['fr','FR 🇫🇷']];
+  var langBtns=langs.map(function(pair){
+    var code=pair[0],label=pair[1];
+    var active=state.lang===code;
+    return '<button class="pri-pick-btn'+(active?' sel':'')+'" data-role="set-lang" data-lang="'+code+'" style="font-size:13px;padding:8px 10px">'+label+'</button>';
+  }).join('');
   return '<div class="overlay" style="z-index:40">'+
     '<div class="scrim" data-role="settings-close"></div>'+
     '<div class="sheet" style="animation:sheetup .28s cubic-bezier(.2,.8,.2,1) both">'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+
-        '<div style="font-size:17px;font-weight:800;color:var(--text)">Настройки</div>'+
-        '<div class="info-box ok">✓ Claude ИИ подключён через Cloudflare Worker</div>'+
+        '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.settings+'</div>'+
+        '<div class="info-box ok">'+L.ai_conn+'</div>'+
         '<div class="info-box '+(hasSpeech?'ok':'err')+'">'+
-          (hasSpeech?'✓ Голосовой ввод доступен':'✗ Голосовой ввод недоступен — используйте Safari на iPhone')+
+          (hasSpeech?L.voice_ok:L.voice_err)+
         '</div>'+
         (!('Notification' in window) ? '' :
           Notification.permission==='granted' ?
             '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-push">'+
-              (state.pushStatus==='ok'?'✓ Push-уведомления подключены':state.pushStatus==='loading'?'⏳ Подключение...':state.pushStatus==='error'?'⚠️ Ошибка подключения — нажмите ещё раз':'📲 Подключить push-уведомления')+
+              (state.pushStatus==='ok'?L.push_ok:state.pushStatus==='loading'?L.push_loading:state.pushStatus==='error'?L.push_err:L.push_connect)+
             '</button>' :
-            '<div class="info-box" style="margin-bottom:10px">🔔 Разрешение на уведомления запросится автоматически когда вы установите напоминание на задачу</div>'
+            '<div class="info-box" style="margin-bottom:10px">'+L.notif_auto+'</div>'
         )+
-        '<button class="btn-outline" style="width:100%" data-role="settings-clear">Очистить все данные</button>'+
+        '<div style="margin-bottom:10px">'+
+          '<div class="field-label">'+L.lang_label+'</div>'+
+          '<div class="pri-picker" style="flex-wrap:wrap">'+langBtns+'</div>'+
+        '</div>'+
+        '<button class="btn-outline" style="width:100%" data-role="settings-clear">'+L.btn_clear_data+'</button>'+
       '</div>'+
     '</div></div>';
 }
@@ -712,7 +746,7 @@ function renderDueBanner(){
   return '<div class="due-banner">'+
     '<div class="due-banner-hd">'+
       '<span style="font-size:18px">🔔</span>'+
-      '<span class="due-banner-title">'+(items.length===1?'НАПОМИНАНИЕ':'НАПОМИНАНИЯ')+' — СЕЙЧАС</span>'+
+      '<span class="due-banner-title">'+(items.length===1?L.rem_single:L.rem_multi)+L.rem_now+'</span>'+
       '<button class="due-banner-close" data-role="close-due-banner">'+IC.close+'</button>'+
     '</div>'+
     items.map(function(t){
@@ -729,21 +763,19 @@ function renderSelectBar(){
   if(!state.selectMode) return '';
   var cnt=Object.keys(state.selected).length;
   return '<div class="select-bar">'+
-    '<span class="sel-count">'+(cnt?'Выбрано: '+cnt:'Нажмите на задачи')+'</span>'+
-    (cnt?'<button class="btn-danger" style="flex:none;padding:10px 16px" data-role="bulk-delete">'+IC.trash+' Удалить '+cnt+'</button>':'')+
+    '<span class="sel-count">'+(cnt?L.selected+cnt:L.tap_sel)+'</span>'+
+    (cnt?'<button class="btn-danger" style="flex:none;padding:10px 16px" data-role="bulk-delete">'+IC.trash+' '+L.del_n+cnt+'</button>':'')+
   '</div>';
 }
 
 function renderBottomNav(){
   return '<div class="bottom-nav">'+
-    '<button class="nav-btn'+(state.view==='list'?' active':'')+'" data-role="nav-list">'+IC.list+'<span>Список</span></button>'+
-    '<button class="nav-btn'+(state.view==='calendar'?' active':'')+'" data-role="nav-cal">'+IC.cal+'<span>Календарь</span></button>'+
+    '<button class="nav-btn'+(state.view==='list'?' active':'')+'" data-role="nav-list">'+IC.list+'<span>'+L.nav_list+'</span></button>'+
+    '<button class="nav-btn'+(state.view==='calendar'?' active':'')+'" data-role="nav-cal">'+IC.cal+'<span>'+L.nav_cal+'</span></button>'+
   '</div>';
 }
 
 /* ── Main render ── */
-var EMPTY_HINTS={day:'Сегодня задач нет — нажмите микрофон, чтобы добавить голосом',week:'Задач на эту неделю нет',month:'Задач на этот месяц нет'};
-
 function render(){
   var savedScroll=0;
   var sheetEl=document.querySelector('.sheet-body');
@@ -753,7 +785,7 @@ function render(){
   app.dataset.theme=state.theme;
 
   var activeTasks=state.sections[state.tab]||[];
-  var activeTitle='Сегодня';
+  var activeTitle=L.tab_day;
   for(var i=0;i<TAB_META.length;i++) if(TAB_META[i].key===state.tab){activeTitle=TAB_META[i].title;break;}
   var ss=anim.summary?' style="animation:fadein .3s ease both"':'';
 
@@ -764,11 +796,11 @@ function render(){
   /* Header: normal vs selectMode */
   var hdr = state.selectMode
     ? '<div class="screen-header">'+
-        '<div><div class="screen-title">Выбор задач</div><div class="screen-subtitle">Удерживайте или нажмите</div></div>'+
-        '<div class="hdr-btns"><button class="btn-outline" style="padding:8px 16px;border-radius:20px;font-size:13px" data-role="exit-select">Готово</button></div>'+
+        '<div><div class="screen-title">'+L.select_hd+'</div><div class="screen-subtitle">'+L.select_hint+'</div></div>'+
+        '<div class="hdr-btns"><button class="btn-outline" style="padding:8px 16px;border-radius:20px;font-size:13px" data-role="exit-select">'+L.select_done+'</button></div>'+
       '</div>'
     : '<div class="screen-header">'+
-        '<div><div class="screen-title">Мои задачи</div><div class="screen-subtitle">'+todayLabel()+'</div></div>'+
+        '<div><div class="screen-title">'+L.app_name+'</div><div class="screen-subtitle">'+todayLabel()+'</div></div>'+
         '<div class="hdr-btns">'+
           '<button class="icon-btn active" data-role="toggle-settings" title="Настройки">'+IC.gear+'</button>'+
           '<button class="icon-btn'+(activeTasks.length&&state.view==='list'?' ':' ')+'" data-role="enter-select" title="Выбрать задачи" style="'+(activeTasks.length&&state.view==='list'?'':'opacity:.4;pointer-events:none')+'">'+IC.sel+'</button>'+
@@ -778,7 +810,7 @@ function render(){
 
   var answerCard=state.aiAnswer
     ?'<div class="ai-answer-card">'+
-        '<div class="ai-card-hd">'+IC.spark('style="color:var(--accent-ink)"')+'<span class="ai-card-label">ИИ-ОТВЕТ</span>'+
+        '<div class="ai-card-hd">'+IC.spark('style="color:var(--accent-ink)"')+'<span class="ai-card-label">'+L.ai_ans_label+'</span>'+
         '<button class="close-btn" style="margin-left:auto" data-role="close-answer">'+IC.close+'</button></div>'+
         '<p class="ai-answer-txt">'+esc(state.aiAnswer)+'</p>'+
       '</div>'
@@ -787,8 +819,8 @@ function render(){
   var listContent=
     '<div class="scroll-area" style="padding-bottom:'+(state.selectMode?'140px':'80px')+'">'+
       (state.processing
-        ?'<div class="ai-proc-card">'+IC.spin(18)+'<span>Обрабатываю через Claude — это займёт пару секунд…</span></div>'
-        :'<div class="ai-card"'+ss+'><div class="ai-card-hd">'+IC.spark('style="color:var(--accent-ink)"')+'<span class="ai-card-label">ИИ-РЕЗЮМЕ</span><span class="ai-card-count">'+totalTasks()+' задач</span></div><p class="ai-card-text">'+esc(state.summary)+'</p></div>')+
+        ?'<div class="ai-proc-card">'+IC.spin(18)+'<span>'+L.ai_proc_long+'</span></div>'
+        :'<div class="ai-card"'+ss+'><div class="ai-card-hd">'+IC.spark('style="color:var(--accent-ink)"')+'<span class="ai-card-label">'+L.ai_label+'</span><span class="ai-card-count">'+totalTasks()+' '+L.tasks_word+'</span></div><p class="ai-card-text">'+esc(state.summary)+'</p></div>')+
       answerCard+
       renderDueBanner()+
       '<div class="tabs">'+TAB_META.map(function(m){
@@ -844,7 +876,7 @@ function cancelEdit(){ syncEdit(); state.modalMode='view'; state.edit=null; rend
 function saveEdit(){
   syncEdit(); var m=state.modal,e=state.edit;
   if(m&&e){
-    var text=(e.text||'').trim()||'Без названия';
+    var text=(e.text||'').trim()||L.untitled;
     var newSec=e.date?dateToSection(e.date):m.section;
     var patch={text:text,desc:e.desc,priority:e.priority,date:e.date,reminderTime:e.reminderTime||''};
     if(newSec!==m.section){
@@ -891,7 +923,7 @@ function onFabMic(){
     if(SpeechRec){
       recTranscript='';
       var rec=new SpeechRec();
-      rec.lang='ru-RU'; rec.continuous=true; rec.interimResults=true;
+      rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
       rec.onresult=function(e){
         var interim='', final='';
         for(var i=0;i<e.results.length;i++){
@@ -918,14 +950,15 @@ function processTranscript(transcript){
   var today=todayStr();
   var existingTasks=allTasks().map(function(t){return {text:t.text,date:t.date||''};});
   var prompt=
-    'Сегодня '+today+'. Голосовое сообщение: "'+transcript+'".\n'+
-    'Задачи пользователя: '+JSON.stringify(existingTasks)+'.\n\n'+
-    'Определи: это добавление задач (одной или нескольких) — или вопрос/поиск по существующим задачам?\n\n'+
-    'Если ДОБАВЛЕНИЕ — извлеки ВСЕ задачи из текста (их может быть несколько, разбей по датам).\n'+
-    'Верни: {"type":"add","tasks":[{"text":"название без дат, времени и вводных слов","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM или пустая строка если время не указано"}]}\n\n'+
-    'Если ВОПРОС/ПОИСК — найди ответ в задачах пользователя и дай краткий ответ.\n'+
-    'Верни: {"type":"query","answer":"текст ответа по-русски","section":"day|week|month или пусто"}\n\n'+
-    'Верни ТОЛЬКО JSON, без лишнего текста.';
+    'Today is '+today+'. Voice message: "'+transcript+'".\n'+
+    'User tasks: '+JSON.stringify(existingTasks)+'.\n\n'+
+    'IMPORTANT: Respond in the same language as the voice message.\n\n'+
+    'Decide: is this adding tasks (one or more) — or a question/search about existing tasks?\n\n'+
+    'If ADDING — extract ALL tasks from the text (there may be several, split by dates).\n'+
+    'Return: {"type":"add","tasks":[{"text":"task name without dates, times or filler words","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty string if no time"}]}\n\n'+
+    'If QUESTION/SEARCH — find the answer in the user tasks and give a brief answer.\n'+
+    'Return: {"type":"query","answer":"answer text in the same language as the voice message","section":"day|week|month or empty"}\n\n'+
+    'Return ONLY JSON, no extra text.';
   callClaude(prompt,function(err,data){
     state.processing=false;
     if(err||!data||!data.type){
@@ -938,7 +971,7 @@ function processTranscript(transcript){
     if(data.type==='add'&&data.tasks&&data.tasks.length){
       addTasksBatch(data.tasks);
     } else if(data.type==='query'){
-      state.aiAnswer=data.answer||'Задача не найдена.';
+      state.aiAnswer=data.answer||'—';
       if(data.section&&state.sections[data.section]) state.tab=data.section;
       state.view='list';
       anim.summary=true; render();
@@ -961,8 +994,8 @@ function addTasksBatch(tasks){
     anim.taskIds[newTask.id]=true; lastSec=sec;
   });
   state.aiAnswer=null;
-  if(tasks.length===1) state.summary='Добавлена задача «'+tasks[0].text+'».';
-  else state.summary='Добавлено '+tasks.length+' задач(и) — каждая в нужный день.';
+  if(tasks.length===1) state.summary=L.summary_1+tasks[0].text+L.summary_1e;
+  else state.summary=L.summary_n_pre+tasks.length+L.summary_n_suf;
   anim.summary=true; state.tab=lastSec; state.view='list'; render(); scheduleReminders(); syncRemindersToServer();
   if(tasks.some(function(t){return t.reminderTime;})) ensureNotifPermission();
 }
@@ -975,7 +1008,7 @@ function onAiMic(){
     if(SpeechRec){
       modalTranscript='';
       var rec=new SpeechRec();
-      rec.lang='ru-RU'; rec.continuous=false; rec.interimResults=false;
+      rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=false; rec.interimResults=false;
       rec.onresult=function(e){ modalTranscript=e.results[0][0].transcript; };
       rec.onerror=function(){};
       rec.onend=function(){ if(state.aiRec){ state.aiRec=false; state.aiProc=true; modalRecObj=null; render(); aiApply(modalTranscript); } };
@@ -996,10 +1029,10 @@ function aiApply(transcript){
   var src=isEdit?(state.edit||{}):currentTask();
   if(!src){state.aiProc=false;render();return;}
   var today=todayStr();
-  var prompt='Задача: "'+((src.text)||'')+'". Голосовая инструкция: "'+transcript+'". Сегодня '+today+'. Верни ТОЛЬКО JSON: {"text":"новое название","priority":"high|mid|low","desc":"описание или пустая строка","date":"YYYY-MM-DD или пустая строка"}.';
+  var prompt='Task: "'+((src.text)||'')+'". Voice instruction: "'+transcript+'". Today is '+today+'. Respond in the same language as the voice instruction. Return ONLY JSON: {"text":"new task name","priority":"high|mid|low","desc":"description or empty string","date":"YYYY-MM-DD or empty string"}.';
   callClaude(prompt,function(err,data){
-    if(err||!data){ state.aiProc=false; state.aiNote='Ошибка соединения с Claude'; anim.aiNote=true; render(); }
-    else applyEdit(data,isEdit,m,'ИИ применил изменения');
+    if(err||!data){ state.aiProc=false; state.aiNote='⚠️ Claude'; anim.aiNote=true; render(); }
+    else applyEdit(data,isEdit,m,'✓ AI');
   });
 }
 
@@ -1016,7 +1049,7 @@ function applyEdit(data,isEdit,m,note){
       return t.id===m.id?Object.assign({},t,{text:data.text||t.text,desc:data.desc!=null?data.desc:t.desc,priority:data.priority||t.priority,date:data.date!=null?data.date:t.date}):t;
     });
   }
-  state.aiProc=false; state.aiNote=note||'Изменения применены'; anim.aiNote=true; render();
+  state.aiProc=false; state.aiNote=note||'✓ AI'; anim.aiNote=true; render();
 }
 
 /* ── Settings ── */
@@ -1048,7 +1081,7 @@ function onDsAiMic(){
     if(SpeechRec){
       dsTranscript='';
       var rec=new SpeechRec();
-      rec.lang='ru-RU'; rec.continuous=false; rec.interimResults=false;
+      rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=false; rec.interimResults=false;
       rec.onresult=function(e){ dsTranscript=e.results[0][0].transcript; };
       rec.onerror=function(){};
       rec.onend=function(){ if(state.dsAiRec){ state.dsAiRec=false; state.dsAiProc=true; dsRecObj=null; render(); dsFillFromTranscript(dsTranscript); } };
@@ -1063,7 +1096,7 @@ function onDsAiMic(){
 function dsFillFromTranscript(transcript){
   var today=todayStr();
   if(transcript){
-    var prompt='Из голосовой записи извлеки название задачи. Сегодня '+today+'. Верни ТОЛЬКО JSON: {"text":"название задачи","priority":"high|mid|low"}. Запись: "'+transcript+'"';
+    var prompt='Extract the task name from this voice note. Today is '+today+'. Respond in the same language as the voice note. Return ONLY JSON: {"text":"task name","priority":"high|mid|low"}. Voice note: "'+transcript+'"';
     callClaude(prompt,function(err,data){
       state.dsAiProc=false;
       if(err||!data){ state.dsAddText=localCleanText(transcript)||transcript; }
@@ -1154,6 +1187,7 @@ appEl.addEventListener('click',function(e){
     case 'settings-clear':      clearAllData(); break;
     case 'settings-notif':      requestNotifPermission(); break;
     case 'settings-push':       subscribePush(); break;
+    case 'set-lang':            applyLang(el.dataset.lang); break;
     case 'set-tab':             setTab(el.dataset.tab); break;
     case 'toggle-done':         toggleDone(sec,id); break;
     case 'cycle-pri':           cyclePri(sec,id); break;
@@ -1318,6 +1352,7 @@ if('serviceWorker' in navigator){
 
 /* ── Init ── */
 loadStorage();
+applyLang(state.lang, true);
 render();
 subscribePush();
 checkReminders();
