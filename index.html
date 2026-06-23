@@ -286,6 +286,12 @@ html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webki
 .ai-answer-card { background:var(--accent-soft); border:1.5px solid var(--accent); border-radius:16px; padding:15px 16px; animation:fadein .3s ease both; }
 .ai-answer-card .ai-card-hd { margin-bottom:8px; }
 .ai-answer-txt  { font-size:14.5px; line-height:1.6; color:var(--text); font-weight:600; }
+.due-banner { background:var(--pri-high-ink); color:#fff; border-radius:16px; padding:14px 16px; animation:fadein .3s ease both; display:flex; flex-direction:column; gap:8px; }
+.due-banner-hd { display:flex; align-items:center; gap:8px; }
+.due-banner-title { font-size:12px; font-weight:800; letter-spacing:.07em; flex:1; }
+.due-banner-close { width:26px; height:26px; border-radius:50%; border:none; background:rgba(255,255,255,.22); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; flex:none; }
+.due-banner-item { background:rgba(255,255,255,.15); border-radius:10px; padding:9px 12px; font-size:13.5px; font-weight:700; cursor:pointer; }
+.due-banner-item-time { font-size:11px; font-weight:600; opacity:.8; margin-top:2px; }
 </style>
 </head>
 <body>
@@ -326,6 +332,7 @@ var MON_RU_G  = ['января','февраля','марта','апреля','м
 var DOW_FULL  = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 var STORE_KEY = 'vtodo-v2';
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
+var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
 var _uid=0;
@@ -361,7 +368,7 @@ var state={
   calSelected:null,
   daySheet:null,
   dsAddText:'', dsAddPri:'mid', dsAiRec:false, dsAiProc:false, dsShowAdd:false,
-  selectMode:false, selected:{}, aiAnswer:null,
+  selectMode:false, selected:{}, aiAnswer:null, dueReminders:null,
 };
 
 var timerIv=null, aiTimeout=null, poolIdx=0, drag=null, dsAiTimeout=null, swReg=null;
@@ -693,6 +700,24 @@ function renderFab(){
   '</div>';
 }
 
+function renderDueBanner(){
+  var items=state.dueReminders; if(!items||!items.length) return '';
+  return '<div class="due-banner">'+
+    '<div class="due-banner-hd">'+
+      '<span style="font-size:18px">🔔</span>'+
+      '<span class="due-banner-title">'+(items.length===1?'НАПОМИНАНИЕ':'НАПОМИНАНИЯ')+' — СЕЙЧАС</span>'+
+      '<button class="due-banner-close" data-role="close-due-banner">'+IC.close+'</button>'+
+    '</div>'+
+    items.map(function(t){
+      var sec=findTaskSection(t);
+      return '<div class="due-banner-item" data-role="open-modal" data-id="'+t.id+'" data-sec="'+sec+'">'+
+        esc(t.text)+
+        '<div class="due-banner-item-time">'+dateLabel(t.date)+(t.reminderTime?' · '+t.reminderTime:'')+'</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+}
+
 function renderSelectBar(){
   if(!state.selectMode) return '';
   var cnt=Object.keys(state.selected).length;
@@ -758,6 +783,7 @@ function render(){
         ?'<div class="ai-proc-card">'+IC.spin(18)+'<span>Обрабатываю через Claude — это займёт пару секунд…</span></div>'
         :'<div class="ai-card"'+ss+'><div class="ai-card-hd">'+IC.spark('style="color:var(--accent-ink)"')+'<span class="ai-card-label">ИИ-РЕЗЮМЕ</span><span class="ai-card-count">'+totalTasks()+' задач</span></div><p class="ai-card-text">'+esc(state.summary)+'</p></div>')+
       answerCard+
+      renderDueBanner()+
       '<div class="tabs">'+TAB_META.map(function(m){
         return '<button class="tab'+(state.tab===m.key?' active':'')+'" data-role="set-tab" data-tab="'+m.key+'"><span class="tab-label">'+m.title+'</span><span class="tab-count">'+state.sections[m.key].length+'</span></button>';
       }).join('')+'</div>'+
@@ -823,7 +849,7 @@ function saveEdit(){
       state.sections[m.section]=state.sections[m.section].map(function(t){return t.id===m.id?Object.assign({},t,patch):t;});
     }
   }
-  state.modalMode='view'; state.edit=null; render(); scheduleReminders();
+  state.modalMode='view'; state.edit=null; render(); scheduleReminders(); syncRemindersToServer();
 }
 function setPri(pri){ syncEdit(); if(state.edit) state.edit.priority=pri; render(); }
 function toggleDoneModal(){ var m=state.modal; if(m) toggleDone(m.section,m.id); else render(); }
@@ -929,7 +955,7 @@ function addTasksBatch(tasks){
   state.aiAnswer=null;
   if(tasks.length===1) state.summary='Добавлена задача «'+tasks[0].text+'».';
   else state.summary='Добавлено '+tasks.length+' задач(и) — каждая в нужный день.';
-  anim.summary=true; state.tab=lastSec; state.view='list'; render();
+  anim.summary=true; state.tab=lastSec; state.view='list'; render(); scheduleReminders(); syncRemindersToServer();
 }
 
 /* ── Modal AI ── */
@@ -1148,6 +1174,7 @@ appEl.addEventListener('click',function(e){
     case 'select-task':         toggleSelectTask(id,sec); break;
     case 'bulk-delete':         bulkDelete(); break;
     case 'close-answer':        state.aiAnswer=null; render(); break;
+    case 'close-due-banner':    state.dueReminders=null; render(); break;
     case 'clear-reminder':      syncEdit(); if(state.edit) state.edit.reminderTime=''; render(); break;
     case 'drag-handle':         break; /* handled by touch/drag events */
   }
@@ -1164,34 +1191,83 @@ document.addEventListener('keydown',function(e){
   }
 });
 
+/* ── Push-подписка ── */
+function urlB64toUint8(str){
+  str=str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4) str+='=';
+  var raw=atob(str); var arr=new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i); return arr;
+}
+function getDeviceId(){
+  var id=localStorage.getItem('vtodo-device-id');
+  if(!id){ id=Date.now().toString(36)+Math.random().toString(36).slice(2); localStorage.setItem('vtodo-device-id',id); }
+  return id;
+}
+function subscribePush(){
+  if(!VAPID_PUBLIC_KEY||!('PushManager' in window)||!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(function(reg){
+    reg.pushManager.getSubscription().then(function(existing){
+      var send=function(sub){
+        fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({userId:getDeviceId(),subscription:sub.toJSON()})
+        }).catch(function(){});
+      };
+      if(existing){ send(existing); return; }
+      if(Notification.permission!=='granted') return;
+      reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64toUint8(VAPID_PUBLIC_KEY)})
+        .then(send).catch(function(e){ console.log('Push subscribe:',e); });
+    });
+  });
+}
+function syncRemindersToServer(){
+  if(!VAPID_PUBLIC_KEY||!navigator.onLine) return;
+  var userId=getDeviceId();
+  allTasks().forEach(function(task){
+    if(task.reminderTime&&task.date&&!task.done){
+      fetch(WORKER_URL+'/remind',{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({userId:userId,taskId:task.id,text:task.text,date:task.date,reminderTime:task.reminderTime})
+      }).catch(function(){});
+    } else {
+      fetch(WORKER_URL+'/unremind',{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({userId:userId,taskId:task.id})
+      }).catch(function(){});
+    }
+  });
+}
+
 /* ── Notifications + Service Worker ── */
 var FIRED_KEY = 'vtodo-fired';
 
 function requestNotifPermission(){
   if(!('Notification' in window)) return;
-  if(Notification.permission==='default') Notification.requestPermission();
+  if(Notification.permission==='default'){
+    Notification.requestPermission().then(function(p){ if(p==='granted') subscribePush(); });
+  }
 }
 
 function getFired(){ try{ return JSON.parse(localStorage.getItem(FIRED_KEY)||'{}'); }catch(e){ return {}; } }
 function markFired(taskId, rt){ var f=getFired(); f[taskId+':'+rt]=Date.now(); try{ localStorage.setItem(FIRED_KEY,JSON.stringify(f)); }catch(e){} }
 
-/* Проверка напоминаний в главном потоке (надёжно когда приложение открыто) */
+/* Проверка напоминаний — окно 24 часа, баннер всегда, системное если разрешено */
 function checkReminders(){
-  if(Notification.permission!=='granted') return;
-  var now=Date.now(); var fired=getFired();
+  var now=Date.now(); var fired=getFired(); var due=[];
   allTasks().forEach(function(task){
     if(!task.reminderTime||!task.date||task.done) return;
     var key=task.id+':'+task.reminderTime;
     if(fired[key]) return;
     var ts=new Date(task.date+'T'+task.reminderTime).getTime();
-    if(ts<=now && ts>now-120000){
-      markFired(task.id,task.reminderTime);
-      try{ new Notification(task.text,{body:'Напоминание • '+dateLabel(task.date),icon:'icon.png',tag:task.id}); }catch(e){}
-    }
+    if(ts<=now && ts>now-86400000){ due.push(task); markFired(task.id,task.reminderTime); }
   });
+  if(!due.length) return;
+  /* Системное уведомление если разрешено */
+  if(Notification.permission==='granted'){
+    due.forEach(function(task){
+      try{ new Notification(task.text,{body:'Напоминание · '+dateLabel(task.date)+' '+task.reminderTime,icon:'icon.png',tag:task.id}); }catch(e){}
+    });
+  }
+  /* Баннер внутри приложения — всегда */
+  state.dueReminders=due; render();
 }
 
-/* Проверяем каждые 30 секунд и при возврате в приложение */
 setInterval(checkReminders, 30000);
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') checkReminders(); });
 
@@ -1223,6 +1299,7 @@ if('serviceWorker' in navigator){
 loadStorage();
 render();
 requestNotifPermission();
+subscribePush();
 checkReminders();
 </script>
 </body>
