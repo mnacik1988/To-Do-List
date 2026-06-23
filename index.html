@@ -647,9 +647,11 @@ function renderSettings(){
         '<div class="info-box '+(hasSpeech?'ok':'err')+'">'+
           (hasSpeech?'✓ Голосовой ввод доступен':'✗ Голосовой ввод недоступен — используйте Safari на iPhone')+
         '</div>'+
-        '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-notif">'+
-          (('Notification' in window && Notification.permission==='granted') ? '✓ Уведомления включены' : '🔔 Включить уведомления')+
-        '</button>'+
+        (!('Notification' in window) ? '' :
+          Notification.permission==='granted' ?
+            '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-push">📲 Подключить push-уведомления</button>' :
+            '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-notif">🔔 Разрешить уведомления (шаг 1)</button>'
+        )+
         '<button class="btn-outline" style="width:100%" data-role="settings-clear">Очистить все данные</button>'+
       '</div>'+
     '</div></div>';
@@ -1147,6 +1149,7 @@ appEl.addEventListener('click',function(e){
     case 'settings-close':      closeSettings(); break;
     case 'settings-clear':      clearAllData(); break;
     case 'settings-notif':      requestNotifPermission(); break;
+    case 'settings-push':       subscribePush(); render(); break;
     case 'set-tab':             setTab(el.dataset.tab); break;
     case 'toggle-done':         toggleDone(sec,id); break;
     case 'cycle-pri':           cyclePri(sec,id); break;
