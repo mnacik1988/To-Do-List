@@ -634,8 +634,8 @@ function renderDaySheet(){
     ?'<div style="display:flex;gap:10px;align-items:center">'+
         '<input id="ds-input" class="day-add-input" placeholder="'+escA(L.task_ph)+'" value="'+escA(state.dsAddText)+'">'+
         '<div style="position:relative;width:48px;height:48px;flex:none">'+
-          (state.dsAiRec?'<span style="position:absolute;inset:0;border-radius:50%;background:var(--accent);animation:pulse 1.8s ease-out infinite;pointer-events:none"></span>':'')+
-          '<button class="day-add-mic" data-role="ds-ai-mic">'+(state.dsAiRec?'<span class="ai-mic-stop"></span>':state.dsAiProc?IC.spin(16):IC.mic(18,18))+'</button>'+
+          (state.recording?'<span style="position:absolute;inset:0;border-radius:50%;background:var(--accent);animation:pulse 1.8s ease-out infinite;pointer-events:none"></span>':'')+
+          '<button class="day-add-mic" data-role="ds-ai-mic">'+(state.recording?'<span class="ai-mic-stop"></span>':state.processing?IC.spin(16):IC.mic(18,18))+'</button>'+
         '</div>'+
       '</div>'+
       '<div><div class="field-label">Приоритет</div><div class="pri-picker">'+
@@ -947,6 +947,7 @@ function onFabMic(){
 }
 
 function processTranscript(transcript){
+  var dayDate=state.daySheet?state.daySheet.date:null;
   var today=todayStr();
   var existingTasks=allTasks().map(function(t){return {text:t.text,date:t.date||''};});
   var prompt=
@@ -962,13 +963,15 @@ function processTranscript(transcript){
   callClaude(prompt,function(err,data){
     state.processing=false;
     if(err||!data||!data.type){
-      var localDate=localParseDate(transcript);
+      var localDate=dayDate||localParseDate(transcript);
       var localText=localCleanText(transcript)||transcript;
       var localTime=localParseTime(transcript);
+      if(dayDate) state.dsShowAdd=false;
       addTasksBatch([{text:localText,priority:'mid',date:localDate,reminderTime:localTime}]);
       return;
     }
     if(data.type==='add'&&data.tasks&&data.tasks.length){
+      if(dayDate){ data.tasks.forEach(function(t){ t.date=dayDate; }); state.dsShowAdd=false; }
       addTasksBatch(data.tasks);
     } else if(data.type==='query'){
       state.aiAnswer=data.answer||'—';
@@ -976,9 +979,10 @@ function processTranscript(transcript){
       state.view='list';
       anim.summary=true; render();
     } else {
-      var localDate=localParseDate(transcript);
+      var localDate=dayDate||localParseDate(transcript);
       var localText=localCleanText(transcript)||transcript;
       var localTime=localParseTime(transcript);
+      if(dayDate) state.dsShowAdd=false;
       addTasksBatch([{text:localText,priority:'mid',date:localDate,reminderTime:localTime}]);
     }
   });
@@ -1004,20 +1008,24 @@ function addTasksBatch(tasks){
 function onAiMic(){
   if(state.aiProc) return;
   if(!state.aiRec){
-    syncEdit(); state.aiRec=true; state.aiNote=''; render();
-    if(SpeechRec){
-      modalTranscript='';
-      var rec=new SpeechRec();
-      rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=false; rec.interimResults=false;
-      rec.onresult=function(e){ modalTranscript=e.results[0][0].transcript; };
-      rec.onerror=function(){};
-      rec.onend=function(){ if(state.aiRec){ state.aiRec=false; state.aiProc=true; modalRecObj=null; render(); aiApply(modalTranscript); } };
-      rec.start(); modalRecObj=rec;
-    }
+    if(!SpeechRec) return;
+    syncEdit(); state.aiNote=''; modalTranscript='';
+    var rec=new SpeechRec();
+    rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
+    rec.onresult=function(e){
+      var fin='';
+      for(var i=0;i<e.results.length;i++){ if(e.results[i].isFinal) fin+=e.results[i][0].transcript; }
+      if(fin) modalTranscript=fin;
+    };
+    rec.onerror=function(ev){ if(ev.error==='no-speech'||ev.error==='aborted') return; state.aiRec=false; state.aiProc=false; modalRecObj=null; render(); };
+    rec.onend=function(){
+      if(state.aiRec){ try{ rec.start(); }catch(e){ state.aiRec=false; state.aiProc=true; modalRecObj=null; render(); aiApply(modalTranscript); } }
+    };
+    rec.start(); modalRecObj=rec;
+    state.aiRec=true; render();
   } else {
     syncEdit(); state.aiRec=false; state.aiProc=true;
     if(modalRecObj){ modalRecObj.stop(); modalRecObj=null; }
-    else{ render(); aiTimeout=setTimeout(function(){aiApply('');},1800); }
     render(); if(modalTranscript) aiApply(modalTranscript);
   }
 }
@@ -1074,53 +1082,6 @@ function dsAddTask(){
   state.sections[sec]=[newTask].concat(state.sections[sec]);
   state.dsAddText=''; state.dsAddPri='mid'; state.dsShowAdd=false;
   saveStorage(); scheduleReminders(); syncRemindersToServer(); render();
-}
-function onDsAiMic(){
-  if(state.dsAiProc) return; syncDsInput();
-  if(!state.dsAiRec){
-    if(!SpeechRec) return;
-    dsTranscript='';
-    var rec=new SpeechRec();
-    rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
-    rec.onresult=function(e){
-      var fin='';
-      for(var i=0;i<e.results.length;i++){ if(e.results[i].isFinal) fin+=e.results[i][0].transcript; }
-      if(fin) dsTranscript=fin;
-    };
-    rec.onerror=function(ev){ if(ev.error==='no-speech'||ev.error==='aborted') return; state.dsAiRec=false; state.dsAiProc=false; dsRecObj=null; render(); };
-    rec.onend=function(){
-      if(state.dsAiRec){ try{ rec.start(); }catch(e){ state.dsAiRec=false; state.dsAiProc=true; dsRecObj=null; render(); dsFillFromTranscript(dsTranscript); } }
-    };
-    rec.start(); dsRecObj=rec;
-    state.dsAiRec=true; render();
-  } else {
-    state.dsAiRec=false; state.dsAiProc=true;
-    if(dsRecObj){ dsRecObj.stop(); dsRecObj=null; }
-    render(); dsFillFromTranscript(dsTranscript);
-  }
-}
-function dsFillFromTranscript(transcript){
-  var today=todayStr();
-  if(transcript){
-    var prompt='Extract the task name from this voice note. Today is '+today+'. Respond in the same language as the voice note. Return ONLY JSON: {"text":"task name","priority":"high|mid|low"}. Voice note: "'+transcript+'"';
-    callClaude(prompt,function(err,data){
-      state.dsAiProc=false;
-      var text;
-      if(err||!data){ text=(localCleanText(transcript)||transcript).trim(); }
-      else{ text=((data.text||localCleanText(transcript)||transcript)+'').trim(); state.dsAddPri=data.priority||state.dsAddPri; }
-      if(text&&state.daySheet){
-        var date=state.daySheet.date; var sec=dateToSection(date);
-        var newTask=T(text,state.dsAddPri,false,'',date);
-        anim.taskIds[newTask.id]=true;
-        state.sections[sec]=[newTask].concat(state.sections[sec]);
-        state.dsAddText=''; state.dsAddPri='mid'; state.dsShowAdd=false;
-        saveStorage(); scheduleReminders(); syncRemindersToServer();
-      }
-      render();
-    });
-  } else {
-    state.dsAiProc=false; render();
-  }
 }
 
 /* ── Drag-and-drop (desktop, HTML5) ── */
@@ -1228,7 +1189,7 @@ appEl.addEventListener('click',function(e){
     case 'ds-toggle-add':       syncDsInput(); state.dsShowAdd=true; render(); break;
     case 'ds-set-pri':          dsSetPri(el.dataset.pri); break;
     case 'ds-add-task':         dsAddTask(); break;
-    case 'ds-ai-mic':           onDsAiMic(); break;
+    case 'ds-ai-mic':           onFabMic(); break;
     case 'enter-select':        enterSelectMode(); break;
     case 'exit-select':         exitSelectMode(); break;
     case 'select-task':         toggleSelectTask(id,sec); break;
