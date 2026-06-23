@@ -848,14 +848,14 @@ function onFabMic(){
         if(el){ el.className='fab-transcript'; el.textContent=recTranscript; }
       };
       rec.onerror=function(e){ if(e.error==='no-speech'||e.error==='aborted') return; clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); };
-      rec.onend=function(){ if(state.recording){ try{ rec.start(); }catch(e){} } else { recObj=null; if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); } else render(); } };
+      rec.onend=function(){ if(state.recording){ try{ rec.start(); }catch(e){ clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); } } else { recObj=null; if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); } else render(); } };
       rec.start(); recObj=rec;
     }
     render();
   } else {
     clearInterval(timerIv); timerIv=null;
     if(recObj){ state.recording=false; recObj.stop(); }
-    else{ state.recording=false; state.processing=true; render(); setTimeout(function(){ addNewTask('Тестовая задача','mid',todayStr()); },1200); }
+    else{ state.recording=false; state.processing=true; render(); setTimeout(function(){ addTasksBatch([{text:'Тестовая задача',priority:'mid',date:todayStr()}]); },1200); }
   }
 }
 
@@ -1028,7 +1028,9 @@ appEl.addEventListener('dragover',function(e){
   var sec=row.dataset.sec,id=row.dataset.id; if(!drag||drag.section!==sec||drag.id===id) return;
   var arr=state.sections[sec].slice(); var from=-1,to=-1;
   for(var i=0;i<arr.length;i++){if(arr[i].id===drag.id)from=i;if(arr[i].id===id)to=i;}
-  if(from<0||to<0) return; var moved=arr.splice(from,1)[0]; arr.splice(to,0,moved); state.sections[sec]=arr; render();
+  if(from<0||to<0) return; var moved=arr.splice(from,1)[0]; arr.splice(to,0,moved); state.sections[sec]=arr;
+  var list=document.getElementById('task-list');
+  if(list) list.innerHTML=arr.map(function(t){return renderTaskRow(t,sec);}).join('');
 });
 document.addEventListener('dragend',function(){ if(!drag) return; drag=null; render(); });
 
