@@ -1084,7 +1084,7 @@ function onDsAiMic(){
       var rec=new SpeechRec();
       rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=false; rec.interimResults=false;
       rec.onresult=function(e){ dsTranscript=e.results[0][0].transcript; };
-      rec.onerror=function(){};
+      rec.onerror=function(){ state.dsAiRec=false; state.dsAiProc=false; dsRecObj=null; render(); };
       rec.onend=function(){ if(state.dsAiRec){ state.dsAiRec=false; state.dsAiProc=true; dsRecObj=null; render(); dsFillFromTranscript(dsTranscript); } };
       rec.start(); dsRecObj=rec;
     }
@@ -1102,6 +1102,7 @@ function dsFillFromTranscript(transcript){
       state.dsAiProc=false;
       if(err||!data){ state.dsAddText=localCleanText(transcript)||transcript; }
       else{ state.dsAddText=data.text||localCleanText(transcript)||transcript; state.dsAddPri=data.priority||state.dsAddPri; }
+      render(); // обновляем DOM до dsAddTask, иначе syncDsInput читает пустое поле
       dsAddTask();
     });
   } else {
