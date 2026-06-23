@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v1';
+var CACHE = 'vtodo-shell-v3';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */
@@ -70,6 +70,24 @@ self.addEventListener('message', function(e){
       delete pending[r.id];
     }, delay);
   });
+});
+
+/* ── Push: показываем уведомление когда приходит push от Cloudflare ── */
+self.addEventListener('push', function(e){
+  var data = {};
+  try { data = e.data.json(); } catch(err) {}
+  var n = data.notification || data;
+  var title = n.title || 'Напоминание';
+  var body  = n.body  || '';
+  e.waitUntil(
+    self.registration.showNotification(title, {
+      body: body,
+      icon: 'icon.png',
+      badge: 'icon.png',
+      tag: 'reminder',
+      renotify: true
+    })
+  );
 });
 
 self.addEventListener('notificationclick', function(e){
