@@ -647,6 +647,9 @@ function renderSettings(){
         '<div class="info-box '+(hasSpeech?'ok':'err')+'">'+
           (hasSpeech?'✓ Голосовой ввод доступен':'✗ Голосовой ввод недоступен — используйте Safari на iPhone')+
         '</div>'+
+        '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-notif">'+
+          (('Notification' in window && Notification.permission==='granted') ? '✓ Уведомления включены' : '🔔 Включить уведомления')+
+        '</button>'+
         '<button class="btn-outline" style="width:100%" data-role="settings-clear">Очистить все данные</button>'+
       '</div>'+
     '</div></div>';
@@ -1143,6 +1146,7 @@ appEl.addEventListener('click',function(e){
     case 'toggle-settings':     openSettings(); break;
     case 'settings-close':      closeSettings(); break;
     case 'settings-clear':      clearAllData(); break;
+    case 'settings-notif':      requestNotifPermission(); break;
     case 'set-tab':             setTab(el.dataset.tab); break;
     case 'toggle-done':         toggleDone(sec,id); break;
     case 'cycle-pri':           cyclePri(sec,id); break;
@@ -1239,8 +1243,9 @@ var FIRED_KEY = 'vtodo-fired';
 
 function requestNotifPermission(){
   if(!('Notification' in window)) return;
+  if(Notification.permission==='granted'){ subscribePush(); render(); return; }
   if(Notification.permission==='default'){
-    Notification.requestPermission().then(function(p){ if(p==='granted') subscribePush(); });
+    Notification.requestPermission().then(function(p){ if(p==='granted'){ subscribePush(); render(); } });
   }
 }
 
@@ -1298,7 +1303,6 @@ if('serviceWorker' in navigator){
 /* ── Init ── */
 loadStorage();
 render();
-requestNotifPermission();
 subscribePush();
 checkReminders();
 </script>
