@@ -1100,10 +1100,18 @@ function dsFillFromTranscript(transcript){
     var prompt='Extract the task name from this voice note. Today is '+today+'. Respond in the same language as the voice note. Return ONLY JSON: {"text":"task name","priority":"high|mid|low"}. Voice note: "'+transcript+'"';
     callClaude(prompt,function(err,data){
       state.dsAiProc=false;
-      if(err||!data){ state.dsAddText=localCleanText(transcript)||transcript; }
-      else{ state.dsAddText=data.text||localCleanText(transcript)||transcript; state.dsAddPri=data.priority||state.dsAddPri; }
-      render(); // обновляем DOM до dsAddTask, иначе syncDsInput читает пустое поле
-      dsAddTask();
+      var text;
+      if(err||!data){ text=(localCleanText(transcript)||transcript).trim(); }
+      else{ text=((data.text||localCleanText(transcript)||transcript)+'').trim(); state.dsAddPri=data.priority||state.dsAddPri; }
+      if(text&&state.daySheet){
+        var date=state.daySheet.date; var sec=dateToSection(date);
+        var newTask=T(text,state.dsAddPri,false,'',date);
+        anim.taskIds[newTask.id]=true;
+        state.sections[sec]=[newTask].concat(state.sections[sec]);
+        state.dsAddText=''; state.dsAddPri='mid'; state.dsShowAdd=false;
+        saveStorage(); scheduleReminders(); syncRemindersToServer();
+      }
+      render();
     });
   } else {
     state.dsAiProc=false; render();
