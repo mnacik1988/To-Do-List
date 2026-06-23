@@ -1215,7 +1215,6 @@ function getDeviceId(){
 }
 function subscribePush(){
   if(!VAPID_PUBLIC_KEY||!('PushManager' in window)||!('serviceWorker' in navigator)) return;
-  state.pushStatus='loading'; render();
   navigator.serviceWorker.ready.then(function(reg){
     reg.pushManager.getSubscription().then(function(existing){
       var send=function(sub){
@@ -1225,9 +1224,10 @@ function subscribePush(){
           .catch(function(){ state.pushStatus='error'; render(); });
       };
       if(existing){ send(existing); return; }
-      if(Notification.permission!=='granted'){ state.pushStatus=''; render(); return; }
+      if(Notification.permission!=='granted') return;
       reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64toUint8(VAPID_PUBLIC_KEY)})
-        .then(send).catch(function(e){ console.log('Push subscribe error:',e.message); state.pushStatus='error'; render(); });
+        .then(send)
+        .catch(function(e){ state.pushStatus='error'; render(); });
     });
   }).catch(function(e){ state.pushStatus='error'; render(); });
 }
@@ -1237,7 +1237,7 @@ function syncRemindersToServer(){
   allTasks().forEach(function(task){
     if(task.reminderTime&&task.date&&!task.done){
       fetch(WORKER_URL+'/remind',{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({userId:userId,taskId:task.id,text:task.text,date:task.date,reminderTime:task.reminderTime})
+        body:JSON.stringify({userId:userId,taskId:task.id,text:task.text,date:task.date,reminderTime:task.reminderTime,ts:new Date(task.date+'T'+task.reminderTime).getTime()})
       }).catch(function(){});
     } else {
       fetch(WORKER_URL+'/unremind',{method:'POST',headers:{'content-type':'application/json'},
