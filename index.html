@@ -927,6 +927,7 @@ function bulkDelete(){
 /* ── FAB + voice ── */
 function onFabMic(){
   if(state.processing) return;
+  if(state.voiceReply) unlockTts();
   if(!state.recording){
     state.recording=true; state.timer=0;
     timerIv=setInterval(function(){ state.timer++; var el=document.querySelector('.fab-timer'); if(el) el.textContent=fmtT(state.timer); },1000);
@@ -1072,9 +1073,17 @@ function applyEdit(data,isEdit,m,note){
 }
 
 /* ── TTS ── */
+var ttsUnlocked=false;
+function unlockTts(){
+  if(ttsUnlocked||!window.speechSynthesis) return;
+  var u=new SpeechSynthesisUtterance('');
+  speechSynthesis.speak(u);
+  ttsUnlocked=true;
+}
 function speak(text){
   if(!window.speechSynthesis||!text) return;
   speechSynthesis.cancel();
+  if(speechSynthesis.paused) speechSynthesis.resume();
   var u=new SpeechSynthesisUtterance(text);
   u.lang=LANG_BCP[state.lang]||'ru-RU';
   u.rate=1.0;
@@ -1200,8 +1209,8 @@ appEl.addEventListener('click',function(e){
     case 'settings-clear':      clearAllData(); break;
     case 'settings-notif':      requestNotifPermission(); break;
     case 'settings-push':       subscribePush(); break;
-    case 'toggle-voice-reply':  state.voiceReply=!state.voiceReply; try{localStorage.setItem('vtodo-voice',state.voiceReply?'1':'0');}catch(e){} render(); break;
-    case 'ai-analyze':          aiAnalyze(); break;
+    case 'toggle-voice-reply':  state.voiceReply=!state.voiceReply; if(state.voiceReply) unlockTts(); try{localStorage.setItem('vtodo-voice',state.voiceReply?'1':'0');}catch(e){} render(); break;
+    case 'ai-analyze':          if(state.voiceReply) unlockTts(); aiAnalyze(); break;
     case 'set-lang':            applyLang(el.dataset.lang); break;
     case 'set-tab':             setTab(el.dataset.tab); break;
     case 'toggle-done':         toggleDone(sec,id); break;
