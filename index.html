@@ -368,6 +368,11 @@ function addDays(base,n){ var d=new Date(base); d.setDate(d.getDate()+n); return
 function todayLabel(){ var d=new Date(); return DOW_FULL[d.getDay()]+', '+d.getDate()+' '+MON_RU_G[d.getMonth()]; }
 function dateLabel(str){ if(!str) return ''; var p=str.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return DOW_FULL[d.getDay()]+', '+d.getDate()+' '+MON_RU_G[d.getMonth()]; }
 function dateToSection(str){ if(!str) return 'month'; var today=new Date(todayStr()); var d=new Date(str); var diff=Math.floor((d-today)/86400000); if(diff<=0) return 'day'; if(diff<=6) return 'week'; return 'month'; }
+function rebalanceSections(){
+  var newSec={day:[],week:[],month:[]};
+  allTasks().forEach(function(t){ newSec[dateToSection(t.date)].push(t); });
+  state.sections=newSec;
+}
 function T(text,priority,done,desc,date,reminderTime){ return {id:uid(),text:text,priority:priority,done:!!done,desc:desc||'',date:date||'',reminderTime:reminderTime||''}; }
 
 /* ── Speech ── */
@@ -1300,7 +1305,7 @@ function checkReminders(){
 }
 
 setInterval(checkReminders, 30000);
-document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') checkReminders(); });
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ rebalanceSections(); saveStorage(); render(); checkReminders(); } });
 
 /* Передаём напоминания в SW для фонового режима */
 function scheduleReminders(){
@@ -1328,6 +1333,7 @@ if('serviceWorker' in navigator){
 
 /* ── Init ── */
 loadStorage();
+rebalanceSections();
 applyLang(state.lang, true);
 render();
 subscribePush();
