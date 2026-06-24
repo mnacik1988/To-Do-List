@@ -20,6 +20,7 @@
 html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 
 :root {
+  color-scheme: light;
   --screen:#f5f2ec; --surface:#fff; --surface2:#ece7dd;
   --text:#2c2a26; --muted:#8c867b; --border:rgba(44,42,38,.09);
   --accent:#5f9b82; --accent-soft:#dcebe2; --accent-ink:#2f5e4a;
@@ -31,6 +32,7 @@ html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webki
   --pri-low:#bcd9c4;  --pri-low-ink:#3f6850;
 }
 [data-theme="dark"] {
+  color-scheme: dark;
   --screen:#1a1922; --surface:#252332; --surface2:#2e2b3d;
   --text:#ecebf2; --muted:#9b97ad; --border:rgba(255,255,255,.10);
   --accent:#74b79a; --accent-soft:#273a33; --accent-ink:#a9dcc6;
@@ -284,6 +286,7 @@ html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webki
 .day-task-text.done { text-decoration:line-through; color:var(--muted); opacity:.7; }
 .day-add-input { flex:1; padding:12px 13px; border-radius:12px; border:1.5px solid var(--border); background:var(--screen); color:var(--text); font-family:inherit; font-size:14px; font-weight:600; outline:none; transition:border-color .15s; }
 .day-add-input:focus { border-color:var(--accent); }
+input[type="date"].day-add-input, input[type="time"].day-add-input { -webkit-appearance:none; appearance:none; min-height:46px; }
 .day-add-mic { width:48px; height:48px; border-radius:50%; border:none; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; box-shadow:0 6px 16px -4px rgba(0,0,0,.25); }
 .day-empty-hint { font-size:14px; color:var(--muted); line-height:1.5; font-style:italic; text-align:center; padding:8px 0; }
 
@@ -581,7 +584,7 @@ function renderModal(){
       '<button class="close-btn" data-role="modal-close">'+IC.close+'</button>'+
     '</div>'+
     '<div class="modal-task-title">'+esc(task.text)+'</div>'+
-    (task.date?'<div style="font-size:12px;font-weight:700;color:var(--muted)">📅 '+dateLabel(task.date)+(task.reminderTime?' &nbsp;🔔 '+task.reminderTime:'')+'</div>':'')+
+    (task.date?'<div style="font-size:12px;font-weight:700;color:var(--muted)">📅 '+dateLabel(task.date)+(task.reminderTime?' &nbsp;🔔 '+esc(task.reminderTime):'')+'</div>':'')+
     '<div><div class="field-label">'+L.desc+'</div>'+
       (hasDesc?'<p class="modal-desc">'+esc(task.desc)+'</p>':'<p class="modal-no-desc">'+L.no_desc+'</p>')+
     '</div>'+
@@ -836,7 +839,7 @@ function renderDueBanner(){
       var sec=findTaskSection(t);
       return '<div class="due-banner-item" data-role="open-modal" data-id="'+t.id+'" data-sec="'+sec+'">'+
         esc(t.text)+
-        '<div class="due-banner-item-time">'+dateLabel(t.date)+(t.reminderTime?' · '+t.reminderTime:'')+'</div>'+
+        '<div class="due-banner-item-time">'+dateLabel(t.date)+(t.reminderTime?' · '+esc(t.reminderTime):'')+'</div>'+
       '</div>';
     }).join('')+
   '</div>';
@@ -924,20 +927,20 @@ function render(){
     renderQuickAdd()+
     renderSettings();
 
-  /* wire inputs */
+  /* wire inputs — both 'input' and 'change' for date/time pickers (iOS fires only 'change') */
+  function wireIC(el,fn){ if(!el) return; el.addEventListener('input',fn); el.addEventListener('change',fn); }
   var te=document.getElementById('edit-text'),de=document.getElementById('edit-desc'),dte=document.getElementById('edit-date'),dre=document.getElementById('edit-reminder');
   if(te) te.addEventListener('input',function(e){if(state.edit) state.edit.text=e.target.value;});
   if(de) de.addEventListener('input',function(e){if(state.edit) state.edit.desc=e.target.value;});
-  if(dte) dte.addEventListener('input',function(e){if(state.edit) state.edit.date=e.target.value;});
-  if(dre) dre.addEventListener('input',function(e){if(state.edit) state.edit.reminderTime=e.target.value;});
+  wireIC(dte,function(e){if(state.edit) state.edit.date=e.target.value;});
+  wireIC(dre,function(e){if(state.edit) state.edit.reminderTime=e.target.value;});
   var dsi=document.getElementById('ds-input');
   if(dsi) dsi.addEventListener('input',function(e){state.dsAddText=e.target.value;});
-  var dsti=document.getElementById('ds-time');
-  if(dsti) dsti.addEventListener('input',function(e){state.dsAddTime=e.target.value;});
+  wireIC(document.getElementById('ds-time'),function(e){state.dsAddTime=e.target.value;});
   var qat=document.getElementById('qa-text'),qad=document.getElementById('qa-date'),qati=document.getElementById('qa-time');
   if(qat){ qat.addEventListener('input',function(e){state.qaText=e.target.value;}); setTimeout(function(){if(qat)qat.focus();},80); }
-  if(qad) qad.addEventListener('input',function(e){state.qaDate=e.target.value;});
-  if(qati) qati.addEventListener('input',function(e){state.qaTime=e.target.value;});
+  wireIC(qad,function(e){state.qaDate=e.target.value;});
+  wireIC(qati,function(e){state.qaTime=e.target.value;});
 
   if(savedScroll>0) requestAnimationFrame(function(){ var el=document.querySelector('.sheet-body'); if(el) el.scrollTop=savedScroll; });
 
@@ -954,7 +957,7 @@ function setTab(tab){ state.tab=tab; render(); }
 function toggleDone(section,id){ state.sections[section]=state.sections[section].map(function(t){return t.id===id?Object.assign({},t,{done:!t.done}):t;}); render(); }
 function cyclePri(section,id){ state.sections[section]=state.sections[section].map(function(t){ if(t.id!==id) return t; return Object.assign({},t,{priority:PRI_ORDER[(PRI_ORDER.indexOf(t.priority)+1)%3]}); }); render(); }
 
-function openModal(section,id){ state.modal={section:section,id:id}; state.modalMode='view'; state.edit=null; state.aiRec=false; state.aiProc=false; state.aiNote=''; state.confirmDelete=false; anim.modal=true; render(); }
+function openModal(section,id){ state.fabOpen=false; state.modal={section:section,id:id}; state.modalMode='view'; state.edit=null; state.aiRec=false; state.aiProc=false; state.aiNote=''; state.confirmDelete=false; anim.modal=true; render(); }
 function closeModal(){
   if(aiTimeout){clearTimeout(aiTimeout);aiTimeout=null;}
   if(modalRecObj){modalRecObj.stop();modalRecObj=null;}
@@ -1086,7 +1089,8 @@ function addTasksBatch(tasks){
   var today=todayStr(); var lastSec='day';
   tasks.forEach(function(t){
     var date=t.date||today; var sec=dateToSection(date);
-    var newTask=T(t.text,t.priority||'mid',false,'',date,t.reminderTime||'');
+    var safePri=(['high','mid','low'].indexOf(t.priority)>=0)?t.priority:'mid';
+    var newTask=T(t.text,safePri,false,'',date,t.reminderTime||'');
     state.sections[sec]=[newTask].concat(state.sections[sec]);
     anim.taskIds[newTask.id]=true; lastSec=sec;
   });
@@ -1142,12 +1146,13 @@ function applyEdit(data,isEdit,m,note){
     state.edit=Object.assign({},state.edit||{},{
       text:data.text||(state.edit||{}).text,
       desc:data.desc!=null?data.desc:(state.edit||{}).desc,
-      priority:data.priority||(state.edit||{}).priority,
+      priority:(['high','mid','low'].indexOf(data.priority)>=0?data.priority:null)||(state.edit||{}).priority,
       date:data.date!=null?data.date:(state.edit||{}).date,
     });
   } else {
     state.sections[m.section]=state.sections[m.section].map(function(t){
-      return t.id===m.id?Object.assign({},t,{text:data.text||t.text,desc:data.desc!=null?data.desc:t.desc,priority:data.priority||t.priority,date:data.date!=null?data.date:t.date}):t;
+      var sp=(['high','mid','low'].indexOf(data.priority)>=0?data.priority:null)||t.priority;
+      return t.id===m.id?Object.assign({},t,{text:data.text||t.text,desc:data.desc!=null?data.desc:t.desc,priority:sp,date:data.date!=null?data.date:t.date}):t;
     });
   }
   state.aiProc=false; state.aiNote=note||'✓ AI'; anim.aiNote=true; render();
@@ -1155,6 +1160,10 @@ function applyEdit(data,isEdit,m,note){
 
 /* ── TTS ── */
 var ttsUnlocked=false;
+var cachedVoices=null;
+if(window.speechSynthesis){
+  speechSynthesis.addEventListener('voiceschanged',function(){ cachedVoices=speechSynthesis.getVoices(); });
+}
 function unlockTts(){
   if(ttsUnlocked||!window.speechSynthesis) return;
   var u=new SpeechSynthesisUtterance('');
@@ -1162,7 +1171,7 @@ function unlockTts(){
   ttsUnlocked=true;
 }
 function pickVoice(lang){
-  var voices=speechSynthesis.getVoices();
+  var voices=cachedVoices||speechSynthesis.getVoices();
   if(!voices||!voices.length) return null;
   var preferred={
     'ru':['Milena','Yuri','Google русский','Microsoft Irina','ru-RU'],
@@ -1199,7 +1208,7 @@ function speak(text){
 function aiAnalyze(){
   if(state.aiAnalyzing) return;
   var tasks=allTasks().filter(function(t){return !t.done;});
-  if(!tasks.length){ speak(L.summary_default); return; }
+  if(!tasks.length){ if(state.voiceReply) speak(L.summary_default); return; }
   state.aiAnalyzing=true; state.summary=L.analyzing; render();
   var today=todayStr();
   var prompt='Today is '+today+'. Pending tasks: '+JSON.stringify(tasks.map(function(t){return {text:t.text,date:t.date||'',priority:t.priority};}))+'. Give brief priority advice (2-3 sentences). Respond in the same language as the task names. Return ONLY JSON: {"advice":"your advice text"}';
@@ -1212,7 +1221,7 @@ function aiAnalyze(){
 }
 
 /* ── Settings ── */
-function openSettings(){ state.settings=true; render(); }
+function openSettings(){ state.fabOpen=false; state.settings=true; render(); }
 function closeSettings(){ state.settings=false; render(); }
 function clearAllData(){ localStorage.removeItem(STORE_KEY); location.reload(); }
 
@@ -1222,7 +1231,7 @@ function calNext(){ if(state.calMonth===11){state.calMonth=0;state.calYear++;}el
 function calSelectDay(date){ state.calSelected=date; openDaySheet(date); }
 
 /* ── Day Sheet ── */
-function openDaySheet(date){ state.daySheet={date:date}; state.dsAddText=''; state.dsAddPri='mid'; state.dsAddTime=''; state.dsAiRec=false; state.dsAiProc=false; state.dsShowAdd=false; anim.daySheet=true; render(); }
+function openDaySheet(date){ state.fabOpen=false; state.daySheet={date:date}; state.dsAddText=''; state.dsAddPri='mid'; state.dsAddTime=''; state.dsAiRec=false; state.dsAiProc=false; state.dsShowAdd=false; anim.daySheet=true; render(); }
 function closeDaySheet(){ if(dsAiTimeout){clearTimeout(dsAiTimeout);dsAiTimeout=null;} if(dsRecObj){dsRecObj.stop();dsRecObj=null;} state.daySheet=null; state.dsShowAdd=false; state.dsAddTime=''; state.dsAiRec=false; state.dsAiProc=false; render(); }
 function dsSetPri(pri){ syncDsInput(); state.dsAddPri=pri; render(); }
 function dsAddTask(){
@@ -1233,6 +1242,7 @@ function dsAddTask(){
   state.sections[sec]=[newTask].concat(state.sections[sec]);
   state.dsAddText=''; state.dsAddPri='mid'; state.dsAddTime=''; state.dsShowAdd=false;
   saveStorage(); scheduleReminders(); syncRemindersToServer(); render();
+  if(newTask.reminderTime) ensureNotifPermission();
 }
 
 /* ── Drag-and-drop (desktop, HTML5) ── */
@@ -1406,7 +1416,13 @@ function subscribePush(){
     });
   }).catch(function(e){ state.pushStatus='error'; render(); });
 }
+var syncRemindersTimer=null;
 function syncRemindersToServer(){
+  if(syncRemindersTimer) clearTimeout(syncRemindersTimer);
+  syncRemindersTimer=setTimeout(doSyncRemindersToServer,1500);
+}
+function doSyncRemindersToServer(){
+  syncRemindersTimer=null;
   if(!VAPID_PUBLIC_KEY||!navigator.onLine) return;
   var userId=getDeviceId();
   allTasks().forEach(function(task){
