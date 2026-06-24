@@ -1080,6 +1080,28 @@ function unlockTts(){
   speechSynthesis.speak(u);
   ttsUnlocked=true;
 }
+function pickVoice(lang){
+  var voices=speechSynthesis.getVoices();
+  if(!voices||!voices.length) return null;
+  var preferred={
+    'ru':['Milena','Yuri','Google русский','Microsoft Irina','ru-RU'],
+    'en':['Samantha','Google US English','Microsoft Zira','en-US'],
+    'uk':['Google українська','uk-UA'],
+    'de':['Anna','Google Deutsch','Microsoft Hedda','de-DE'],
+    'fr':['Amelie','Thomas','Google français','Microsoft Hortense','fr-FR']
+  };
+  var names=preferred[lang]||[];
+  for(var i=0;i<names.length;i++){
+    for(var j=0;j<voices.length;j++){
+      if(voices[j].name.indexOf(names[i])!==-1) return voices[j];
+    }
+  }
+  var bcp=LANG_BCP[lang]||'ru-RU';
+  for(var k=0;k<voices.length;k++){
+    if(voices[k].lang===bcp) return voices[k];
+  }
+  return null;
+}
 function speak(text){
   if(!window.speechSynthesis||!text) return;
   speechSynthesis.cancel();
@@ -1087,6 +1109,8 @@ function speak(text){
   var u=new SpeechSynthesisUtterance(text);
   u.lang=LANG_BCP[state.lang]||'ru-RU';
   u.rate=1.0;
+  var v=pickVoice(state.lang);
+  if(v) u.voice=v;
   speechSynthesis.speak(u);
 }
 
