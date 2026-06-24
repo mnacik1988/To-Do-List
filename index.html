@@ -1350,8 +1350,8 @@ appEl.addEventListener('click',function(e){
     case 'qa-save':
       var qText=(state.qaText||'').trim();
       if(!qText) break;
-      addTasksBatch([{text:qText,priority:state.qaPri,date:state.qaDate||todayStr(),reminderTime:state.qaTime||''}]);
       state.quickAdd=false;
+      addTasksBatch([{text:qText,priority:state.qaPri,date:state.qaDate||todayStr(),reminderTime:state.qaTime||''}]);
       break;
     case 'fab-mic':             onFabMic(); break;
     case 'ai-mic':              onAiMic(); break;
