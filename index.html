@@ -1144,11 +1144,14 @@ function processTranscript(transcript){
     'Today is '+today+'. Voice message: "'+transcript+'".\n'+
     'User tasks: '+JSON.stringify(existingTasks)+'.\n\n'+
     'IMPORTANT: Respond in the same language as the voice message.\n\n'+
-    'Decide: is this adding tasks (one or more) — or a question/search about existing tasks?\n\n'+
-    'If ADDING — extract ALL tasks from the text (there may be several, split by dates).\n'+
-    'Return: {"type":"add","tasks":[{"text":"task name without dates, times or filler words","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty string if no time"}]}\n\n'+
-    'If QUESTION/SEARCH — find the answer in the user tasks and give a brief answer.\n'+
-    'Return: {"type":"query","answer":"answer text in the same language as the voice message","section":"day|week|month or empty"}\n\n'+
+    'Decide what the user wants:\n\n'+
+    '1. ADD new tasks — user dictates new task(s) to create.\n'+
+    'Return: {"type":"add","tasks":[{"text":"task name without dates/times/filler","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty"}]}\n\n'+
+    '2. EDIT existing task — user wants to change something about a task already in the list (set reminder, change date, rename, change priority). Find the best matching task by text.\n'+
+    'Return: {"type":"edit","find":"exact or partial task text to find","changes":{"text":"new name if renamed","date":"YYYY-MM-DD if changed","reminderTime":"HH:MM if set/changed","priority":"high|mid|low if changed"}}\n'+
+    'Only include fields that actually change. "find" must match part of an existing task text.\n\n'+
+    '3. QUESTION — user asks something about their tasks.\n'+
+    'Return: {"type":"query","answer":"brief answer in same language","section":"day|week|month or empty"}\n\n'+
     'Return ONLY JSON, no extra text.';
   callClaude(prompt,function(err,data){
     state.processing=false;
@@ -1160,7 +1163,23 @@ function processTranscript(transcript){
       addTasksBatch([{text:localText,priority:'mid',date:localDate,reminderTime:localTime}]);
       return;
     }
-    if(data.type==='add'&&data.tasks&&data.tasks.length){
+    if(data.type==='edit'&&data.find){
+      var ok=applyAiEdit(data.find,data.changes||{});
+      if(ok){
+        rebalanceSections();
+        var editedTask=null;
+        for(var s in state.sections){ state.sections[s].forEach(function(t){ if(t.text.toLowerCase().indexOf(data.find.toLowerCase())>=0) editedTask=t; }); }
+        var msg=editedTask?('✓ '+esc(editedTask.text)):'✓';
+        state.summary=msg;
+        if(state.voiceReply) speak(msg);
+        anim.summary=true; render();
+        scheduleReminders(); syncRemindersToServer();
+      } else {
+        state.aiAnswer='Задача не найдена: «'+esc(data.find)+'»';
+        if(state.voiceReply) speak(state.aiAnswer);
+        anim.summary=true; render();
+      }
+    } else if(data.type==='add'&&data.tasks&&data.tasks.length){
       if(dayDate){ data.tasks.forEach(function(t){ t.date=dayDate; }); state.dsShowAdd=false; }
       addTasksBatch(data.tasks);
     } else if(data.type==='query'){
@@ -1177,6 +1196,32 @@ function processTranscript(transcript){
       addTasksBatch([{text:localText,priority:'mid',date:localDate,reminderTime:localTime}]);
     }
   });
+}
+
+function applyAiEdit(find, changes){
+  if(!find||!changes) return false;
+  var fl=find.toLowerCase();
+  var found=null, foundSec=null;
+  for(var sec in state.sections){
+    state.sections[sec].forEach(function(t){
+      if(!found&&t.text.toLowerCase().indexOf(fl)>=0){ found=t; foundSec=sec; }
+    });
+  }
+  if(!found) return false;
+  var patch={};
+  if(changes.text&&changes.text.trim()) patch.text=changes.text.trim();
+  if(changes.date) patch.date=changes.date;
+  if(changes.reminderTime!==undefined) patch.reminderTime=changes.reminderTime;
+  if(changes.priority&&['high','mid','low'].indexOf(changes.priority)>=0) patch.priority=changes.priority;
+  var newSec=patch.date?dateToSection(patch.date):foundSec;
+  if(newSec!==foundSec){
+    var updated=null;
+    state.sections[foundSec]=state.sections[foundSec].filter(function(t){ if(t.id===found.id){updated=Object.assign({},t,patch);return false;} return true; });
+    if(updated) state.sections[newSec]=[updated].concat(state.sections[newSec]);
+  } else {
+    state.sections[foundSec]=state.sections[foundSec].map(function(t){ return t.id===found.id?Object.assign({},t,patch):t; });
+  }
+  return true;
 }
 
 function addTasksBatch(tasks){
@@ -1364,18 +1409,23 @@ appEl.addEventListener('touchstart',function(e){
   var handle=e.target.closest('[data-role="drag-handle"]'); if(!handle) return;
   var row=handle.closest('[data-role="task-row"]'); if(!row) return;
   var rect=row.getBoundingClientRect();
-  touchDrag={section:handle.dataset.sec,id:handle.dataset.id,row:row,startY:e.touches[0].clientY,offsetY:e.touches[0].clientY-rect.top,targetId:null};
+  touchDrag={section:handle.dataset.sec,id:handle.dataset.id,row:row,startY:e.touches[0].clientY,offsetY:e.touches[0].clientY-rect.top,targetId:null,moved:false};
   touchClone=row.cloneNode(true);
   touchClone.className=touchClone.className+' touch-clone';
-  touchClone.style.cssText='position:fixed;left:'+rect.left+'px;top:'+rect.top+'px;width:'+rect.width+'px;z-index:200;';
+  touchClone.style.cssText='position:fixed;left:'+rect.left+'px;top:'+rect.top+'px;width:'+rect.width+'px;z-index:200;display:none;';
   document.body.appendChild(touchClone);
-  row.style.opacity='0.25';
 },{passive:true});
 
 document.addEventListener('touchmove',function(e){
   if(!touchDrag) return;
-  e.preventDefault();
   var y=e.touches[0].clientY;
+  if(!touchDrag.moved){
+    if(Math.abs(y-touchDrag.startY)<6) return;
+    touchDrag.moved=true;
+    touchDrag.row.style.opacity='0.25';
+    touchClone.style.display='';
+  }
+  e.preventDefault();
   touchClone.style.top=(y-touchDrag.offsetY)+'px';
   /* find target */
   var list=document.getElementById('task-list'); if(!list) return;
