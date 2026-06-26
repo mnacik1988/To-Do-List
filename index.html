@@ -513,7 +513,7 @@ function localCleanText(text){
 /* ── Overdue helpers ── */
 function getOverdueTasks(){
   var today=todayStr();
-  return state.sections.day.filter(function(t){ return t.date&&t.date<today; });
+  return state.sections.day.filter(function(t){ return t.date&&t.date<today&&!t.done; });
 }
 function getTodayOnlyTasks(){
   var today=todayStr();
