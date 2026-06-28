@@ -977,9 +977,10 @@ function render(){
       answerCard+
       renderDueBanner()+
       '<div class="tabs">'+TAB_META.map(function(m){
-        return '<button class="tab'+(state.tab===m.key?' active':'')+'" data-role="set-tab" data-tab="'+m.key+'"><span class="tab-label">'+m.title+'</span><span class="tab-count">'+state.sections[m.key].length+'</span></button>';
+        var tabCnt=m.key==='day'?(getTodayOnlyTasks().length+getOverdueTasks().length):state.sections[m.key].length;
+        return '<button class="tab'+(state.tab===m.key?' active':'')+'" data-role="set-tab" data-tab="'+m.key+'"><span class="tab-label">'+m.title+'</span><span class="tab-count">'+tabCnt+'</span></button>';
       }).join('')+'</div>'+
-      '<div class="sec-hd"><span class="sec-title">'+activeTitle+'</span><span class="sec-count">'+(state.tab==='day'?state.sections.day.length:activeTasks.length)+'</span></div>'+
+      '<div class="sec-hd"><span class="sec-title">'+activeTitle+'</span><span class="sec-count">'+(state.tab==='day'?(getTodayOnlyTasks().length+getOverdueTasks().length):activeTasks.length)+'</span></div>'+
       (state.tab==='day'?renderOverdueSection():'')+
       '<div class="task-list" id="task-list" data-sec="'+state.tab+'">'+taskListHtml+'</div>'+
     '</div>';
