@@ -1309,7 +1309,7 @@ function aiApply(transcript){
   var src=isEdit?(state.edit||{}):currentTask();
   if(!src){state.aiProc=false;render();return;}
   var today=todayStr();
-  var prompt='Task: "'+((src.text)||'")". Current reminderTime: "'+(src.reminderTime||'')+'" (HH:MM 24h or empty). Voice instruction: "'+transcript+'". Today is '+today+'. Respond in the same language as the voice instruction. Return ONLY JSON: {"text":"new task name or empty to keep","priority":"high|mid|low or empty to keep","desc":"description or empty string","date":"YYYY-MM-DD or empty to keep","reminderTime":"HH:MM or empty to remove"}. For reminderTime: convert spoken time to 24h format (e.g. 9am=09:00, 9pm=21:00). If user says remove/clear reminder set reminderTime to null.';
+  var prompt='Task: "'+((src.text)||'')+'". Current reminderTime: "'+(src.reminderTime||'')+'" (HH:MM 24h or empty). Voice instruction: "'+transcript+'". Today is '+today+'. Respond in the same language as the voice instruction. Return ONLY JSON: {"text":"new task name or empty to keep","priority":"high|mid|low or empty to keep","desc":"description or empty string","date":"YYYY-MM-DD or empty to keep","reminderTime":"HH:MM or empty to remove"}. For reminderTime: convert spoken time to 24h format (e.g. 9am=09:00, 9pm=21:00). If user says remove/clear reminder set reminderTime to null.';
   callClaude(prompt,function(err,data){
     if(err&&err.limit){ state.aiProc=false; state.aiNote='⚠️ '+L.ai_limit; anim.aiNote=true; render(); }
     else if(err||!data){ state.aiProc=false; state.aiNote='⚠️ Claude'; anim.aiNote=true; render(); }
