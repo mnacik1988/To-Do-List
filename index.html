@@ -1309,7 +1309,7 @@ function aiApply(transcript){
   var src=isEdit?(state.edit||{}):currentTask();
   if(!src){state.aiProc=false;render();return;}
   var today=todayStr();
-  var prompt='Task: "'+((src.text)||'')+'". Voice instruction: "'+transcript+'". Today is '+today+'. Respond in the same language as the voice instruction. Return ONLY JSON: {"text":"new task name","priority":"high|mid|low","desc":"description or empty string","date":"YYYY-MM-DD or empty string"}.';
+  var prompt='Task: "'+((src.text)||'")". Current reminderTime: "'+(src.reminderTime||'')+'" (HH:MM 24h or empty). Voice instruction: "'+transcript+'". Today is '+today+'. Respond in the same language as the voice instruction. Return ONLY JSON: {"text":"new task name or empty to keep","priority":"high|mid|low or empty to keep","desc":"description or empty string","date":"YYYY-MM-DD or empty to keep","reminderTime":"HH:MM or empty to remove"}. For reminderTime: convert spoken time to 24h format (e.g. 9am=09:00, 9pm=21:00). If user says remove/clear reminder set reminderTime to null.';
   callClaude(prompt,function(err,data){
     if(err&&err.limit){ state.aiProc=false; state.aiNote='⚠️ '+L.ai_limit; anim.aiNote=true; render(); }
     else if(err||!data){ state.aiProc=false; state.aiNote='⚠️ Claude'; anim.aiNote=true; render(); }
@@ -1318,20 +1318,26 @@ function aiApply(transcript){
 }
 
 function applyEdit(data,isEdit,m,note){
+  var validPri=['high','mid','low'];
+  var newRem=data.reminderTime===null?'':(data.reminderTime||null);
   if(isEdit){
-    state.edit=Object.assign({},state.edit||{},{
-      text:data.text||(state.edit||{}).text,
-      desc:data.desc!=null?data.desc:(state.edit||{}).desc,
-      priority:(['high','mid','low'].indexOf(data.priority)>=0?data.priority:null)||(state.edit||{}).priority,
-      date:data.date!=null?data.date:(state.edit||{}).date,
+    var ed=state.edit||{};
+    state.edit=Object.assign({},ed,{
+      text:data.text||ed.text,
+      desc:data.desc!=null?data.desc:ed.desc,
+      priority:(validPri.indexOf(data.priority)>=0?data.priority:null)||ed.priority,
+      date:data.date!=null?data.date:ed.date,
+      reminderTime:newRem!==null?newRem:ed.reminderTime,
     });
   } else {
     state.sections[m.section]=state.sections[m.section].map(function(t){
-      var sp=(['high','mid','low'].indexOf(data.priority)>=0?data.priority:null)||t.priority;
-      return t.id===m.id?Object.assign({},t,{text:data.text||t.text,desc:data.desc!=null?data.desc:t.desc,priority:sp,date:data.date!=null?data.date:t.date}):t;
+      if(t.id!==m.id) return t;
+      var sp=(validPri.indexOf(data.priority)>=0?data.priority:null)||t.priority;
+      var rt=newRem!==null?newRem:t.reminderTime;
+      return Object.assign({},t,{text:data.text||t.text,desc:data.desc!=null?data.desc:t.desc,priority:sp,date:data.date!=null?data.date:t.date,reminderTime:rt});
     });
   }
-  state.aiProc=false; state.aiNote=note||'✓ AI'; anim.aiNote=true; render();
+  save(); state.aiProc=false; state.aiNote=note||'✓ AI'; anim.aiNote=true; render();
 }
 
 /* ── TTS ── */
