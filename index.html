@@ -138,8 +138,10 @@ html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webki
   width:36px; flex:none; border:none; background:transparent;
   color:var(--muted); opacity:.35; cursor:grab; padding:0;
   display:flex; align-items:center; justify-content:center; touch-action:none;
+  -webkit-user-select:none; user-select:none;
 }
 .drag-handle:active { cursor:grabbing; opacity:.7; }
+.task-row { -webkit-user-select:none; user-select:none; }
 
 /* Select mode */
 .sel-circle {
@@ -1452,6 +1454,7 @@ var touchDrag=null, touchClone=null;
 
 appEl.addEventListener('touchstart',function(e){
   var handle=e.target.closest('[data-role="drag-handle"]'); if(!handle) return;
+  e.preventDefault();
   var row=handle.closest('[data-role="task-row"]'); if(!row) return;
   var rect=row.getBoundingClientRect();
   touchDrag={section:handle.dataset.sec,id:handle.dataset.id,row:row,startY:e.touches[0].clientY,offsetY:e.touches[0].clientY-rect.top,targetId:null,moved:false};
@@ -1459,7 +1462,7 @@ appEl.addEventListener('touchstart',function(e){
   touchClone.className=touchClone.className+' touch-clone';
   touchClone.style.cssText='position:fixed;left:'+rect.left+'px;top:'+rect.top+'px;width:'+rect.width+'px;z-index:200;display:none;';
   document.body.appendChild(touchClone);
-},{passive:true});
+},{passive:false});
 
 document.addEventListener('touchmove',function(e){
   if(!touchDrag) return;
@@ -1467,7 +1470,8 @@ document.addEventListener('touchmove',function(e){
   if(!touchDrag.moved){
     if(Math.abs(y-touchDrag.startY)<6) return;
     touchDrag.moved=true;
-    touchDrag.row.style.opacity='0.25';
+    touchDrag.row.style.opacity='0.5';
+    touchDrag.row.style.transform='scale(0.98)';
     touchClone.style.display='';
   }
   e.preventDefault();
@@ -1499,6 +1503,7 @@ document.addEventListener('touchend',function(){
     arr.splice(toIdx+(fromIdx<toIdx?0:1),0,moved);
     state.sections[sec]=arr;
   }
+  if(touchDrag.row){ touchDrag.row.style.opacity=''; touchDrag.row.style.transform=''; }
   if(touchClone){ touchClone.remove(); touchClone=null; }
   touchDrag=null; render();
 },{passive:true});
