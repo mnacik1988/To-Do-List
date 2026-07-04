@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v3';
+var CACHE = 'vtodo-shell-v4';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */

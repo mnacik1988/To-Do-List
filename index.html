@@ -139,9 +139,14 @@ html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webki
   color:var(--muted); opacity:.35; cursor:grab; padding:0;
   display:flex; align-items:center; justify-content:center; touch-action:none;
   -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none;
 }
 .drag-handle:active { cursor:grabbing; opacity:.7; }
-.task-row { -webkit-user-select:none; user-select:none; }
+.task-row {
+  -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
+}
 
 /* Select mode */
 .sel-circle {
@@ -1451,6 +1456,10 @@ document.addEventListener('dragend',function(){ if(!drag) return; drag=null; ren
 
 /* ── Touch drag (mobile) ── */
 var touchDrag=null, touchClone=null;
+
+appEl.addEventListener('contextmenu',function(e){
+  if(e.target.closest('[data-role="drag-handle"]')||e.target.closest('[data-role="task-row"]')) e.preventDefault();
+});
 
 appEl.addEventListener('touchstart',function(e){
   var handle=e.target.closest('[data-role="drag-handle"]'); if(!handle) return;
