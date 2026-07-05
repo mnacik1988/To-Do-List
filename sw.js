@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v5';
+var CACHE = 'vtodo-shell-v6';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */
@@ -22,7 +22,7 @@ self.addEventListener('activate', function(e){
   );
 });
 
-/* ── Fetch: отдаём из кеша, обновляем в фоне ── */
+/* ── Fetch ── */
 self.addEventListener('fetch', function(e){
   if(e.request.method !== 'GET') return;
   var url = new URL(e.request.url);
@@ -31,19 +31,31 @@ self.addEventListener('fetch', function(e){
   /* Шрифты Google — через сеть, без кеширования */
   if(url.hostname.indexOf('googleapis.com') >= 0 || url.hostname.indexOf('gstatic.com') >= 0) return;
 
+  /* HTML-документ — СЕТЬ В ПРИОРИТЕТЕ (чтобы обновления всегда применялись),
+     кеш только когда нет интернета */
+  if(e.request.mode === 'navigate' || url.pathname.indexOf('index.html') >= 0){
+    e.respondWith(
+      fetch(e.request).then(function(response){
+        var clone = response.clone();
+        caches.open(CACHE).then(function(c){ c.put(e.request, clone); });
+        return response;
+      }).catch(function(){
+        return caches.match(e.request).then(function(c){ return c || caches.match('./index.html'); });
+      })
+    );
+    return;
+  }
+
+  /* Остальное (иконки, манифест) — кеш сразу, обновление в фоне */
   e.respondWith(
     caches.match(e.request).then(function(cached){
-      /* Возвращаем кеш сразу, параллельно обновляем */
       var networkFetch = fetch(e.request).then(function(response){
         if(response && response.status === 200 && response.type === 'basic'){
           var clone = response.clone();
           caches.open(CACHE).then(function(c){ c.put(e.request, clone); });
         }
         return response;
-      }).catch(function(){
-        /* Офлайн и нет кеша — возвращаем index.html */
-        if(e.request.mode === 'navigate') return caches.match('./index.html');
-      });
+      }).catch(function(){});
       return cached || networkFetch;
     })
   );
