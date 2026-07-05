@@ -16,8 +16,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+body {
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea, [contenteditable="true"], [contenteditable=""] {
+  -webkit-user-select: text; user-select: text;
+  -webkit-touch-callout: default;
+}
 
 :root {
   color-scheme: light;
