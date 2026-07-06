@@ -1082,7 +1082,7 @@ function syncDsInput(){ var el=document.getElementById('ds-input'); if(el) state
 
 function toggleTheme(){ state.theme=state.theme==='light'?'dark':'light'; render(); }
 function setTab(tab){ state.tab=tab; render(); }
-function toggleDone(section,id){ state.sections[section]=state.sections[section].map(function(t){return t.id===id?Object.assign({},t,{done:!t.done}):t;}); render(); }
+function toggleDone(section,id){ state.sections[section]=state.sections[section].map(function(t){return t.id===id?Object.assign({},t,{done:!t.done}):t;}); scheduleReminders(); syncRemindersToServer(); render(); }
 function cyclePri(section,id){ state.sections[section]=state.sections[section].map(function(t){ if(t.id!==id) return t; return Object.assign({},t,{priority:PRI_ORDER[(PRI_ORDER.indexOf(t.priority)+1)%3]}); }); render(); }
 
 function openModal(section,id){ state.fabOpen=false; state.modal={section:section,id:id}; state.modalMode='view'; state.edit=null; state.aiRec=false; state.aiProc=false; state.aiNote=''; state.confirmDelete=false; anim.modal=true; render(); }
@@ -1115,7 +1115,7 @@ function saveEdit(){
 function setPri(pri){ syncEdit(); if(state.edit) state.edit.priority=pri; render(); }
 function toggleDoneModal(){ var m=state.modal; if(m) toggleDone(m.section,m.id); else render(); }
 function deleteTask(){ state.confirmDelete=true; render(); }
-function confirmDeleteYes(){ var m=state.modal; if(!m){state.confirmDelete=false;render();return;} state.sections[m.section]=state.sections[m.section].filter(function(t){return t.id!==m.id;}); state.confirmDelete=false; closeModal(); }
+function confirmDeleteYes(){ var m=state.modal; if(!m){state.confirmDelete=false;render();return;} state.sections[m.section]=state.sections[m.section].filter(function(t){return t.id!==m.id;}); state.confirmDelete=false; unremindTask(m.id); scheduleReminders(); closeModal(); }
 function confirmDeleteNo(){ state.confirmDelete=false; render(); }
 
 /* ── Select mode ── */
@@ -1129,10 +1129,11 @@ function toggleSelectTask(id,section){
 function bulkDelete(){
   var ids=Object.keys(state.selected);
   if(!ids.length) return;
+  ids.forEach(function(id){ unremindTask(id); });
   for(var sec in state.sections){
     state.sections[sec]=state.sections[sec].filter(function(t){ return !state.selected[t.id]; });
   }
-  state.selected={}; state.selectMode=false; render();
+  state.selected={}; state.selectMode=false; scheduleReminders(); render();
 }
 function deleteTaskById(sec,id){
   if(sec&&state.sections[sec]){
@@ -1140,7 +1141,13 @@ function deleteTaskById(sec,id){
   } else {
     for(var s in state.sections){ state.sections[s]=state.sections[s].filter(function(t){ return t.id!==id; }); }
   }
-  render();
+  unremindTask(id); scheduleReminders(); render();
+}
+/* Убрать напоминание с сервера для удалённой задачи (её уже нет в allTasks) */
+function unremindTask(id){
+  if(!VAPID_PUBLIC_KEY||!navigator.onLine) return;
+  fetch(WORKER_URL+'/unremind',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({userId:getDeviceId(),taskId:id})}).catch(function(){});
 }
 
 /* ── Overdue actions ── */
@@ -1799,7 +1806,7 @@ function checkReminders(){
 }
 
 setInterval(checkReminders, 30000);
-document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ rebalanceSections(); saveStorage(); render(); checkReminders(); } });
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ rebalanceSections(); saveStorage(); render(); checkReminders(); scheduleReminders(); syncRemindersToServer(); } });
 
 /* Передаём напоминания в SW для фонового режима */
 function scheduleReminders(){
