@@ -1,0 +1,11 @@
+# По умолчанию игнорируем ВСЁ (защита от случайной заливки секретов)
+*
+
+# Разрешаем только файлы, нужные приложению на GitHub
+!.gitignore
+!README.md
+!index.html
+!sw.js
+!manifest.json
+!icon.png
+!icon.svg
