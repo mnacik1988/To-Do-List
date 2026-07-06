@@ -9,3 +9,6 @@
 !manifest.json
 !icon.png
 !icon.svg
+!privacy.html
+!.well-known/
+!.well-known/assetlinks.json
