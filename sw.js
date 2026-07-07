@@ -1,6 +1,6 @@
 'use strict';
-var CACHE = 'vtodo-shell-v12';
-var SHELL = ['./index.html', './manifest.json', './icon.png', './sw.js'];
+var CACHE = 'vtodo-shell-v13';
+var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */
 self.addEventListener('install', function(e){

@@ -1,8 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#5f9b82"/>
-  <rect x="140" y="148" width="232" height="32" rx="16" fill="rgba(255,255,255,0.25)"/>
-  <rect x="140" y="212" width="180" height="32" rx="16" fill="rgba(255,255,255,0.25)"/>
-  <rect x="140" y="276" width="210" height="32" rx="16" fill="rgba(255,255,255,0.25)"/>
-  <circle cx="340" cy="348" r="88" fill="#fff"/>
-  <path d="M306 348 L330 372 L374 324" stroke="#5f9b82" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs><linearGradient id="navy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e2f52"/><stop offset="1" stop-color="#0f1a30"/></linearGradient><linearGradient id="gold" x1="0.1" y1="0.05" x2="0.9" y2="0.95"><stop offset="0" stop-color="#f6d888"/><stop offset="0.5" stop-color="#e8b34e"/><stop offset="1" stop-color="#cf9430"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#navy)"/>
+  <path d="M158 262 L222 340 L372 150" fill="none" stroke="#0e1830" stroke-width="50" stroke-linecap="round" stroke-linejoin="round" opacity="0.30" transform="translate(0,9)"/>
+  <path d="M158 254 L222 332 L372 142" fill="none" stroke="url(#gold)" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
