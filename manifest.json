@@ -10,8 +10,8 @@
   "lang": "ru",
   "dir": "ltr",
   "categories": ["productivity", "lifestyle"],
-  "background_color": "#f5f2ec",
-  "theme_color": "#5f9b82",
+  "background_color": "#152238",
+  "theme_color": "#22375c",
   "icons": [
     {
       "src": "icon.png",
