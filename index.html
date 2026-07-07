@@ -1032,7 +1032,7 @@ function render(){
     '<div class="scroll-area" style="padding-bottom:'+(state.selectMode?'140px':'80px')+'">'+
       (state.processing
         ?'<div class="ai-proc-card">'+IC.spin(18)+'<span>'+L.ai_proc_long+'</span></div>'
-        :'<div class="ai-card"'+ss+'><div class="ai-card-hd">'+IC.spark('style="color:var(--accent-ink)"')+'<span class="ai-card-label">'+L.ai_label+'</span><span class="ai-card-count">'+totalTasks()+' '+L.tasks_word+'</span>'+'<button data-role="ai-analyze" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--accent-ink);padding:2px 6px;border-radius:8px;opacity:'+(state.aiAnalyzing?'0.5':'1')+'">'+(state.aiAnalyzing?'…':L.analyze_btn)+'</button>'+'</div><p class="ai-card-text">'+esc(state.summary)+'</p></div>')+
+        :'<div class="ai-card"'+ss+'><div class="ai-card-hd">'+IC.spark('style="color:var(--accent-ink)"')+'<span class="ai-card-label">'+L.ai_label+'</span><span class="ai-card-count">'+totalTasks()+' '+L.tasks_word+'</span>'+'<button data-role="ai-analyze" style="margin-left:auto;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:700;color:var(--accent-ink);padding:5px 12px;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,.12);opacity:'+(state.aiAnalyzing?'0.5':'1')+'">'+(state.aiAnalyzing?'…':'↻ '+L.analyze_btn)+'</button>'+'</div><p class="ai-card-text">'+esc(state.summary)+'</p></div>')+
       answerCard+
       renderDueBanner()+
       '<div class="tabs">'+TAB_META.map(function(m){
