@@ -1,7 +1,7 @@
 {
-  "name": "Мои задачи",
-  "short_name": "Задачи",
-  "description": "Голосовой to-do список с ИИ-помощником, напоминаниями и календарём",
+  "name": "Mynado",
+  "short_name": "Mynado",
+  "description": "Mynado — голосовой to-do список с ИИ-помощником, напоминаниями и календарём",
   "id": "/To-Do-List/",
   "start_url": "./index.html",
   "scope": "./",
