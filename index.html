@@ -1146,8 +1146,9 @@ function deleteTaskById(sec,id){
 /* Убрать напоминание с сервера для удалённой задачи (её уже нет в allTasks) */
 function unremindTask(id){
   if(!VAPID_PUBLIC_KEY||!navigator.onLine) return;
+  if(!getSyncedRem()[id]) return; /* не было на сервере — нечего снимать, экономим запись */
   fetch(WORKER_URL+'/unremind',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({userId:getDeviceId(),taskId:id})}).catch(function(){});
+    body:JSON.stringify({userId:getDeviceId(),taskId:id})}).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); delete s[id]; saveSyncedRem(s); } }).catch(function(){});
 }
 
 /* ── Overdue actions ── */
@@ -1746,20 +1747,34 @@ function syncRemindersToServer(){
   if(syncRemindersTimer) clearTimeout(syncRemindersTimer);
   syncRemindersTimer=setTimeout(doSyncRemindersToServer,1500);
 }
+/* Снимок отправленных на сервер напоминаний — пишем в KV ТОЛЬКО при реальных изменениях (экономим лимит записи KV) */
+var SYNC_REM_KEY='vtodo-rem-synced';
+function getSyncedRem(){ try{ return JSON.parse(localStorage.getItem(SYNC_REM_KEY)||'{}'); }catch(e){ return {}; } }
+function saveSyncedRem(m){ try{ localStorage.setItem(SYNC_REM_KEY,JSON.stringify(m)); }catch(e){} }
+
 function doSyncRemindersToServer(){
   syncRemindersTimer=null;
   if(!VAPID_PUBLIC_KEY||!navigator.onLine) return;
   var userId=getDeviceId();
+  var synced=getSyncedRem();
+  var desired={};
   allTasks().forEach(function(task){
-    if(task.reminderTime&&task.date&&!task.done){
-      fetch(WORKER_URL+'/remind',{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({userId:userId,taskId:task.id,text:task.text,date:task.date,reminderTime:task.reminderTime,ts:new Date(task.date+'T'+task.reminderTime).getTime()})
-      }).catch(function(){});
-    } else {
-      fetch(WORKER_URL+'/unremind',{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({userId:userId,taskId:task.id})
-      }).catch(function(){});
-    }
+    if(task.reminderTime&&task.date&&!task.done){ desired[task.id]=task.date+'|'+task.reminderTime; }
+  });
+  /* добавленные/изменённые → запись в KV только если сигнатура поменялась */
+  allTasks().forEach(function(task){
+    var sig=desired[task.id];
+    if(!sig || synced[task.id]===sig) return;
+    fetch(WORKER_URL+'/remind',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({userId:userId,taskId:task.id,text:task.text,date:task.date,reminderTime:task.reminderTime,ts:new Date(task.date+'T'+task.reminderTime).getTime()})
+    }).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); s[task.id]=sig; saveSyncedRem(s); } }).catch(function(){});
+  });
+  /* снятые/удалённые/выполненные → убираем с сервера ОДИН раз */
+  Object.keys(synced).forEach(function(id){
+    if(desired[id]) return;
+    fetch(WORKER_URL+'/unremind',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({userId:userId,taskId:id})
+    }).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); delete s[id]; saveSyncedRem(s); } }).catch(function(){});
   });
 }
 
