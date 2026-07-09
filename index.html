@@ -395,7 +395,7 @@ function applyLang(lang, noRender){
 var STORE_KEY = 'vtodo-v2';
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
 var AI_DAILY_LIMIT = 20;
-var APP_VERSION = '0.24';
+var APP_VERSION = '0.25';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -471,17 +471,33 @@ function getAiUsage(){
   try{ var raw=localStorage.getItem('vtodo-ai-usage'); if(raw){ var u=JSON.parse(raw); if(u.date===todayStr()) return u; } }catch(e){}
   return {date:todayStr(),count:0};
 }
-function canUseAi(){ return getAiUsage().count<AI_DAILY_LIMIT; }
+function getEffectiveLimit(){
+  try{ var raw=localStorage.getItem('vtodo-ai-limit-info'); if(raw){ var u=JSON.parse(raw); if(u.date===todayStr()) return u.limit; } }catch(e){}
+  return AI_DAILY_LIMIT;
+}
+function canUseAi(){ return getAiUsage().count<getEffectiveLimit(); }
 function incrementAiUsage(){ var u=getAiUsage(); u.count++; try{localStorage.setItem('vtodo-ai-usage',JSON.stringify(u));}catch(e){} }
-function maxOutAiUsage(){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:todayStr(),count:AI_DAILY_LIMIT}));}catch(e){} }
-function aiUsageLeft(){ return Math.max(0,AI_DAILY_LIMIT-getAiUsage().count); }
+function maxOutAiUsage(){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:todayStr(),count:getEffectiveLimit()}));}catch(e){} }
+function aiUsageLeft(){ return Math.max(0,getEffectiveLimit()-getAiUsage().count); }
+function refreshAiLimit(){
+  if(!navigator.onLine) return;
+  fetch(WORKER_URL+'/limit?userId='+encodeURIComponent(getDeviceId()))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(typeof data.limit==='number'){
+        try{ localStorage.setItem('vtodo-ai-limit-info',JSON.stringify({date:todayStr(),limit:data.limit})); }catch(e){}
+        if(typeof data.used==='number'){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:todayStr(),count:data.used}));}catch(e){} }
+        if(state.settings) render();
+      }
+    }).catch(function(){});
+}
 
 /* ── Claude API ── */
 function callClaude(prompt, cb){
   if(!canUseAi()){ cb({limit:true},null); return; }
   var fired=false;
   var timer=setTimeout(function(){ if(!fired){ fired=true; cb(new Error('timeout'),null); } },25000);
-  function done(err,data){ if(fired) return; fired=true; clearTimeout(timer); cb(err,data); }
+  function done(err,data){ if(fired) return; fired=true; clearTimeout(timer); refreshAiLimit(); cb(err,data); }
   fetch(WORKER_URL,{
     method:'POST',
     headers:{'content-type':'application/json'},
@@ -834,7 +850,7 @@ function renderSettings(){
           (state.voiceReply?L.voice_reply_on:L.voice_reply_off)+
         '</button>'+
         '<div class="info-box" style="background:var(--surface2);margin-bottom:10px">'+
-          L.ai_left+'<strong>'+aiUsageLeft()+' / '+AI_DAILY_LIMIT+'</strong>'+
+          L.ai_left+'<strong>'+aiUsageLeft()+' / '+getEffectiveLimit()+'</strong>'+
         '</div>'+
         (!state.clearConfirm
           ? '<button class="btn-outline" style="width:100%" data-role="settings-clear">'+L.btn_clear_data+'</button>'
@@ -1460,7 +1476,7 @@ function aiAnalyze(){
 }
 
 /* ── Settings ── */
-function openSettings(){ state.fabOpen=false; state.settings=true; render(); }
+function openSettings(){ state.fabOpen=false; state.settings=true; render(); refreshAiLimit(); }
 function closeSettings(){ state.settings=false; render(); }
 function clearAllData(){ localStorage.removeItem(STORE_KEY); location.reload(); }
 
@@ -1865,6 +1881,7 @@ applyLang(state.lang, true);
 render();
 subscribePush();
 checkReminders();
+refreshAiLimit();
 </script>
 </body>
 </html>
