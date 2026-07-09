@@ -3,6 +3,7 @@
 
 # Разрешаем только файлы, нужные приложению на GitHub
 !.gitignore
+!.nojekyll
 !README.md
 !index.html
 !sw.js
