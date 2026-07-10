@@ -395,7 +395,7 @@ function applyLang(lang, noRender){
 var STORE_KEY = 'vtodo-v2';
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
 var AI_DAILY_LIMIT = 20;
-var APP_VERSION = '0.29';
+var APP_VERSION = '0.30';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1252,6 +1252,7 @@ function processTranscript(transcript){
     'IMPORTANT: Respond in the same language as the voice message.\n\n'+
     'Decide what the user wants:\n\n'+
     '1. ADD new tasks — user dictates new task(s) to create.\n'+
+    'If the user names a place to go (store, pharmacy, etc.) followed by a list of specific items/errands there, do NOT create a separate generic "go to X" task — the item tasks already imply the trip. Only create one task per item.\n'+
     'Return: {"type":"add","tasks":[{"text":"task name without dates/times/filler","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty"}]}\n\n'+
     '2. EDIT existing task — user wants to change something about a task already in the list (set reminder, change date, rename, change priority). Find the best matching task by text.\n'+
     'Return: {"type":"edit","find":"exact or partial task text to find","changes":{"text":"new name if renamed","date":"YYYY-MM-DD if changed","reminderTime":"HH:MM if set/changed","priority":"high|mid|low if changed"}}\n'+
