@@ -395,7 +395,7 @@ function applyLang(lang, noRender){
 var STORE_KEY = 'vtodo-v2';
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
 var AI_DAILY_LIMIT = 20;
-var APP_VERSION = '0.26';
+var APP_VERSION = '0.27';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -452,14 +452,15 @@ function clearAnim(){ requestAnimationFrame(function(){ anim.taskIds={};anim.sum
 
 /* ── localStorage ── */
 function saveStorage(){
-  try{ localStorage.setItem(STORE_KEY,JSON.stringify({sections:state.sections,summary:state.summary,theme:state.theme})); }catch(e){}
+  try{ localStorage.setItem(STORE_KEY,JSON.stringify({sections:state.sections,theme:state.theme})); }catch(e){}
 }
 function loadStorage(){
   try{
     var raw=localStorage.getItem(STORE_KEY); if(!raw) return;
     var s=JSON.parse(raw);
     if(s.sections){ state.sections=s.sections; var max=0; allTasks().forEach(function(t){ var n=parseInt(t.id.slice(1),10); if(n>max)max=n; }); _uid=max; }
-    if(s.summary) state.summary=s.summary;
+    // ИИ-резюме НЕ восстанавливаем из хранилища — при каждом запуске начинаем
+    // с чистого приглашения (state.summary_default), а не со старого отчёта.
     if(s.theme)   state.theme=s.theme;
   }catch(e){}
   try{ var savedLang=localStorage.getItem('vtodo-lang'); if(savedLang&&TRANSLATIONS[savedLang]) state.lang=savedLang; }catch(e){}
@@ -1886,6 +1887,7 @@ if('serviceWorker' in navigator){
 loadStorage();
 rebalanceSections();
 applyLang(state.lang, true);
+state.summary=L.summary_default;
 render();
 subscribePush();
 checkReminders();
