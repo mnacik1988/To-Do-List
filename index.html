@@ -8,8 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mynado">
-<meta name="theme-color" content="#f5f2ec" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a1922" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#22375c">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -395,7 +394,7 @@ function applyLang(lang, noRender){
 var STORE_KEY = 'vtodo-v2';
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
 var AI_DAILY_LIMIT = 20;
-var APP_VERSION = '0.27';
+var APP_VERSION = '0.28';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -502,7 +501,7 @@ function callClaude(prompt, cb){
   fetch(WORKER_URL,{
     method:'POST',
     headers:{'content-type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:700,messages:[{role:'user',content:prompt}],userId:getDeviceId()})
+    body:JSON.stringify({messages:[{role:'user',content:prompt}],userId:getDeviceId()})
   })
   .then(function(r){return r.json();})
   .then(function(data){
@@ -1487,7 +1486,14 @@ function aiAnalyze(){
 /* ── Settings ── */
 function openSettings(){ state.fabOpen=false; state.settings=true; anim.settings=true; render(); refreshAiLimit(); }
 function closeSettings(){ state.settings=false; render(); }
-function clearAllData(){ localStorage.removeItem(STORE_KEY); location.reload(); }
+function clearAllData(){
+  try{
+    var keys=[];
+    for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('vtodo-')===0) keys.push(k); }
+    keys.forEach(function(k){ localStorage.removeItem(k); });
+  }catch(e){}
+  location.reload();
+}
 
 /* ── Calendar ── */
 function calPrev(){ if(state.calMonth===0){state.calMonth=11;state.calYear--;}else state.calMonth--; render(); }
@@ -1760,11 +1766,13 @@ function getDeviceId(){
   if(!id){ id=Date.now().toString(36)+Math.random().toString(36).slice(2); localStorage.setItem('vtodo-device-id',id); }
   return id;
 }
+var pushActive=false; // есть активная push-подписка → системные уведомления шлёт сервер
 function subscribePush(){
   if(!VAPID_PUBLIC_KEY||!('PushManager' in window)||!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.ready.then(function(reg){
     reg.pushManager.getSubscription().then(function(existing){
       var send=function(sub){
+        pushActive=true;
         fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},
           body:JSON.stringify({userId:getDeviceId(),subscription:sub.toJSON()})
         }).then(function(){ state.pushStatus='ok'; render(); })
@@ -1846,8 +1854,9 @@ function checkReminders(){
     if(ts<=now && ts>now-86400000){ due.push(task); markFired(task.id,task.reminderTime); }
   });
   if(!due.length) return;
-  /* Системное уведомление если разрешено */
-  if(Notification.permission==='granted'){
+  /* Системное уведомление — только как ЗАПАСНОЙ вариант, если push неактивен
+     или мы офлайн (иначе сервер уже пришлёт push → было бы два уведомления). */
+  if(Notification.permission==='granted' && !(pushActive && navigator.onLine)){
     due.forEach(function(task){
       try{ new Notification(task.text,{body:'Напоминание · '+dateLabel(task.date)+' '+task.reminderTime,icon:'icon.png',tag:task.id}); }catch(e){}
     });
