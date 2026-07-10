@@ -395,7 +395,7 @@ function applyLang(lang, noRender){
 var STORE_KEY = 'vtodo-v2';
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
 var AI_DAILY_LIMIT = 20;
-var APP_VERSION = '0.25';
+var APP_VERSION = '0.26';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -447,8 +447,8 @@ var state={
 };
 
 var timerIv=null, aiTimeout=null, poolIdx=0, drag=null, dsAiTimeout=null, swReg=null;
-var anim={taskIds:{},summary:false,modal:false,aiNote:false,daySheet:false};
-function clearAnim(){ requestAnimationFrame(function(){ anim.taskIds={};anim.summary=anim.modal=anim.aiNote=anim.daySheet=false; }); }
+var anim={taskIds:{},summary:false,modal:false,aiNote:false,daySheet:false,settings:false};
+function clearAnim(){ requestAnimationFrame(function(){ anim.taskIds={};anim.summary=anim.modal=anim.aiNote=anim.daySheet=anim.settings=false; }); }
 
 /* ── localStorage ── */
 function saveStorage(){
@@ -825,9 +825,10 @@ function renderSettings(){
     var active=state.lang===code;
     return '<button class="pri-pick-btn'+(active?' sel':'')+'" data-role="set-lang" data-lang="'+code+'" style="font-size:13px;padding:8px 10px">'+label+'</button>';
   }).join('');
+  var sheetAnim=anim.settings?' style="animation:sheetup .28s cubic-bezier(.2,.8,.2,1) both"':'';
   return '<div class="overlay" style="z-index:40">'+
     '<div class="scrim" data-role="settings-close"></div>'+
-    '<div class="sheet" style="animation:sheetup .28s cubic-bezier(.2,.8,.2,1) both">'+
+    '<div class="sheet"'+sheetAnim+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+
         '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.settings+'</div>'+
@@ -1022,9 +1023,16 @@ function render(){
   for(var i=0;i<TAB_META.length;i++) if(TAB_META[i].key===state.tab){activeTitle=TAB_META[i].title;break;}
   var ss=anim.summary?' style="animation:fadein .3s ease both"':'';
 
-  var taskListHtml=activeTasks.length
-    ?activeTasks.map(function(t){return renderTaskRow(t,state.tab);}).join('')
-    :'<div style="padding:28px 0;text-align:center;color:var(--muted);font-size:13.5px;font-weight:600;line-height:1.6"><div style="font-size:28px;margin-bottom:10px">✓</div>'+EMPTY_HINTS[state.tab]+'</div>';
+  var taskListHtml;
+  if(activeTasks.length){
+    taskListHtml=activeTasks.map(function(t){return renderTaskRow(t,state.tab);}).join('');
+  }else if(state.tab==='day'&&getOverdueTasks().length){
+    // Просроченные уже показаны отдельным блоком выше — доп. "задач нет" не нужно,
+    // иначе одновременно видно и счётчик "1", и надпись "задач нет" — противоречиво.
+    taskListHtml='';
+  }else{
+    taskListHtml='<div style="padding:28px 0;text-align:center;color:var(--muted);font-size:13.5px;font-weight:600;line-height:1.6"><div style="font-size:28px;margin-bottom:10px">✓</div>'+EMPTY_HINTS[state.tab]+'</div>';
+  }
 
   /* Header: normal vs selectMode */
   var hdr = state.selectMode
@@ -1476,7 +1484,7 @@ function aiAnalyze(){
 }
 
 /* ── Settings ── */
-function openSettings(){ state.fabOpen=false; state.settings=true; render(); refreshAiLimit(); }
+function openSettings(){ state.fabOpen=false; state.settings=true; anim.settings=true; render(); refreshAiLimit(); }
 function closeSettings(){ state.settings=false; render(); }
 function clearAllData(){ localStorage.removeItem(STORE_KEY); location.reload(); }
 
