@@ -430,7 +430,7 @@ function initGoogleSignIn(){
   if(!isGoogleSignedIn()) google.accounts.id.prompt();
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.31';
+var APP_VERSION = '0.32';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -874,7 +874,7 @@ function renderSettings(){
         (isGoogleSignedIn()
           ? '<div class="info-box ok">'+L.google_signed_in+esc(getGoogleEmail())+'</div>'
           : '<div class="info-box err">'+L.google_not_signed_in+'</div>'+
-            '<div id="google-signin-slot" style="display:flex;justify-content:center;margin-bottom:10px"></div>'
+            '<div id="google-signin-slot" style="display:flex;justify-content:center;background:var(--surface2);border-radius:14px;padding:6px;overflow:hidden;margin-bottom:10px"></div>'
         )+
         '<div class="info-box '+(hasSpeech?'ok':'err')+'">'+
           (hasSpeech?L.voice_ok:L.voice_err)+
@@ -1147,7 +1147,8 @@ function render(){
   var gSlot=document.getElementById('google-signin-slot');
   if(gSlot && window.google && google.accounts && google.accounts.id){
     gSlot.innerHTML='';
-    google.accounts.id.renderButton(gSlot,{theme:state.theme==='dark'?'filled_black':'outline',size:'large',text:'signin_with',width:240});
+    var gWidth=Math.max(200,Math.min(360,gSlot.clientWidth-12));
+    google.accounts.id.renderButton(gSlot,{theme:app.dataset.theme==='dark'?'filled_black':'outline',size:'large',shape:'pill',text:'signin_with',locale:state.lang,width:gWidth});
   }
 
   saveStorage();
