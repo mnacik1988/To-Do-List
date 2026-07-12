@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#f5f2ec" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1a1922" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -443,7 +443,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.40';
+var APP_VERSION = '0.41';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1564,11 +1564,20 @@ function closeSettings(){
   var scrim=sheet&&sheet.parentElement?sheet.parentElement.querySelector('.scrim'):null;
   if(!sheet){ state.settings=false; render(); return; }
   // Плавный уезд вниз + затухание фона, затем убираем из DOM.
-  sheet.style.animation='none'; // снять анимацию открытия (sheetup), чтобы не конфликтовала с уездом
-  sheet.style.transition='transform .28s cubic-bezier(.4,0,.2,1)';
-  sheet.style.transform='translateY(100%)';
-  if(scrim){ scrim.style.transition='opacity .28s ease'; scrim.style.opacity='0'; }
-  settingsCloseTimer=setTimeout(function(){ settingsCloseTimer=null; state.settings=false; render(); },280);
+  // ВАЖНО: анимацию открытия (sheetup, fill-mode:both удерживает transform)
+  // снимаем и ФОРСИМ reflow ДО установки transition/transform. Без reflow в
+  // одном кадре iOS Safari не запускает transition — шторка исчезает резко
+  // (проявлялось: плавно только когда между открытием и закрытием случался
+  // лишний render, напр. после входа через Google).
+  sheet.style.animation='none';
+  sheet.style.transform='translateY(0)';
+  void sheet.offsetHeight; // форс reflow — фиксируем стартовую точку перехода
+  requestAnimationFrame(function(){
+    sheet.style.transition='transform .28s cubic-bezier(.4,0,.2,1)';
+    sheet.style.transform='translateY(100%)';
+    if(scrim){ scrim.style.transition='opacity .28s ease'; scrim.style.opacity='0'; }
+  });
+  settingsCloseTimer=setTimeout(function(){ settingsCloseTimer=null; state.settings=false; render(); },300);
 }
 function clearAllData(){
   try{
