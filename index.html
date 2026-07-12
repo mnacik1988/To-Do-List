@@ -449,7 +449,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.44';
+var APP_VERSION = '0.45';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -814,7 +814,7 @@ function renderModal(){
 
   return '<div class="overlay">'+
     '<div class="scrim" data-role="modal-close"'+sa+'></div>'+
-    '<div class="sheet"'+sha+'>'+
+    '<div class="sheet" data-sheet="modal"'+sha+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+body+'</div>'+
     '</div></div>';
@@ -861,7 +861,7 @@ function renderDaySheet(){
 
   return '<div class="overlay">'+
     '<div class="scrim" data-role="day-close"'+sa+'></div>'+
-    '<div class="sheet"'+sha+'>'+
+    '<div class="sheet" data-sheet="day"'+sha+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+
         '<div style="display:flex;align-items:center;justify-content:space-between">'+
@@ -1015,7 +1015,7 @@ function renderQuickAdd(){
   var sha=' style="animation:sheetup .3s cubic-bezier(.2,.8,.2,1) both"';
   return '<div class="overlay" style="z-index:35">'+
     '<div class="scrim" data-role="qa-cancel"'+sa+'></div>'+
-    '<div class="sheet"'+sha+'>'+
+    '<div class="sheet" data-sheet="qa"'+sha+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+
         '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.qa_title+'</div>'+
@@ -1203,8 +1203,11 @@ function openModal(section,id){ state.fabOpen=false; state.modal={section:sectio
 function closeModal(){
   if(aiTimeout){clearTimeout(aiTimeout);aiTimeout=null;}
   if(modalRecObj){modalRecObj.stop();modalRecObj=null;}
-  state.modal=null; state.modalMode='view'; state.edit=null;
-  state.aiRec=false; state.aiProc=false; state.aiNote=''; state.confirmDelete=false; render();
+  state.aiRec=false; // запись глушим сразу, остальное — после анимации уезда
+  closeSheetAnimated('modal', function(){
+    state.modal=null; state.modalMode='view'; state.edit=null;
+    state.aiProc=false; state.aiNote=''; state.confirmDelete=false; render();
+  });
 }
 function startEdit(){ var task=currentTask(); if(!task) return; syncEdit(); state.modalMode='edit'; state.edit={text:task.text,desc:task.desc||'',priority:task.priority,date:task.date||'',reminderTime:task.reminderTime||''}; state.aiNote=''; render(); var el=document.getElementById('edit-text'); if(el) el.focus(); }
 function cancelEdit(){ syncEdit(); state.modalMode='view'; state.edit=null; render(); }
@@ -1583,6 +1586,27 @@ function aiAnalyze(){
   });
 }
 
+/* ── Общее плавное закрытие шторок (карточка задачи, день, быстрое добавление) ──
+   Уезд вниз + затухание фона, done() (реальное закрытие state+render) — после
+   анимации. Тот же приём reflow+rAF, что и в closeSettings (иначе на iOS резко). */
+var _sheetClosing={};
+function closeSheetAnimated(key, done){
+  if(_sheetClosing[key]) return;
+  var sheet=document.querySelector('.sheet[data-sheet="'+key+'"]');
+  if(!sheet){ done(); return; }
+  var scrim=sheet.parentElement?sheet.parentElement.querySelector('.scrim'):null;
+  _sheetClosing[key]=true;
+  sheet.style.animation='none';
+  sheet.style.transform='translateY(0)';
+  void sheet.offsetHeight;
+  requestAnimationFrame(function(){
+    sheet.style.transition='transform .28s cubic-bezier(.4,0,.2,1)';
+    sheet.style.transform='translateY(100%)';
+    if(scrim){ scrim.style.transition='opacity .28s ease'; scrim.style.opacity='0'; }
+  });
+  setTimeout(function(){ _sheetClosing[key]=false; done(); },300);
+}
+
 /* ── Settings ── */
 var settingsCloseTimer=null;
 function openSettings(){ if(settingsCloseTimer){clearTimeout(settingsCloseTimer);settingsCloseTimer=null;} state.fabOpen=false; state.settings=true; anim.settings=true; render(); refreshAiLimit(); }
@@ -1623,7 +1647,14 @@ function calSelectDay(date){ state.calSelected=date; openDaySheet(date); }
 
 /* ── Day Sheet ── */
 function openDaySheet(date){ state.fabOpen=false; state.daySheet={date:date}; state.dsAddText=''; state.dsAddPri='mid'; state.dsAddTime=''; state.dsAiRec=false; state.dsAiProc=false; state.dsShowAdd=false; anim.daySheet=true; render(); }
-function closeDaySheet(){ if(dsAiTimeout){clearTimeout(dsAiTimeout);dsAiTimeout=null;} if(dsRecObj){dsRecObj.stop();dsRecObj=null;} state.daySheet=null; state.dsShowAdd=false; state.dsAddTime=''; state.dsAiRec=false; state.dsAiProc=false; render(); }
+function closeDaySheet(instant){
+  if(dsAiTimeout){clearTimeout(dsAiTimeout);dsAiTimeout=null;}
+  if(dsRecObj){dsRecObj.stop();dsRecObj=null;}
+  var finish=function(){ state.daySheet=null; state.dsShowAdd=false; state.dsAddTime=''; state.dsAiRec=false; state.dsAiProc=false; render(); };
+  // instant=true при переходе «день → карточка задачи»: без анимации, иначе
+  // уезжающая шторка дня наложится на выезжающую карточку.
+  if(instant) finish(); else closeSheetAnimated('day', finish);
+}
 function dsSetPri(pri){ syncDsInput(); state.dsAddPri=pri; render(); }
 function dsAddTask(){
   syncDsInput(); var text=(state.dsAddText||'').trim(); if(!text) return;
@@ -1851,7 +1882,7 @@ appEl.addEventListener('click',function(e){
     case 'toggle-done':         toggleDone(sec,id); break;
     case 'cycle-pri':           cyclePri(sec,id); break;
     case 'open-modal':          openModal(sec,id); break;
-    case 'open-modal-from-day': closeDaySheet(); setTimeout(function(){ openModal(sec,id); },50); break;
+    case 'open-modal-from-day': closeDaySheet(true); setTimeout(function(){ openModal(sec,id); },50); break;
     case 'modal-close':         closeModal(); break;
     case 'start-edit':          startEdit(); break;
     case 'cancel-edit':         cancelEdit(); break;
@@ -1865,7 +1896,7 @@ appEl.addEventListener('click',function(e){
     case 'fab-scrim':           state.fabOpen=false; render(); break;
     case 'fab-dial-mic':        state.fabOpen=false; onFabMic(); break;
     case 'fab-dial-text':       state.fabOpen=false; state.quickAdd=true; state.qaText=''; state.qaDate=todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
-    case 'qa-cancel':           state.quickAdd=false; render(); break;
+    case 'qa-cancel':           closeSheetAnimated('qa', function(){ state.quickAdd=false; render(); }); break;
     case 'qa-set-pri':          state.qaPri=el.dataset.pri; render(); break;
     case 'qa-save':
       var qText=(state.qaText||'').trim();
