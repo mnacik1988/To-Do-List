@@ -443,7 +443,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.38';
+var APP_VERSION = '0.39';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -879,7 +879,7 @@ function renderSettings(){
   var sheetAnim=anim.settings?' style="animation:sheetup .28s cubic-bezier(.2,.8,.2,1) both"':'';
   return '<div class="overlay" style="z-index:40">'+
     '<div class="scrim" data-role="settings-close"></div>'+
-    '<div class="sheet"'+sheetAnim+'>'+
+    '<div class="sheet" data-sheet-drag="settings"'+sheetAnim+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+
         '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.settings+'</div>'+
@@ -1734,6 +1734,45 @@ document.addEventListener('touchend',function(){
   } else {
     s.row.style.transform='translateX(0)';
     if(openSwipeEl===s.wrap) openSwipeEl=null;
+  }
+},{passive:true});
+
+/* ── Свайп-вниз по шторке настроек = закрыть ──
+   Тянем шторку за пределы, только если внутренний скролл уже вверху
+   (иначе жест down = обычная прокрутка контента). Не конфликтует с
+   обработчиками задач: у них триггер — [data-role="task-row"], которого
+   в шторке нет, поэтому переменная swipe там всегда null. */
+var sheetDrag=null;
+document.addEventListener('touchstart',function(e){
+  var sheet=e.target.closest('.sheet[data-sheet-drag]');
+  if(!sheet){ sheetDrag=null; return; }
+  sheetDrag={ sheet:sheet, body:sheet.querySelector('.sheet-body'), startY:e.touches[0].clientY, dy:0, active:false, key:sheet.getAttribute('data-sheet-drag') };
+},{passive:true});
+document.addEventListener('touchmove',function(e){
+  if(!sheetDrag) return;
+  var dy=e.touches[0].clientY-sheetDrag.startY;
+  if(!sheetDrag.active){
+    if(dy>6 && (!sheetDrag.body || sheetDrag.body.scrollTop<=0)){
+      sheetDrag.active=true; sheetDrag.sheet.style.transition='none';
+    } else if(dy<-4 || (sheetDrag.body && sheetDrag.body.scrollTop>0)){
+      sheetDrag=null; return;   // отдаём жест внутренней прокрутке
+    } else { return; }
+  }
+  if(dy<0) dy=0;
+  sheetDrag.dy=dy;
+  e.preventDefault();
+  sheetDrag.sheet.style.transform='translateY('+dy+'px)';
+},{passive:false});
+document.addEventListener('touchend',function(){
+  if(!sheetDrag) return;
+  var s=sheetDrag; sheetDrag=null;
+  if(!s.active) return;
+  s.sheet.style.transition='transform .25s cubic-bezier(.2,.8,.2,1)';
+  if(s.dy>90){
+    s.sheet.style.transform='translateY(100%)';
+    setTimeout(function(){ if(s.key==='settings') closeSettings(); },180);
+  } else {
+    s.sheet.style.transform='translateY(0)';
   }
 },{passive:true});
 
