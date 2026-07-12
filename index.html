@@ -430,7 +430,7 @@ function initGoogleSignIn(){
   if(!isGoogleSignedIn()) google.accounts.id.prompt();
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.34';
+var APP_VERSION = '0.35';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1147,7 +1147,7 @@ function render(){
   var gSlot=document.getElementById('google-signin-slot');
   if(gSlot && window.google && google.accounts && google.accounts.id){
     gSlot.innerHTML='';
-    google.accounts.id.renderButton(gSlot,{theme:app.dataset.theme==='dark'?'filled_black':'outline',size:'large',shape:'pill',text:'signin_with',locale:state.lang,width:240});
+    google.accounts.id.renderButton(gSlot,{theme:'filled_black',size:'large',shape:'pill',text:'signin_with',locale:state.lang,width:240});
   }
 
   saveStorage();
