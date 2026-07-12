@@ -424,9 +424,15 @@ function setGoogleToken(jwt){
     localStorage.setItem('vtodo-google-jwt',jwt);
     localStorage.setItem('vtodo-google-jwt-exp',String(payload.exp||0));
     localStorage.setItem('vtodo-google-email',payload.email||'');
+    localStorage.setItem('vtodo-google-sub',payload.sub||'');
   }catch(e){}
 }
 function getGoogleEmail(){ try{ return localStorage.getItem('vtodo-google-email')||''; }catch(e){ return ''; } }
+function getGoogleSub(){ try{ return localStorage.getItem('vtodo-google-sub')||''; }catch(e){ return ''; } }
+// Ключ, по которому сервер считает лимит и по которому выдаётся VIP (/admin/vip).
+// Совпадает с userId воркера ('google:'+sub). Пусто, если не залогинен — тогда
+// ИИ-лимита у пользователя нет вообще (device-id для ИИ больше не используется).
+function getUserKey(){ var s=getGoogleSub(); return s?('google:'+s):''; }
 function isGoogleSignedIn(){ return !!getGoogleToken(); }
 function onGoogleCredential(resp){
   if(resp && resp.credential){ setGoogleToken(resp.credential); refreshAiLimit(); if(state.settings) render(); }
@@ -443,7 +449,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.42';
+var APP_VERSION = '0.43';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -923,9 +929,13 @@ function renderSettings(){
               '<button class="btn-outline" style="flex:1" data-role="settings-clear-cancel">'+L.btn_cancel+'</button>'+
             '</div>'
         )+
-        '<button class="btn-outline" style="width:100%;margin-top:10px;font-size:11px;opacity:.8" data-role="copy-device-id">'+
-          (state.idCopied?L.my_id_copied:L.my_id+': '+getDeviceId())+
-        '</button>'+
+        // «Мой ID» = Google-ключ (по нему сервер считает лимит и выдаётся VIP).
+        // Показываем только залогиненным: без входа ИИ-лимита нет, ID бесполезен.
+        (isGoogleSignedIn()
+          ? '<button class="btn-outline" style="width:100%;margin-top:10px;font-size:11px;opacity:.8" data-role="copy-device-id">'+
+              (state.idCopied?L.my_id_copied:L.my_id+': '+getUserKey())+
+            '</button>'
+          : '')+
         '<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:16px;opacity:.75">Mynado v'+APP_VERSION+'</div>'+
       '</div>'+
     '</div></div>';
@@ -1817,7 +1827,7 @@ appEl.addEventListener('click',function(e){
     case 'settings-push':       subscribePush(); break;
     case 'toggle-voice-reply':  state.voiceReply=!state.voiceReply; if(state.voiceReply) unlockTts(); try{localStorage.setItem('vtodo-voice',state.voiceReply?'1':'0');}catch(e){} render(); break;
     case 'copy-device-id':
-      var deviceId=getDeviceId();
+      var deviceId=getUserKey();
       if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(deviceId).catch(function(){}); }
       state.idCopied=true; render();
       setTimeout(function(){ state.idCopied=false; render(); },1500);
