@@ -449,7 +449,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.43';
+var APP_VERSION = '0.44';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1302,15 +1302,21 @@ function onFabMic(){
     timerIv=setInterval(function(){ state.timer++; var el=document.querySelector('.fab-timer'); if(el) el.textContent=fmtT(state.timer); },1000);
     if(SpeechRec){
       recTranscript='';
+      var finalAcc='';
       var rec=new SpeechRec();
       rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
+      // ВАЖНО (фикс дублирования на Android): цикл с e.resultIndex, а не с 0.
+      // Финальные куски накапливаем ОДИН раз в finalAcc, а не пересобираем из
+      // всех e.results на каждом событии — иначе Android повторял готовые слова
+      // ("завтразавтразавтра"). interim — только текущий незавершённый кусок.
       rec.onresult=function(e){
-        var interim='', final='';
-        for(var i=0;i<e.results.length;i++){
-          if(e.results[i].isFinal) final+=e.results[i][0].transcript;
-          else interim+=e.results[i][0].transcript;
+        var interim='';
+        for(var i=e.resultIndex;i<e.results.length;i++){
+          var t=e.results[i][0].transcript;
+          if(e.results[i].isFinal) finalAcc+=t+' ';
+          else interim+=t;
         }
-        recTranscript=(final||interim).trim();
+        recTranscript=(finalAcc+interim).trim();
         var el=document.querySelector('.fab-timer,.fab-transcript');
         if(el){ el.className='fab-transcript'; el.textContent=recTranscript; }
       };
@@ -1447,12 +1453,19 @@ function onAiMic(){
   if(!state.aiRec){
     if(!SpeechRec) return;
     syncEdit(); state.aiNote=''; modalTranscript='';
+    var mFinalAcc='';
     var rec=new SpeechRec();
     rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
+    // Фикс дублирования на Android (см. основной ввод): resultIndex + аккумулятор.
     rec.onresult=function(e){
-      var fin='';
-      for(var i=0;i<e.results.length;i++){ if(e.results[i].isFinal) fin+=e.results[i][0].transcript; }
-      if(fin) modalTranscript=fin;
+      var interim='';
+      for(var i=e.resultIndex;i<e.results.length;i++){
+        var t=e.results[i][0].transcript;
+        if(e.results[i].isFinal) mFinalAcc+=t+' ';
+        else interim+=t;
+      }
+      var full=(mFinalAcc+interim).trim();
+      if(full) modalTranscript=full;
     };
     rec.onerror=function(ev){ if(ev.error==='no-speech'||ev.error==='aborted') return; state.aiRec=false; state.aiProc=false; modalRecObj=null; render(); };
     rec.onend=function(){
