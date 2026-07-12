@@ -426,11 +426,14 @@ function promptGoogleSignIn(){
 }
 function initGoogleSignIn(){
   if(!window.google || !google.accounts || !google.accounts.id) return;
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true });
-  if(!isGoogleSignedIn()) google.accounts.id.prompt();
+  // auto_select/prompt() убраны намеренно: они запускают фоновые попытки
+  // тихого входа (FedCM), которые периодически перерисовывают наш рендер
+  // кнопки и сбрасывают её тёмный вид обратно на светлый по умолчанию.
+  // Явной кнопки (renderButton в настройках) достаточно для входа.
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.35';
+var APP_VERSION = '0.36';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
