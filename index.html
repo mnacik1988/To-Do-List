@@ -443,7 +443,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.39';
+var APP_VERSION = '0.40';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1556,8 +1556,20 @@ function aiAnalyze(){
 }
 
 /* ── Settings ── */
-function openSettings(){ state.fabOpen=false; state.settings=true; anim.settings=true; render(); refreshAiLimit(); }
-function closeSettings(){ state.settings=false; render(); }
+var settingsCloseTimer=null;
+function openSettings(){ if(settingsCloseTimer){clearTimeout(settingsCloseTimer);settingsCloseTimer=null;} state.fabOpen=false; state.settings=true; anim.settings=true; render(); refreshAiLimit(); }
+function closeSettings(){
+  if(settingsCloseTimer) return; // уже закрывается
+  var sheet=document.querySelector('.sheet[data-sheet-drag="settings"]');
+  var scrim=sheet&&sheet.parentElement?sheet.parentElement.querySelector('.scrim'):null;
+  if(!sheet){ state.settings=false; render(); return; }
+  // Плавный уезд вниз + затухание фона, затем убираем из DOM.
+  sheet.style.animation='none'; // снять анимацию открытия (sheetup), чтобы не конфликтовала с уездом
+  sheet.style.transition='transform .28s cubic-bezier(.4,0,.2,1)';
+  sheet.style.transform='translateY(100%)';
+  if(scrim){ scrim.style.transition='opacity .28s ease'; scrim.style.opacity='0'; }
+  settingsCloseTimer=setTimeout(function(){ settingsCloseTimer=null; state.settings=false; render(); },280);
+}
 function clearAllData(){
   try{
     var keys=[];
@@ -1767,11 +1779,10 @@ document.addEventListener('touchend',function(){
   if(!sheetDrag) return;
   var s=sheetDrag; sheetDrag=null;
   if(!s.active) return;
-  s.sheet.style.transition='transform .25s cubic-bezier(.2,.8,.2,1)';
-  if(s.dy>90){
-    s.sheet.style.transform='translateY(100%)';
-    setTimeout(function(){ if(s.key==='settings') closeSettings(); },180);
+  if(s.dy>90 && s.key==='settings'){
+    closeSettings();   // плавно доедет вниз от текущей точки + затухание фона, потом уберёт из DOM
   } else {
+    s.sheet.style.transition='transform .25s cubic-bezier(.2,.8,.2,1)';
     s.sheet.style.transform='translateY(0)';
   }
 },{passive:true});
