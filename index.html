@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; font-family: 'Manrope', system-ui, sans-serif; -webkit-font-smoothing: antialiased; touch-action: manipulation; }
@@ -395,6 +396,38 @@ function applyLang(lang, noRender){
 var STORE_KEY = 'vtodo-v2';
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
 var AI_DAILY_LIMIT = 20;
+
+/* ── Google Sign-In (привязывает ИИ-лимит к аккаунту, а не к устройству) ── */
+var GOOGLE_CLIENT_ID = '1053800558840-dftrtb0rhlbjtgjnah0jeinmsf4oqs1s.apps.googleusercontent.com';
+
+function getGoogleToken(){
+  try{
+    var jwt=localStorage.getItem('vtodo-google-jwt');
+    var exp=parseInt(localStorage.getItem('vtodo-google-jwt-exp')||'0');
+    if(jwt && exp>Date.now()/1000+30) return jwt;
+  }catch(e){}
+  return null;
+}
+function setGoogleToken(jwt){
+  try{
+    var payload=JSON.parse(decodeURIComponent(escape(atob(jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))));
+    localStorage.setItem('vtodo-google-jwt',jwt);
+    localStorage.setItem('vtodo-google-jwt-exp',String(payload.exp||0));
+  }catch(e){}
+}
+function isGoogleSignedIn(){ return !!getGoogleToken(); }
+function onGoogleCredential(resp){
+  if(resp && resp.credential){ setGoogleToken(resp.credential); refreshAiLimit(); if(state.settings) render(); }
+}
+function promptGoogleSignIn(){
+  if(window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
+}
+function initGoogleSignIn(){
+  if(!window.google || !google.accounts || !google.accounts.id) return;
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true });
+  if(!isGoogleSignedIn()) google.accounts.id.prompt();
+}
+window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
 var APP_VERSION = '0.30';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
@@ -476,13 +509,14 @@ function getEffectiveLimit(){
   try{ var raw=localStorage.getItem('vtodo-ai-limit-info'); if(raw){ var u=JSON.parse(raw); if(u.date===todayStr()) return u.limit; } }catch(e){}
   return AI_DAILY_LIMIT;
 }
-function canUseAi(){ return getAiUsage().count<getEffectiveLimit(); }
+function canUseAi(){ return isGoogleSignedIn() && getAiUsage().count<getEffectiveLimit(); }
 function incrementAiUsage(){ var u=getAiUsage(); u.count++; try{localStorage.setItem('vtodo-ai-usage',JSON.stringify(u));}catch(e){} }
 function maxOutAiUsage(){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:todayStr(),count:getEffectiveLimit()}));}catch(e){} }
 function aiUsageLeft(){ return Math.max(0,getEffectiveLimit()-getAiUsage().count); }
 function refreshAiLimit(){
   if(!navigator.onLine) return;
-  fetch(WORKER_URL+'/limit?userId='+encodeURIComponent(getDeviceId()))
+  var tok=getGoogleToken(); if(!tok) return;
+  fetch(WORKER_URL+'/limit',{headers:{'Authorization':'Bearer '+tok}})
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(typeof data.limit==='number'){
@@ -495,14 +529,15 @@ function refreshAiLimit(){
 
 /* ── Claude API ── */
 function callClaude(prompt, cb){
+  if(!isGoogleSignedIn()){ promptGoogleSignIn(); cb({limit:true},null); return; }
   if(!canUseAi()){ cb({limit:true},null); return; }
   var fired=false;
   var timer=setTimeout(function(){ if(!fired){ fired=true; cb(new Error('timeout'),null); } },25000);
   function done(err,data){ if(fired) return; fired=true; clearTimeout(timer); refreshAiLimit(); cb(err,data); }
   fetch(WORKER_URL,{
     method:'POST',
-    headers:{'content-type':'application/json'},
-    body:JSON.stringify({messages:[{role:'user',content:prompt}],userId:getDeviceId()})
+    headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
+    body:JSON.stringify({messages:[{role:'user',content:prompt}]})
   })
   .then(function(r){return r.json();})
   .then(function(data){
