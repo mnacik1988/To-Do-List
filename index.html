@@ -449,7 +449,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.47';
+var APP_VERSION = '0.48';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1331,15 +1331,19 @@ function onFabMic(){
       var voiceDebugLog=[]; var voiceDebugEventN=0; // временная диагностика, см. renderVoiceDebug
       var rec=new SpeechRec();
       rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
-      // Фикс дублирования на Android: (1) цикл с e.resultIndex вместо 0, финалы
-      // копятся ОДИН раз в finalAcc, а не пересобираются из всех e.results на
-      // каждом событии. (2) Этого оказалось НЕДОСТАТОЧНО — реальная причина
-      // "завтразавтразавтра" в том, что сам движок Android на коротких словах
-      // несколько раз подряд шлёт ОТДЕЛЬНЫЙ финальный результат с ОДИНАКОВЫМ
-      // текстом (не переиспользует индекс, а честно генерит новый) — это баг
-      // самого распознавателя, а не нашей группировки индексов. Защита: если
-      // новый финальный кусок дословно совпадает с только что добавленным —
-      // пропускаем его.
+      // Фикс дублирования на Android — НАСТОЯЩАЯ причина (найдена диагностикой
+      // 2026-07-13 по сырому логу с телефона Александра): движок на этом
+      // устройстве шлёт КАЖДЫЙ финальный результат как ВСЮ фразу-с-начала
+      // целиком, повторно "финализируя" её по мере роста — не отдельные новые
+      // кусочки. Пример из лога: [2]="завтра" [4]="завтра в" [9]="завтра в
+      // 11:00" [11]="завтра в 11:00 иду" [13]="завтра в 11:00 иду в зал" —
+      // монотонный рост, каждый новый final ПОЛНОСТЬЮ содержит предыдущий.
+      // Прошлые попытки (группировка по resultIndex, пропуск точных повторов)
+      // не работали, т.к. СКЛАДЫВАЛИ эти куски друг на друга. Правильно —
+      // ЗАМЕНЯТЬ накопленный текст последним (самым полным) финалом, если он
+      // продолжает предыдущий; если новый final НЕ является продолжением
+      // (перестал начинаться с уже накопленного — то есть это самостоятельный
+      // следующий отрезок речи, а не рост того же) — дописываем через пробел.
       rec.onresult=function(e){
         voiceDebugEventN++;
         var evLines=['#'+voiceDebugEventN+' resultIndex='+e.resultIndex+' results.length='+e.results.length];
@@ -1349,13 +1353,17 @@ function onFabMic(){
           var isF=e.results[i].isFinal;
           evLines.push('  ['+i+'] '+(isF?'FINAL':'interim')+': "'+t+'"');
           if(isF){
-            var norm=t.trim().toLowerCase();
-            if(norm && norm!==lastFinalSeg){ finalAcc+=t+' '; lastFinalSeg=norm; evLines.push('    -> added'); }
-            else evLines.push('    -> SKIPPED (dup guard)');
-          } else interim+=t;
+            var norm=t.trim();
+            if(norm){
+              var accLow=finalAcc.trim().toLowerCase(), normLow=norm.toLowerCase();
+              if(normLow===lastFinalSeg){ evLines.push('    -> SKIPPED (exact dup)'); }
+              else if(!accLow || normLow.indexOf(accLow)===0){ finalAcc=norm; lastFinalSeg=normLow; evLines.push('    -> REPLACED (continuation)'); }
+              else { finalAcc=(finalAcc.trim()+' '+norm).trim(); lastFinalSeg=normLow; evLines.push('    -> APPENDED (new segment)'); }
+            }
+          } else interim=t;
         }
         voiceDebugLog.push(evLines.join('\n'));
-        recTranscript=(finalAcc+interim).trim();
+        recTranscript=(finalAcc||interim).trim();
         var el=document.querySelector('.fab-timer,.fab-transcript');
         if(el){ el.className='fab-transcript'; el.textContent=recTranscript; }
       };
@@ -1508,19 +1516,28 @@ function onAiMic(){
     var mLastFinalSeg='';
     var rec=new SpeechRec();
     rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
-    // Фикс дублирования на Android (см. основной ввод, там подробный комментарий):
-    // resultIndex + аккумулятор + пропуск финального куска, дословно совпавшего
-    // с только что добавленным (реальный баг движка Android, шлёт повтор).
+    // Фикс дублирования на Android (см. основной ввод — там подробный разбор
+    // с реальными данными): финальные результаты на этом движке — это вся
+    // фраза-с-начала целиком, повторно финализированная по мере роста, а не
+    // отдельные новые кусочки. Заменяем накопленный текст последним (самым
+    // полным) финалом, если он продолжает предыдущий; иначе дописываем.
     rec.onresult=function(e){
       var interim='';
       for(var i=e.resultIndex;i<e.results.length;i++){
         var t=e.results[i][0].transcript;
         if(e.results[i].isFinal){
-          var norm=t.trim().toLowerCase();
-          if(norm && norm!==mLastFinalSeg){ mFinalAcc+=t+' '; mLastFinalSeg=norm; }
-        } else interim+=t;
+          var norm=t.trim();
+          if(norm){
+            var accLow=mFinalAcc.trim().toLowerCase(), normLow=norm.toLowerCase();
+            if(normLow!==mLastFinalSeg){
+              if(!accLow || normLow.indexOf(accLow)===0) mFinalAcc=norm;
+              else mFinalAcc=(mFinalAcc.trim()+' '+norm).trim();
+              mLastFinalSeg=normLow;
+            }
+          }
+        } else interim=t;
       }
-      var full=(mFinalAcc+interim).trim();
+      var full=(mFinalAcc||interim).trim();
       if(full) modalTranscript=full;
     };
     rec.onerror=function(ev){ if(ev.error==='no-speech'||ev.error==='aborted') return; state.aiRec=false; state.aiProc=false; modalRecObj=null; render(); };
