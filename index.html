@@ -471,7 +471,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.50';
+var APP_VERSION = '0.51';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -552,6 +552,10 @@ function getEffectiveLimit(){
   try{ var raw=localStorage.getItem('vtodo-ai-limit-info'); if(raw){ var u=JSON.parse(raw); if(u.date===todayStr()) return u.limit; } }catch(e){}
   return AI_DAILY_LIMIT;
 }
+function isVip(){
+  try{ var raw=localStorage.getItem('vtodo-ai-limit-info'); if(raw){ var u=JSON.parse(raw); if(u.date===todayStr()) return !!u.vip; } }catch(e){}
+  return false;
+}
 function canUseAi(){ return isGoogleSignedIn() && getAiUsage().count<getEffectiveLimit(); }
 function incrementAiUsage(){ var u=getAiUsage(); u.count++; try{localStorage.setItem('vtodo-ai-usage',JSON.stringify(u));}catch(e){} }
 function maxOutAiUsage(){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:todayStr(),count:getEffectiveLimit()}));}catch(e){} }
@@ -563,7 +567,7 @@ function refreshAiLimit(){
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(typeof data.limit==='number'){
-        try{ localStorage.setItem('vtodo-ai-limit-info',JSON.stringify({date:todayStr(),limit:data.limit})); }catch(e){}
+        try{ localStorage.setItem('vtodo-ai-limit-info',JSON.stringify({date:todayStr(),limit:data.limit,vip:!!data.vip})); }catch(e){}
         if(typeof data.used==='number'){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:todayStr(),count:data.used}));}catch(e){} }
         if(state.settings) render();
       }
@@ -940,8 +944,9 @@ function renderSettings(){
         // Счётчик X/Y показываем только залогиненным — иначе висит устаревшее
         // закешированное значение (напр. старый VIP по device-id), вводя в заблуждение.
         (isGoogleSignedIn()
-          ? '<div class="info-box" style="background:var(--surface2);margin-bottom:10px">'+
-              L.ai_left+'<strong>'+aiUsageLeft()+' / '+getEffectiveLimit()+'</strong>'+
+          ? '<div class="info-box" style="background:var(--surface2);margin-bottom:10px;display:flex;align-items:center;gap:8px">'+
+              (isVip()?'<span style="font-weight:800;font-size:11px;letter-spacing:.06em;background:linear-gradient(135deg,#f6d888,#cf9430);color:#2c2200;padding:3px 9px;border-radius:20px;flex:none">★ VIP</span>':'')+
+              '<span>'+L.ai_left+'<strong>'+aiUsageLeft()+' / '+getEffectiveLimit()+'</strong></span>'+
             '</div>'
           : '')+
         (!state.clearConfirm
