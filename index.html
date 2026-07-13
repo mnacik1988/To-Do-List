@@ -434,8 +434,19 @@ function getGoogleSub(){ try{ return localStorage.getItem('vtodo-google-sub')||'
 // ИИ-лимита у пользователя нет вообще (device-id для ИИ больше не используется).
 function getUserKey(){ var s=getGoogleSub(); return s?('google:'+s):''; }
 function isGoogleSignedIn(){ return !!getGoogleToken(); }
+// Отличается от isGoogleSignedIn(): true, если пользователь КОГДА-ЛИБО входил
+// (есть sub), даже если текущий токен уже протух. Используется для UI —
+// чтобы "Вошли как email" не мигало в "Не авторизован" каждый раз, когда
+// истекает часовой токен, а тихое обновление в моменте (см. callClaude) не
+// успело сработать. Реальная проверка для запроса к серверу — isGoogleSignedIn().
+function hasEverSignedIn(){ return !!getGoogleSub(); }
+var pendingAiRetry=null;
 function onGoogleCredential(resp){
-  if(resp && resp.credential){ setGoogleToken(resp.credential); refreshAiLimit(); if(state.settings) render(); }
+  if(resp && resp.credential){
+    setGoogleToken(resp.credential); refreshAiLimit();
+    if(pendingAiRetry){ var fn=pendingAiRetry; pendingAiRetry=null; fn(); }
+    if(state.settings) render();
+  }
 }
 function promptGoogleSignIn(){
   if(window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
@@ -471,7 +482,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.53';
+var APP_VERSION = '0.54';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -576,7 +587,20 @@ function refreshAiLimit(){
 
 /* ── Claude API ── */
 function callClaude(prompt, cb){
-  if(!isGoogleSignedIn()){ cb({needAuth:true},null); return; }
+  if(!isGoogleSignedIn()){
+    // Токена нет/протух. Если раньше уже логинился — даём ОДНУ попытку тихо
+    // обновить сессию (без показа кнопки/окна входа) и повторить этот же
+    // запрос; если за 2.5с не получилось — тогда честно просим войти.
+    // Без этого токен (~1ч) истекал и приложение выглядело "разлогиненным"
+    // на ровном месте при каждом более длинном использовании.
+    if(hasEverSignedIn() && !pendingAiRetry){
+      pendingAiRetry=function(){ callClaude(prompt, cb); };
+      silentGoogleRefresh();
+      setTimeout(function(){ if(pendingAiRetry){ pendingAiRetry=null; cb({needAuth:true},null); } },2500);
+      return;
+    }
+    cb({needAuth:true},null); return;
+  }
   if(!canUseAi()){ cb({limit:true},null); return; }
   var fired=false;
   var timer=setTimeout(function(){ if(!fired){ fired=true; cb(new Error('timeout'),null); } },25000);
@@ -916,7 +940,12 @@ function renderSettings(){
       '<div class="sheet-body">'+
         '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.settings+'</div>'+
         '<div class="info-box ok">'+L.ai_conn+'</div>'+
-        (isGoogleSignedIn()
+        // hasEverSignedIn(), не isGoogleSignedIn() — токен живёт ~1ч и его
+        // отсутствие в моменте НЕ значит, что пользователь вышел; тихое
+        // обновление (callClaude/silentGoogleRefresh) само разберётся при
+        // следующем реальном обращении к ИИ. Блок не должен мигать в "не
+        // авторизован" просто из-за истечения токена.
+        (hasEverSignedIn()
           ? '<div class="info-box ok">'+L.google_signed_in+esc(getGoogleEmail())+'</div>'
           : '<div class="info-box err">'+L.google_not_signed_in+'</div>'+
             '<div style="position:relative;margin-bottom:10px">'+
@@ -941,9 +970,10 @@ function renderSettings(){
         '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="toggle-voice-reply">'+
           (state.voiceReply?L.voice_reply_on:L.voice_reply_off)+
         '</button>'+
-        // Счётчик X/Y показываем только залогиненным — иначе висит устаревшее
-        // закешированное значение (напр. старый VIP по device-id), вводя в заблуждение.
-        (isGoogleSignedIn()
+        // Счётчик X/Y показываем при hasEverSignedIn() (см. комментарий выше
+        // про блок "Вошли как") — устаревшее значение из localStorage,
+        // но НЕ выдуманное: оно и так обновляется только пока валиден токен.
+        (hasEverSignedIn()
           ? '<div class="info-box" style="background:var(--surface2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px">'+
               '<span>'+L.ai_left+'<strong>'+aiUsageLeft()+' / '+getEffectiveLimit()+'</strong></span>'+
               (isVip()?'<span style="font-weight:800;font-size:11px;letter-spacing:.06em;background:linear-gradient(135deg,#f6d888,#cf9430);color:#2c2200;padding:3px 9px;border-radius:20px;flex:none">★ VIP</span>':'')+
@@ -957,8 +987,7 @@ function renderSettings(){
             '</div>'
         )+
         // «Мой ID» = Google-ключ (по нему сервер считает лимит и выдаётся VIP).
-        // Показываем только залогиненным: без входа ИИ-лимита нет, ID бесполезен.
-        (isGoogleSignedIn()
+        (hasEverSignedIn()
           ? '<button class="btn-outline" style="width:100%;margin-top:10px;font-size:11px;opacity:.8" data-role="copy-device-id">'+
               (state.idCopied?L.my_id_copied:L.my_id+': '+getUserKey())+
             '</button>'
