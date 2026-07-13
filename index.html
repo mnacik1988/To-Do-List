@@ -449,7 +449,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.48';
+var APP_VERSION = '0.49';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1048,26 +1048,6 @@ function renderQuickAdd(){
   '</div>';
 }
 
-// ── ВРЕМЕННАЯ диагностика бага дублирования голоса на Android (2026-07-13) ──
-// Показывает СЫРОЙ вывод SpeechRecognition после записи — что именно и
-// сколько раз прислал движок распознавания. Убрать после того, как баг
-// найден и починен по этим данным (см. память проекта).
-function renderVoiceDebug(){
-  if(!state.voiceDebugDump) return '';
-  return '<div class="overlay" style="z-index:60">'+
-    '<div class="scrim" data-role="close-voice-debug"></div>'+
-    '<div class="sheet">'+
-      '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
-      '<div class="sheet-body">'+
-        '<div style="font-size:15px;font-weight:800;color:var(--text)">🔍 Диагностика голоса (временно)</div>'+
-        '<div style="font-size:11px;color:var(--muted)">Сфотографируй этот экран и пришли — так станет видно, что реально присылает распознаватель.</div>'+
-        '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5;background:var(--surface2);padding:10px;border-radius:10px;font-family:monospace;color:var(--text)">'+esc(state.voiceDebugDump)+'</pre>'+
-        '<button class="btn-primary" data-role="close-voice-debug">Закрыть</button>'+
-      '</div>'+
-    '</div>'+
-  '</div>';
-}
-
 function renderDueBanner(){
   var items=state.dueReminders; if(!items||!items.length) return '';
   return '<div class="due-banner">'+
@@ -1175,8 +1155,7 @@ function render(){
     renderModal()+
     renderDaySheet()+
     renderQuickAdd()+
-    renderSettings()+
-    renderVoiceDebug();
+    renderSettings();
 
   /* wire inputs — both 'input' and 'change' for date/time pickers (iOS fires only 'change') */
   function wireIC(el,fn){ if(!el) return; el.addEventListener('input',fn); el.addEventListener('change',fn); }
@@ -1328,59 +1307,40 @@ function onFabMic(){
       recTranscript='';
       var finalAcc='';
       var lastFinalSeg='';
-      var voiceDebugLog=[]; var voiceDebugEventN=0; // временная диагностика, см. renderVoiceDebug
       var rec=new SpeechRec();
       rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
-      // Фикс дублирования на Android — НАСТОЯЩАЯ причина (найдена диагностикой
-      // 2026-07-13 по сырому логу с телефона Александра): движок на этом
-      // устройстве шлёт КАЖДЫЙ финальный результат как ВСЮ фразу-с-начала
-      // целиком, повторно "финализируя" её по мере роста — не отдельные новые
-      // кусочки. Пример из лога: [2]="завтра" [4]="завтра в" [9]="завтра в
-      // 11:00" [11]="завтра в 11:00 иду" [13]="завтра в 11:00 иду в зал" —
-      // монотонный рост, каждый новый final ПОЛНОСТЬЮ содержит предыдущий.
-      // Прошлые попытки (группировка по resultIndex, пропуск точных повторов)
-      // не работали, т.к. СКЛАДЫВАЛИ эти куски друг на друга. Правильно —
-      // ЗАМЕНЯТЬ накопленный текст последним (самым полным) финалом, если он
+      // Фикс дублирования на Android (найдено диагностикой 2026-07-13 по
+      // сырому логу с телефона Александра): движок на этом устройстве шлёт
+      // КАЖДЫЙ финальный результат как ВСЮ фразу-с-начала целиком, повторно
+      // "финализируя" её по мере роста ("завтра" -> "завтра в" -> "завтра в
+      // 11:00" -> ...) — не отдельные новые кусочки. Складывать их (как было
+      // раньше) — ошибка, отсюда дублирование. Правильно — ЗАМЕНЯТЬ
+      // накопленный текст последним (самым полным) финалом, если он
       // продолжает предыдущий; если новый final НЕ является продолжением
-      // (перестал начинаться с уже накопленного — то есть это самостоятельный
-      // следующий отрезок речи, а не рост того же) — дописываем через пробел.
+      // (самостоятельный следующий отрезок речи после паузы) — дописываем
+      // через пробел. Подтверждено рабочим тестом на реальном устройстве.
       rec.onresult=function(e){
-        voiceDebugEventN++;
-        var evLines=['#'+voiceDebugEventN+' resultIndex='+e.resultIndex+' results.length='+e.results.length];
         var interim='';
         for(var i=e.resultIndex;i<e.results.length;i++){
           var t=e.results[i][0].transcript;
-          var isF=e.results[i].isFinal;
-          evLines.push('  ['+i+'] '+(isF?'FINAL':'interim')+': "'+t+'"');
-          if(isF){
+          if(e.results[i].isFinal){
             var norm=t.trim();
             if(norm){
               var accLow=finalAcc.trim().toLowerCase(), normLow=norm.toLowerCase();
-              if(normLow===lastFinalSeg){ evLines.push('    -> SKIPPED (exact dup)'); }
-              else if(!accLow || normLow.indexOf(accLow)===0){ finalAcc=norm; lastFinalSeg=normLow; evLines.push('    -> REPLACED (continuation)'); }
-              else { finalAcc=(finalAcc.trim()+' '+norm).trim(); lastFinalSeg=normLow; evLines.push('    -> APPENDED (new segment)'); }
+              if(normLow!==lastFinalSeg){
+                if(!accLow || normLow.indexOf(accLow)===0) finalAcc=norm;
+                else finalAcc=(finalAcc.trim()+' '+norm).trim();
+                lastFinalSeg=normLow;
+              }
             }
           } else interim=t;
         }
-        voiceDebugLog.push(evLines.join('\n'));
         recTranscript=(finalAcc||interim).trim();
         var el=document.querySelector('.fab-timer,.fab-transcript');
         if(el){ el.className='fab-transcript'; el.textContent=recTranscript; }
       };
-      rec.onerror=function(e){
-        voiceDebugLog.push('#'+(++voiceDebugEventN)+' ERROR: '+e.error);
-        if(e.error==='no-speech'||e.error==='aborted') return;
-        clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render();
-      };
-      rec.onend=function(){
-        voiceDebugLog.push('--- onend, state.recording='+state.recording+' ---');
-        if(state.recording){ try{ rec.start(); }catch(e){ clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); } }
-        else {
-          recObj=null;
-          state.voiceDebugDump='ИТОГ: "'+recTranscript+'"\n\n'+voiceDebugLog.join('\n\n');
-          if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); } else render();
-        }
-      };
+      rec.onerror=function(e){ if(e.error==='no-speech'||e.error==='aborted') return; clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); };
+      rec.onend=function(){ if(state.recording){ try{ rec.start(); }catch(e){ clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); } } else { recObj=null; if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); } else render(); } };
       rec.start(); recObj=rec;
     }
     render();
@@ -1934,7 +1894,6 @@ appEl.addEventListener('click',function(e){
     case 'toggle-theme':        toggleTheme(); break;
     case 'toggle-settings':     openSettings(); break;
     case 'settings-close':      closeSettings(); break;
-    case 'close-voice-debug':   state.voiceDebugDump=''; render(); break;
     case 'settings-clear':         state.clearConfirm=true; render(); break;
     case 'settings-clear-confirm': clearAllData(); break;
     case 'settings-clear-cancel':  state.clearConfirm=false; render(); break;
