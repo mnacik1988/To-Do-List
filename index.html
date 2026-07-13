@@ -460,6 +460,18 @@ function promptGoogleSignIn(){
 function silentGoogleRefresh(){
   if(window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
 }
+// На iOS/Safari PWA, сохранённая на экран Домой, время от времени сама
+// стирает localStorage (Intelligent Tracking Prevention чистит данные
+// сайтов, которые давно не открывали через полноценный Safari — а открытие
+// именно значка на столе для этого счётчика не всегда засчитывается). Это
+// НЕ связано с истечением Google-токена (~1ч, уже решено выше) — тут
+// пропадает вообще всё: и sub, и email, приложение выглядит как "первый
+// запуск". Полностью запретить это нельзя, но можно ПОПРОСИТЬ браузер не
+// удалять наши данные под давлением — работает не всегда (зависит от
+// версии iOS), но не помешает.
+if(navigator.storage && navigator.storage.persist){
+  navigator.storage.persist().catch(function(){});
+}
 // Токен считаем "скоро истекающим" за 5 минут до факта — тогда есть запас
 // обновить его тихо, прежде чем он реально протухнет и ИИ откажет в запросе.
 function googleTokenExpiringSoon(){
@@ -482,7 +494,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.54';
+var APP_VERSION = '0.55';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
