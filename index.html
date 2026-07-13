@@ -495,7 +495,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.56';
+var APP_VERSION = '0.57';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -600,30 +600,30 @@ function refreshAiLimit(){
 }
 
 /* ── Claude API ── */
-function callClaude(prompt, cb){
-  if(!isGoogleSignedIn()){
-    // Токена нет/протух. Если раньше уже логинился — даём ОДНУ попытку тихо
-    // обновить сессию (без показа кнопки/окна входа) и повторить этот же
-    // запрос; если за 2.5с не получилось — тогда честно просим войти.
-    // Без этого токен (~1ч) истекал и приложение выглядело "разлогиненным"
-    // на ровном месте при каждом более длинном использовании.
-    if(hasEverSignedIn() && !pendingAiRetry){
-      pendingAiRetry=function(){ callClaude(prompt, cb); };
-      silentGoogleRefresh();
-      setTimeout(function(){
-        if(pendingAiRetry){
-          pendingAiRetry=null;
-          // Тихое обновление подтверждённо не сработало — не делаем вид, что
-          // всё ок (иначе интерфейс говорит "подключено", а ИИ молча
-          // отказывает — путает пользователя). Честно просим войти заново.
-          state.tokenStale=true; if(state.settings) render();
-          cb({needAuth:true},null);
-        }
-      },2500);
-      return;
-    }
-    cb({needAuth:true},null); return;
+// Токена нет/протух — или сервер отклонил токен, который клиент ЕЩЁ считал
+// живым (реальный случай бага 2026-07-13: локальный isGoogleSignedIn() не
+// поймал протухание, а воркер уже отказал 401 authRequired — раньше этот
+// путь не распознавался как needAuth, банер "сессия истекла" не появлялся,
+// хотя ИИ реально не работал). Единая точка для обоих случаев: если раньше
+// уже логинился — ОДНА попытка тихого обновления (без показа окна входа) и
+// повтор запроса; если за 2.5с не получилось — честно просим войти.
+function handleAuthFailure(retryFn, cb){
+  if(hasEverSignedIn() && !pendingAiRetry){
+    pendingAiRetry=retryFn;
+    silentGoogleRefresh();
+    setTimeout(function(){
+      if(pendingAiRetry){
+        pendingAiRetry=null;
+        state.tokenStale=true; if(state.settings) render();
+        cb({needAuth:true},null);
+      }
+    },2500);
+    return;
   }
+  cb({needAuth:true},null);
+}
+function callClaude(prompt, cb){
+  if(!isGoogleSignedIn()){ handleAuthFailure(function(){ callClaude(prompt, cb); }, cb); return; }
   if(!canUseAi()){ cb({limit:true},null); return; }
   var fired=false;
   var timer=setTimeout(function(){ if(!fired){ fired=true; cb(new Error('timeout'),null); } },25000);
@@ -636,6 +636,11 @@ function callClaude(prompt, cb){
   .then(function(r){return r.json();})
   .then(function(data){
     if(data.error){
+      if(data.error.authRequired){
+        if(fired) return; fired=true; clearTimeout(timer);
+        handleAuthFailure(function(){ callClaude(prompt, cb); }, cb);
+        return;
+      }
       if(data.error.limit){maxOutAiUsage();done({limit:true},null);return;}
       done(new Error(data.error.message),null);return;
     }
