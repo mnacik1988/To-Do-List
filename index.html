@@ -440,16 +440,38 @@ function onGoogleCredential(resp){
 function promptGoogleSignIn(){
   if(window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
 }
+// Токен Google живёт ~1 час. Раньше (v0.36) фоновое тихое обновление было
+// намеренно отключено — оно конфликтовало с видимой кнопкой Google (сбрасывало
+// её тёмный вид). С тех пор кнопка стала полностью невидимой (см.
+// GOOGLE_G_SVG/renderSettings — своя кнопка поверх настоящей с opacity:0),
+// поэтому фоновые попытки больше не задевают внешний вид — можно вернуть.
+// Без этого вход "слетал" каждый час, требуя повторной ручной авторизации.
+function silentGoogleRefresh(){
+  if(window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
+}
+// Токен считаем "скоро истекающим" за 5 минут до факта — тогда есть запас
+// обновить его тихо, прежде чем он реально протухнет и ИИ откажет в запросе.
+function googleTokenExpiringSoon(){
+  try{
+    var exp=parseInt(localStorage.getItem('vtodo-google-jwt-exp')||'0');
+    if(!exp) return false; // никогда не логинился — обновлять нечего
+    return exp<Date.now()/1000+300;
+  }catch(e){ return false; }
+}
 function initGoogleSignIn(){
   if(!window.google || !google.accounts || !google.accounts.id) return;
-  // auto_select/prompt() убраны намеренно: они запускают фоновые попытки
-  // тихого входа (FedCM), которые периодически перерисовывают наш рендер
-  // кнопки и сбрасывают её тёмный вид обратно на светлый по умолчанию.
-  // Явной кнопки (renderButton в настройках) достаточно для входа.
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true });
+  if(googleTokenExpiringSoon()) silentGoogleRefresh();
+  // Раз в 10 минут проверяем, не пора ли обновить токен (пока приложение открыто).
+  setInterval(function(){ if(googleTokenExpiringSoon()) silentGoogleRefresh(); }, 600000);
+  // PWA/TWA на телефоне часто просто разворачивают из фона (не полная
+  // перезагрузка) — на этот случай тоже проверяем при возврате в приложение.
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='visible' && googleTokenExpiringSoon()) silentGoogleRefresh();
+  });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.49';
+var APP_VERSION = '0.50';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
