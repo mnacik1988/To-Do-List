@@ -449,7 +449,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.45';
+var APP_VERSION = '0.46';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1306,18 +1306,26 @@ function onFabMic(){
     if(SpeechRec){
       recTranscript='';
       var finalAcc='';
+      var lastFinalSeg='';
       var rec=new SpeechRec();
       rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
-      // ВАЖНО (фикс дублирования на Android): цикл с e.resultIndex, а не с 0.
-      // Финальные куски накапливаем ОДИН раз в finalAcc, а не пересобираем из
-      // всех e.results на каждом событии — иначе Android повторял готовые слова
-      // ("завтразавтразавтра"). interim — только текущий незавершённый кусок.
+      // Фикс дублирования на Android: (1) цикл с e.resultIndex вместо 0, финалы
+      // копятся ОДИН раз в finalAcc, а не пересобираются из всех e.results на
+      // каждом событии. (2) Этого оказалось НЕДОСТАТОЧНО — реальная причина
+      // "завтразавтразавтра" в том, что сам движок Android на коротких словах
+      // несколько раз подряд шлёт ОТДЕЛЬНЫЙ финальный результат с ОДИНАКОВЫМ
+      // текстом (не переиспользует индекс, а честно генерит новый) — это баг
+      // самого распознавателя, а не нашей группировки индексов. Защита: если
+      // новый финальный кусок дословно совпадает с только что добавленным —
+      // пропускаем его.
       rec.onresult=function(e){
         var interim='';
         for(var i=e.resultIndex;i<e.results.length;i++){
           var t=e.results[i][0].transcript;
-          if(e.results[i].isFinal) finalAcc+=t+' ';
-          else interim+=t;
+          if(e.results[i].isFinal){
+            var norm=t.trim().toLowerCase();
+            if(norm && norm!==lastFinalSeg){ finalAcc+=t+' '; lastFinalSeg=norm; }
+          } else interim+=t;
         }
         recTranscript=(finalAcc+interim).trim();
         var el=document.querySelector('.fab-timer,.fab-transcript');
@@ -1457,15 +1465,20 @@ function onAiMic(){
     if(!SpeechRec) return;
     syncEdit(); state.aiNote=''; modalTranscript='';
     var mFinalAcc='';
+    var mLastFinalSeg='';
     var rec=new SpeechRec();
     rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
-    // Фикс дублирования на Android (см. основной ввод): resultIndex + аккумулятор.
+    // Фикс дублирования на Android (см. основной ввод, там подробный комментарий):
+    // resultIndex + аккумулятор + пропуск финального куска, дословно совпавшего
+    // с только что добавленным (реальный баг движка Android, шлёт повтор).
     rec.onresult=function(e){
       var interim='';
       for(var i=e.resultIndex;i<e.results.length;i++){
         var t=e.results[i][0].transcript;
-        if(e.results[i].isFinal) mFinalAcc+=t+' ';
-        else interim+=t;
+        if(e.results[i].isFinal){
+          var norm=t.trim().toLowerCase();
+          if(norm && norm!==mLastFinalSeg){ mFinalAcc+=t+' '; mLastFinalSeg=norm; }
+        } else interim+=t;
       }
       var full=(mFinalAcc+interim).trim();
       if(full) modalTranscript=full;
