@@ -449,7 +449,7 @@ function initGoogleSignIn(){
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.46';
+var APP_VERSION = '0.47';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1048,6 +1048,26 @@ function renderQuickAdd(){
   '</div>';
 }
 
+// ── ВРЕМЕННАЯ диагностика бага дублирования голоса на Android (2026-07-13) ──
+// Показывает СЫРОЙ вывод SpeechRecognition после записи — что именно и
+// сколько раз прислал движок распознавания. Убрать после того, как баг
+// найден и починен по этим данным (см. память проекта).
+function renderVoiceDebug(){
+  if(!state.voiceDebugDump) return '';
+  return '<div class="overlay" style="z-index:60">'+
+    '<div class="scrim" data-role="close-voice-debug"></div>'+
+    '<div class="sheet">'+
+      '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
+      '<div class="sheet-body">'+
+        '<div style="font-size:15px;font-weight:800;color:var(--text)">🔍 Диагностика голоса (временно)</div>'+
+        '<div style="font-size:11px;color:var(--muted)">Сфотографируй этот экран и пришли — так станет видно, что реально присылает распознаватель.</div>'+
+        '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5;background:var(--surface2);padding:10px;border-radius:10px;font-family:monospace;color:var(--text)">'+esc(state.voiceDebugDump)+'</pre>'+
+        '<button class="btn-primary" data-role="close-voice-debug">Закрыть</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
 function renderDueBanner(){
   var items=state.dueReminders; if(!items||!items.length) return '';
   return '<div class="due-banner">'+
@@ -1155,7 +1175,8 @@ function render(){
     renderModal()+
     renderDaySheet()+
     renderQuickAdd()+
-    renderSettings();
+    renderSettings()+
+    renderVoiceDebug();
 
   /* wire inputs — both 'input' and 'change' for date/time pickers (iOS fires only 'change') */
   function wireIC(el,fn){ if(!el) return; el.addEventListener('input',fn); el.addEventListener('change',fn); }
@@ -1307,6 +1328,7 @@ function onFabMic(){
       recTranscript='';
       var finalAcc='';
       var lastFinalSeg='';
+      var voiceDebugLog=[]; var voiceDebugEventN=0; // временная диагностика, см. renderVoiceDebug
       var rec=new SpeechRec();
       rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
       // Фикс дублирования на Android: (1) цикл с e.resultIndex вместо 0, финалы
@@ -1319,20 +1341,38 @@ function onFabMic(){
       // новый финальный кусок дословно совпадает с только что добавленным —
       // пропускаем его.
       rec.onresult=function(e){
+        voiceDebugEventN++;
+        var evLines=['#'+voiceDebugEventN+' resultIndex='+e.resultIndex+' results.length='+e.results.length];
         var interim='';
         for(var i=e.resultIndex;i<e.results.length;i++){
           var t=e.results[i][0].transcript;
-          if(e.results[i].isFinal){
+          var isF=e.results[i].isFinal;
+          evLines.push('  ['+i+'] '+(isF?'FINAL':'interim')+': "'+t+'"');
+          if(isF){
             var norm=t.trim().toLowerCase();
-            if(norm && norm!==lastFinalSeg){ finalAcc+=t+' '; lastFinalSeg=norm; }
+            if(norm && norm!==lastFinalSeg){ finalAcc+=t+' '; lastFinalSeg=norm; evLines.push('    -> added'); }
+            else evLines.push('    -> SKIPPED (dup guard)');
           } else interim+=t;
         }
+        voiceDebugLog.push(evLines.join('\n'));
         recTranscript=(finalAcc+interim).trim();
         var el=document.querySelector('.fab-timer,.fab-transcript');
         if(el){ el.className='fab-transcript'; el.textContent=recTranscript; }
       };
-      rec.onerror=function(e){ if(e.error==='no-speech'||e.error==='aborted') return; clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); };
-      rec.onend=function(){ if(state.recording){ try{ rec.start(); }catch(e){ clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); } } else { recObj=null; if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); } else render(); } };
+      rec.onerror=function(e){
+        voiceDebugLog.push('#'+(++voiceDebugEventN)+' ERROR: '+e.error);
+        if(e.error==='no-speech'||e.error==='aborted') return;
+        clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render();
+      };
+      rec.onend=function(){
+        voiceDebugLog.push('--- onend, state.recording='+state.recording+' ---');
+        if(state.recording){ try{ rec.start(); }catch(e){ clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); } }
+        else {
+          recObj=null;
+          state.voiceDebugDump='ИТОГ: "'+recTranscript+'"\n\n'+voiceDebugLog.join('\n\n');
+          if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); } else render();
+        }
+      };
       rec.start(); recObj=rec;
     }
     render();
@@ -1877,6 +1917,7 @@ appEl.addEventListener('click',function(e){
     case 'toggle-theme':        toggleTheme(); break;
     case 'toggle-settings':     openSettings(); break;
     case 'settings-close':      closeSettings(); break;
+    case 'close-voice-debug':   state.voiceDebugDump=''; render(); break;
     case 'settings-clear':         state.clearConfirm=true; render(); break;
     case 'settings-clear-confirm': clearAllData(); break;
     case 'settings-clear-cancel':  state.clearConfirm=false; render(); break;
