@@ -425,8 +425,7 @@ function setGoogleToken(jwt){
     localStorage.setItem('vtodo-google-jwt-exp',String(payload.exp||0));
     localStorage.setItem('vtodo-google-email',payload.email||'');
     localStorage.setItem('vtodo-google-sub',payload.sub||'');
-    authLog('setGoogleToken: new jwt, exp='+payload.exp+' (in '+Math.round((payload.exp-Date.now()/1000)/60)+'min)');
-  }catch(e){ authLog('setGoogleToken: EXCEPTION '+e.message); }
+  }catch(e){}
 }
 function getGoogleEmail(){ try{ return localStorage.getItem('vtodo-google-email')||''; }catch(e){ return ''; } }
 function getGoogleSub(){ try{ return localStorage.getItem('vtodo-google-sub')||''; }catch(e){ return ''; } }
@@ -434,21 +433,6 @@ function getGoogleSub(){ try{ return localStorage.getItem('vtodo-google-sub')||'
 // Совпадает с userId воркера ('google:'+sub). Пусто, если не залогинен — тогда
 // ИИ-лимита у пользователя нет вообще (device-id для ИИ больше не используется).
 function getUserKey(){ var s=getGoogleSub(); return s?('google:'+s):''; }
-// ── ВРЕМЕННАЯ диагностика бага "вход слетает" (2026-07-13) ──────────────
-// Четыре попытки фикса вслепую не сработали — пишем реальные события в
-// localStorage (переживает переоткрытие Настроек), показываем в
-// renderSettings(). Убрать после того, как баг найден и починен.
-function authLog(msg){
-  try{
-    var raw=localStorage.getItem('vtodo-auth-debug');
-    var arr=raw?JSON.parse(raw):[];
-    var now=new Date(); var t=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2)+':'+('0'+now.getSeconds()).slice(-2);
-    arr.push(t+' '+msg);
-    if(arr.length>40) arr=arr.slice(arr.length-40);
-    localStorage.setItem('vtodo-auth-debug',JSON.stringify(arr));
-  }catch(e){}
-}
-function getAuthLog(){ try{ var raw=localStorage.getItem('vtodo-auth-debug'); return raw?JSON.parse(raw).join('\n'):'(пусто)'; }catch(e){ return '(ошибка чтения)'; } }
 function isGoogleSignedIn(){ return !!getGoogleToken(); }
 // Отличается от isGoogleSignedIn(): true, если пользователь КОГДА-ЛИБО входил
 // (есть sub), даже если текущий токен уже протух. Используется для UI —
@@ -458,11 +442,10 @@ function isGoogleSignedIn(){ return !!getGoogleToken(); }
 function hasEverSignedIn(){ return !!getGoogleSub(); }
 var pendingAiRetry=null;
 function onGoogleCredential(resp){
-  authLog('onGoogleCredential: '+(resp&&resp.credential?'got credential':'EMPTY/no credential — '+JSON.stringify(resp)));
   if(resp && resp.credential){
     setGoogleToken(resp.credential); refreshAiLimit();
     state.tokenStale=false;
-    if(pendingAiRetry){ authLog('onGoogleCredential: resolving pendingAiRetry'); var fn=pendingAiRetry; pendingAiRetry=null; fn(); }
+    if(pendingAiRetry){ var fn=pendingAiRetry; pendingAiRetry=null; fn(); }
     if(state.settings) render();
   }
 }
@@ -476,23 +459,7 @@ function promptGoogleSignIn(){
 // поэтому фоновые попытки больше не задевают внешний вид — можно вернуть.
 // Без этого вход "слетал" каждый час, требуя повторной ручной авторизации.
 function silentGoogleRefresh(){
-  if(!(window.google && google.accounts && google.accounts.id)){ authLog('silentGoogleRefresh: google.accounts.id недоступен'); return; }
-  authLog('silentGoogleRefresh: prompt() вызван');
-  // Колбэк prompt() сообщает ТОЧНУЮ причину неудачи (isNotDisplayed/isSkippedMoment/
-  // isDismissedMoment + getXReason()) — это ключевая диагностика, которой не хватало.
-  google.accounts.id.prompt(function(notification){
-    try{
-      if(notification.isNotDisplayed && notification.isNotDisplayed()){
-        authLog('prompt notification: NOT DISPLAYED, reason='+notification.getNotDisplayedReason());
-      } else if(notification.isSkippedMoment && notification.isSkippedMoment()){
-        authLog('prompt notification: SKIPPED, reason='+notification.getSkippedReason());
-      } else if(notification.isDismissedMoment && notification.isDismissedMoment()){
-        authLog('prompt notification: DISMISSED, reason='+notification.getDismissedReason());
-      } else {
-        authLog('prompt notification: (не удалось определить состояние)');
-      }
-    }catch(e){ authLog('prompt notification: EXCEPTION '+e.message); }
-  });
+  if(window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
 }
 // На iOS/Safari PWA, сохранённая на экран Домой, время от времени сама
 // стирает localStorage (Intelligent Tracking Prevention чистит данные
@@ -516,20 +483,19 @@ function googleTokenExpiringSoon(){
   }catch(e){ return false; }
 }
 function initGoogleSignIn(){
-  authLog('initGoogleSignIn: старт, google.accounts.id доступен='+!!(window.google&&google.accounts&&google.accounts.id));
   if(!window.google || !google.accounts || !google.accounts.id) return;
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true });
-  if(googleTokenExpiringSoon()){ authLog('initGoogleSignIn: токен скоро истекает — рефреш при старте'); silentGoogleRefresh(); }
+  if(googleTokenExpiringSoon()) silentGoogleRefresh();
   // Раз в 10 минут проверяем, не пора ли обновить токен (пока приложение открыто).
-  setInterval(function(){ if(googleTokenExpiringSoon()){ authLog('таймер 10мин: токен скоро истекает — рефреш'); silentGoogleRefresh(); } }, 600000);
+  setInterval(function(){ if(googleTokenExpiringSoon()) silentGoogleRefresh(); }, 600000);
   // PWA/TWA на телефоне часто просто разворачивают из фона (не полная
   // перезагрузка) — на этот случай тоже проверяем при возврате в приложение.
   document.addEventListener('visibilitychange', function(){
-    if(document.visibilityState==='visible' && googleTokenExpiringSoon()){ authLog('visibilitychange: вернулись в приложение, токен скоро истекает — рефреш'); silentGoogleRefresh(); }
+    if(document.visibilityState==='visible' && googleTokenExpiringSoon()) silentGoogleRefresh();
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.58';
+var APP_VERSION = '0.59';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -642,28 +608,21 @@ function refreshAiLimit(){
 // уже логинился — ОДНА попытка тихого обновления (без показа окна входа) и
 // повтор запроса; если за 2.5с не получилось — честно просим войти.
 function handleAuthFailure(retryFn, cb){
-  authLog('handleAuthFailure: hasEverSignedIn='+hasEverSignedIn()+' pendingAiRetry='+(!!pendingAiRetry));
   if(hasEverSignedIn() && !pendingAiRetry){
     pendingAiRetry=retryFn;
     silentGoogleRefresh();
     setTimeout(function(){
       if(pendingAiRetry){
-        authLog('handleAuthFailure: таймаут 2.5с истёк, тихое обновление НЕ помогло — tokenStale=true');
         pendingAiRetry=null;
         state.tokenStale=true; if(state.settings) render();
         cb({needAuth:true},null);
-      } else {
-        authLog('handleAuthFailure: pendingAiRetry уже очищен к моменту таймаута (значит retry сам сработал раньше)');
       }
     },2500);
     return;
   }
-  authLog('handleAuthFailure: fallback needAuth (либо не логинился, либо retry уже шёл)');
   cb({needAuth:true},null);
 }
 function callClaude(prompt, cb){
-  var expLeft='n/a'; try{ var e0=parseInt(localStorage.getItem('vtodo-google-jwt-exp')||'0'); expLeft=e0?Math.round(e0-Date.now()/1000)+'s':'нет'; }catch(err){}
-  authLog('callClaude: isGoogleSignedIn='+isGoogleSignedIn()+' expLeft='+expLeft);
   if(!isGoogleSignedIn()){ handleAuthFailure(function(){ callClaude(prompt, cb); }, cb); return; }
   if(!canUseAi()){ cb({limit:true},null); return; }
   var fired=false;
@@ -674,10 +633,9 @@ function callClaude(prompt, cb){
     headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
     body:JSON.stringify({messages:[{role:'user',content:prompt}]})
   })
-  .then(function(r){ authLog('callClaude: HTTP '+r.status); return r.json(); })
+  .then(function(r){return r.json();})
   .then(function(data){
     if(data.error){
-      authLog('callClaude: data.error='+JSON.stringify(data.error));
       if(data.error.authRequired){
         if(fired) return; fired=true; clearTimeout(timer);
         handleAuthFailure(function(){ callClaude(prompt, cb); }, cb);
@@ -691,10 +649,9 @@ function callClaude(prompt, cb){
     if(start<0||end<0){done(new Error('no-json'),null);return;}
     var parsed=JSON.parse(text.slice(start,end+1));
     incrementAiUsage();
-    authLog('callClaude: УСПЕХ, incrementAiUsage');
     done(null,parsed);
   })
-  .catch(function(e){ authLog('callClaude: NETWORK/JS EXCEPTION '+(e&&e.message)); done(e,null); });
+  .catch(function(e){ done(e,null); });
 }
 
 /* ── Data helpers ── */
@@ -1025,17 +982,6 @@ function renderSettings(){
               '<div id="google-signin-slot" style="position:absolute;inset:0;opacity:0;overflow:hidden"></div>'+
             '</div>'
         )+
-        // ВРЕМЕННО (2026-07-13): диагностика бага "вход слетает, ИИ не работает
-        // молча". Показывает живые значения + лог событий. Убрать после починки.
-        (function(){
-          var e0=0; try{ e0=parseInt(localStorage.getItem('vtodo-google-jwt-exp')||'0'); }catch(err){}
-          var expInfo=e0?Math.round(e0-Date.now()/1000)+'с ('+(e0>Date.now()/1000?'ещё жив':'ПРОТУХ')+')':'нет токена';
-          return '<div style="margin-bottom:10px">'+
-            '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🔍 Диагностика (временно): isGoogleSignedIn='+isGoogleSignedIn()+' hasEverSignedIn='+hasEverSignedIn()+' tokenStale='+state.tokenStale+' expLeft='+expInfo+'</div>'+
-            '<pre style="white-space:pre-wrap;word-break:break-word;font-size:10px;line-height:1.5;background:var(--surface2);padding:8px;border-radius:8px;font-family:monospace;color:var(--text);max-height:180px;overflow:auto;margin:0">'+esc(getAuthLog())+'</pre>'+
-            '<button class="btn-outline" style="width:100%;margin-top:6px;font-size:11px" data-role="clear-auth-log">Очистить лог</button>'+
-          '</div>';
-        })()+
         '<div class="info-box '+(hasSpeech?'ok':'err')+'">'+
           (hasSpeech?L.voice_ok:L.voice_err)+
         '</div>'+
@@ -2033,7 +1979,6 @@ appEl.addEventListener('click',function(e){
     case 'toggle-theme':        toggleTheme(); break;
     case 'toggle-settings':     openSettings(); break;
     case 'settings-close':      closeSettings(); break;
-    case 'clear-auth-log':      try{localStorage.removeItem('vtodo-auth-debug');}catch(e){} render(); break;
     case 'settings-clear':         state.clearConfirm=true; render(); break;
     case 'settings-clear-confirm': clearAllData(); break;
     case 'settings-clear-cancel':  state.clearConfirm=false; render(); break;
