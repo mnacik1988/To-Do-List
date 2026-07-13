@@ -471,7 +471,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.52';
+var APP_VERSION = '0.53';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -944,9 +944,9 @@ function renderSettings(){
         // Счётчик X/Y показываем только залогиненным — иначе висит устаревшее
         // закешированное значение (напр. старый VIP по device-id), вводя в заблуждение.
         (isGoogleSignedIn()
-          ? '<div class="info-box" style="background:var(--surface2);margin-bottom:10px;position:relative">'+
-              (isVip()?'<span style="position:absolute;top:-9px;left:12px;font-weight:800;font-size:11px;letter-spacing:.06em;background:linear-gradient(135deg,#f6d888,#cf9430);color:#2c2200;padding:3px 9px;border-radius:20px;box-shadow:0 2px 6px rgba(0,0,0,.25)">★ VIP</span>':'')+
-              L.ai_left+'<strong>'+aiUsageLeft()+' / '+getEffectiveLimit()+'</strong>'+
+          ? '<div class="info-box" style="background:var(--surface2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+              '<span>'+L.ai_left+'<strong>'+aiUsageLeft()+' / '+getEffectiveLimit()+'</strong></span>'+
+              (isVip()?'<span style="font-weight:800;font-size:11px;letter-spacing:.06em;background:linear-gradient(135deg,#f6d888,#cf9430);color:#2c2200;padding:3px 9px;border-radius:20px;flex:none">★ VIP</span>':'')+
             '</div>'
           : '')+
         (!state.clearConfirm
