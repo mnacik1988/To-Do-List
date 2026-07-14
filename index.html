@@ -495,7 +495,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.61';
+var APP_VERSION = '0.62';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1445,16 +1445,20 @@ function onFabMic(){
 function processTranscript(transcript){
   var dayDate=state.daySheet?state.daySheet.date:null;
   var today=todayStr();
-  var existingTasks=allTasks().map(function(t){return {text:t.text,date:t.date||''};});
+  // Выполненные задачи НЕ даём модели как кандидатов для правки — иначе
+  // новая задача про того же человека/место ("Набрать Виталика") ошибочно
+  // сопоставляется с уже сделанной похожей ("Сходить к Виталику") и вместо
+  // ADD прилетает EDIT в пустоту (баг с телефона Александра, 2026-07-14).
+  var existingTasks=allTasks().filter(function(t){return !t.done;}).map(function(t){return {text:t.text,date:t.date||''};});
   var prompt=
     'Today is '+today+'. Voice message: "'+transcript+'".\n'+
-    'User tasks: '+JSON.stringify(existingTasks)+'.\n\n'+
+    'User tasks (NOT completed; completed tasks are excluded on purpose — never treat this voice message as editing something that is not in this list): '+JSON.stringify(existingTasks)+'.\n\n'+
     'IMPORTANT: Respond in the same language as the voice message.\n\n'+
     'Decide what the user wants:\n\n'+
     '1. ADD new tasks — user dictates new task(s) to create.\n'+
     'If the user names a place to go (store, pharmacy, etc.) followed by a list of specific items/errands there, do NOT create a separate generic "go to X" task — the item tasks already imply the trip. Only create one task per item.\n'+
     'Return: {"type":"add","tasks":[{"text":"task name without dates/times/filler","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty"}]}\n\n'+
-    '2. EDIT existing task — user wants to change something about a task already in the list (set reminder, change date, rename, change priority). Find the best matching task by text.\n'+
+    '2. EDIT existing task — ONLY when the user is clearly continuing/modifying the SAME task action already in the list (e.g. adding a reminder, moving the date, renaming, changing priority for THAT exact errand). Matching a task by a shared name/keyword (e.g. same person\'s name) is NOT enough — a different action/verb about the same person or place is a NEW task, not an edit. When in doubt, prefer ADD over EDIT.\n'+
     'Return: {"type":"edit","find":"exact or partial task text to find","changes":{"text":"new name if renamed","date":"YYYY-MM-DD if changed","reminderTime":"HH:MM if set/changed","priority":"high|mid|low if changed"}}\n'+
     'Only include fields that actually change. "find" must match part of an existing task text.\n\n'+
     '3. QUESTION — user asks something about their tasks.\n'+
@@ -1520,7 +1524,7 @@ function applyAiEdit(find, changes){
   var found=null, foundSec=null;
   for(var sec in state.sections){
     state.sections[sec].forEach(function(t){
-      if(!found&&t.text.toLowerCase().indexOf(fl)>=0){ found=t; foundSec=sec; }
+      if(!found&&!t.done&&t.text.toLowerCase().indexOf(fl)>=0){ found=t; foundSec=sec; }
     });
   }
   if(!found) return false;
