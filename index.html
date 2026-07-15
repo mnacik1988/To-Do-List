@@ -520,7 +520,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.67';
+var APP_VERSION = '0.68';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -961,7 +961,7 @@ function renderPaywall(){
   var features=[L.paywall_feature_1,L.paywall_feature_2].map(function(f){
     return '<li>'+IC.check+'<span>'+esc(f)+'</span></li>';
   }).join('');
-  return '<div class="overlay">'+
+  return '<div class="overlay" style="z-index:45">'+
     '<div class="scrim" data-role="close-paywall"'+sa+'></div>'+
     '<div class="sheet" data-sheet="paywall"'+sha+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
