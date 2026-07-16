@@ -583,7 +583,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.73';
+var APP_VERSION = '0.74';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1270,7 +1270,7 @@ function renderSettings(){
             '</div>'
           : '')+
         (hasEverSignedIn()&&!isVip()&&!isPro()
-          ? '<button class="btn-outline" style="width:100%;margin-bottom:10px;background:#4f7fd6;border-color:#4f7fd6;color:#fff" data-role="open-paywall">★ '+L.settings_pro_btn+'</button>'
+          ? '<button class="btn-outline" style="width:100%;margin-bottom:10px;background:linear-gradient(135deg,#f6d888,#cf9430);border-color:#cf9430;color:#2c2200" data-role="open-paywall">★ '+L.settings_pro_btn+'</button>'
           : '')+
         (!state.clearConfirm
           ? '<button class="btn-outline" style="width:100%" data-role="settings-clear">'+L.btn_clear_data+'</button>'
