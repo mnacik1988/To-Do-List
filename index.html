@@ -431,7 +431,49 @@ var GOOGLE_CLIENT_ID = '1053800558840-dftrtb0rhlbjtgjnah0jeinmsf4oqs1s.apps.goog
 // (настоящая кнопка Google рендерится невидимо поверх — см. renderSettings).
 var GOOGLE_G_SVG = '<svg width="18" height="18" viewBox="0 0 48 48" style="flex:none"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
 
+// Своя сессия (см. exchangeForSessionToken) живёт 90 дней и обновляется
+// через наш сервер (/auth/refresh) — не зависит от капризного Google One
+// Tap. Пока сессии ещё нет (первый вход только что случился, обмен ещё не
+// прошёл) — используем "сырой" часовой Google-токен как временный запасной
+// вариант. Сервер понимает оба формата одинаково (см. verifyAuthToken).
+function getSessionToken(){
+  try{
+    var jwt=localStorage.getItem('vtodo-session-jwt');
+    var exp=parseInt(localStorage.getItem('vtodo-session-jwt-exp')||'0');
+    if(jwt && exp>Date.now()/1000+30) return jwt;
+  }catch(e){}
+  return null;
+}
+function setSessionToken(jwt, exp){
+  try{
+    localStorage.setItem('vtodo-session-jwt', jwt);
+    localStorage.setItem('vtodo-session-jwt-exp', String(exp||0));
+  }catch(e){}
+}
+function sessionTokenExpiringSoon(){
+  try{
+    var exp=parseInt(localStorage.getItem('vtodo-session-jwt-exp')||'0');
+    if(!exp) return false;
+    return exp<Date.now()/1000+14*24*3600; // осталось меньше 14 дней
+  }catch(e){ return false; }
+}
+function exchangeForSessionToken(idToken){
+  fetch(WORKER_URL+'/auth/session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({idToken:idToken})})
+    .then(function(r){return r.json();})
+    .then(function(data){ if(data && data.token) setSessionToken(data.token, data.exp); })
+    .catch(function(){});
+}
+function refreshSessionToken(){
+  var tok=getSessionToken();
+  if(!tok) return;
+  fetch(WORKER_URL+'/auth/refresh',{method:'POST',headers:{'Authorization':'Bearer '+tok}})
+    .then(function(r){return r.json();})
+    .then(function(data){ if(data && data.token) setSessionToken(data.token, data.exp); })
+    .catch(function(){});
+}
 function getGoogleToken(){
+  var s=getSessionToken();
+  if(s) return s;
   try{
     var jwt=localStorage.getItem('vtodo-google-jwt');
     var exp=parseInt(localStorage.getItem('vtodo-google-jwt-exp')||'0');
@@ -466,6 +508,9 @@ function onGoogleCredential(resp){
   if(resp && resp.credential){
     setGoogleToken(resp.credential); refreshAiLimit();
     state.tokenStale=false;
+    // Сразу меняем короткий Google-токен на свою 90-дневную сессию — дальше
+    // вход держится через неё, без зависимости от Google One Tap.
+    exchangeForSessionToken(resp.credential);
     // /subscribe и /remind теперь тоже требуют вход — сразу после успешного
     // входа (первого или после протухания токена) досылаем то, что не
     // смогли отправить, пока юзер не был авторизован.
@@ -507,20 +552,36 @@ function googleTokenExpiringSoon(){
     return exp<Date.now()/1000+300;
   }catch(e){ return false; }
 }
+// Проверяем/продлеваем сессию: если она уже есть — просто обновляем её
+// заранее через наш сервер (надёжно). Если сессии ещё нет (старые данные с
+// версии до 90-дневных сессий, обмен ещё не случился) — пробуем доменять
+// имеющийся ещё живой Google-токен на сессию; и только если вообще ничего
+// нет — падаем на старый ненадёжный Google One Tap как последний шанс.
+function maybeRefreshAuth(){
+  if(getSessionToken() && sessionTokenExpiringSoon()){ refreshSessionToken(); return; }
+  if(!getSessionToken()){
+    try{
+      var rawJwt=localStorage.getItem('vtodo-google-jwt');
+      var rawExp=parseInt(localStorage.getItem('vtodo-google-jwt-exp')||'0');
+      if(rawJwt && rawExp>Date.now()/1000+30){ exchangeForSessionToken(rawJwt); return; }
+    }catch(e){}
+    if(googleTokenExpiringSoon()) silentGoogleRefresh();
+  }
+}
 function initGoogleSignIn(){
   if(!window.google || !google.accounts || !google.accounts.id) return;
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true });
-  if(googleTokenExpiringSoon()) silentGoogleRefresh();
-  // Раз в 10 минут проверяем, не пора ли обновить токен (пока приложение открыто).
-  setInterval(function(){ if(googleTokenExpiringSoon()) silentGoogleRefresh(); }, 600000);
+  maybeRefreshAuth();
+  // Раз в 10 минут проверяем, не пора ли продлить сессию (пока приложение открыто).
+  setInterval(maybeRefreshAuth, 600000);
   // PWA/TWA на телефоне часто просто разворачивают из фона (не полная
   // перезагрузка) — на этот случай тоже проверяем при возврате в приложение.
   document.addEventListener('visibilitychange', function(){
-    if(document.visibilityState==='visible' && googleTokenExpiringSoon()) silentGoogleRefresh();
+    if(document.visibilityState==='visible') maybeRefreshAuth();
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.68';
+var APP_VERSION = '0.69';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
