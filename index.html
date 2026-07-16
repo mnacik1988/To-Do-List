@@ -333,7 +333,7 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 .pri-pick-btn.sel   { box-shadow:0 0 0 2.5px var(--text); }
 .pri-pick-btn:not(.sel) { opacity:.42; }
 .chip-btn { flex:1; padding:9px 6px; border-radius:11px; border:none; font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer; background:var(--surface2); color:var(--muted); transition:background .15s,color .15s; }
-.chip-btn.active { background:var(--accent-soft); color:var(--accent-ink); font-weight:800; }
+.chip-btn.active { background:var(--accent); color:#fff; font-weight:800; }
 
 /* Day sheet */
 .day-sheet-date { font-size:18px; font-weight:800; color:var(--text); }
@@ -583,7 +583,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.72';
+var APP_VERSION = '0.73';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
