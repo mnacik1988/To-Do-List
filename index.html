@@ -36,7 +36,7 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 :root {
   color-scheme: light;
   --screen:#f5f2ec; --surface:#fff; --surface2:#ece7dd;
-  --text:#2c2a26; --muted:#8c867b; --border:rgba(44,42,38,.09);
+  --text:#2c2a26; --muted:#8c867b; --border:rgba(44,42,38,.09); --border-strong:rgba(44,42,38,.35);
   --accent:#22375c; --accent-soft:#e6eaf2; --accent-ink:#8a6a1c;
   --sage:#d3e6d8; --sage-ink:#3c6450;
   --rose:#ecd9d3; --rose-ink:#8a5446;
@@ -48,7 +48,7 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 [data-theme="dark"] {
   color-scheme: dark;
   --screen:#1a1922; --surface:#252332; --surface2:#2e2b3d;
-  --text:#ecebf2; --muted:#9b97ad; --border:rgba(255,255,255,.10);
+  --text:#ecebf2; --muted:#9b97ad; --border:rgba(255,255,255,.10); --border-strong:rgba(255,255,255,.30);
   --accent:#5170ad; --accent-soft:#28324c; --accent-ink:#e6c56e;
   --sage:#2f4a3e; --sage-ink:#bfe0cc;
   --rose:#4a3a38; --rose-ink:#e7c4ba;
@@ -314,7 +314,7 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 .ai-note-text { font-size:12px; font-weight:700; color:var(--text); line-height:1.35; }
 
 .modal-actions { display:flex; gap:10px; margin-top:2px; }
-.btn-outline { flex:1; padding:13px; border-radius:14px; border:1.5px solid var(--border); background:transparent; color:var(--text); font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; }
+.btn-outline { flex:1; padding:13px; border-radius:14px; border:1.5px solid var(--border-strong); background:transparent; color:var(--text); font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; }
 .btn-primary { flex:1; padding:13px; border-radius:14px; border:none; background:var(--accent); color:#fff; font-family:inherit; font-size:13.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
 .btn-danger  { flex:1; padding:13px; border-radius:14px; border:1.5px solid var(--pri-high); background:transparent; color:var(--pri-high-ink); font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
 
@@ -583,7 +583,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.77';
+var APP_VERSION = '0.78';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
