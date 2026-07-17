@@ -583,7 +583,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.75';
+var APP_VERSION = '0.76';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -756,7 +756,12 @@ function callAi(prompt, cb){
 
 /* ── Data helpers ── */
 function allTasks(){ return state.sections.day.concat(state.sections.week,state.sections.month); }
-function totalTasks(){ return allTasks().length; }
+// Раньше просто summировал все 3 раздела — но выполненные ПРОСРОЧЕННЫЕ
+// задачи не попадают ни в getOverdueTasks() (только невыполненные), ни в
+// getTodayOnlyTasks() (только дата ≥ сегодня), поэтому нигде не видны во
+// вкладках, а в общий счётчик всё равно шли — итог не совпадал с суммой
+// цифр на вкладках (найдено 2026-07-17). Считаем так же, как вкладки.
+function totalTasks(){ return getTodayOnlyTasks().length+getOverdueTasks().length+state.sections.week.length+state.sections.month.length; }
 function currentTask(){ if(!state.modal)return null; var s=state.modal.section,id=state.modal.id,list=state.sections[s]||[]; for(var i=0;i<list.length;i++) if(list[i].id===id) return list[i]; return null; }
 function tasksForDate(str){ return allTasks().filter(function(t){return t.date===str;}); }
 function findTaskSection(task){ for(var s in state.sections){var arr=state.sections[s];for(var j=0;j<arr.length;j++) if(arr[j].id===task.id) return s;} return 'day'; }
