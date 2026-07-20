@@ -583,7 +583,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.78';
+var APP_VERSION = '0.79';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1046,6 +1046,7 @@ function renderModal(){
   var editDesc=ed.desc!=null?ed.desc:(task.desc||'');
   var editPri=ed.priority||task.priority;
   var editDate=ed.date!=null?ed.date:(task.date||'');
+  var editReminderTime=ed.reminderTime!=null?ed.reminderTime:(task.reminderTime||'');
   var editChecklist=ed.checklist!=null?ed.checklist:(task.checklist||[]);
   var sa=anim.modal?' style="animation:fadein .2s ease both"':'';
   var sha=anim.modal?' style="animation:sheetup .3s cubic-bezier(.2,.8,.2,1) both"':'';
@@ -1114,8 +1115,8 @@ function renderModal(){
     '<div><div class="field-label">'+L.field_date+'</div><input id="edit-date" type="date" class="form-date" value="'+escA(editDate)+'"></div>'+
     '<div><div class="field-label">'+L.field_remind+'</div>'+
       '<div style="display:flex;align-items:center;gap:10px">'+
-        '<input id="edit-reminder" type="time" class="form-date" style="flex:1" value="'+escA(ed.reminderTime||task.reminderTime||'')+'">'+
-        (ed.reminderTime||task.reminderTime?'<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="clear-reminder">'+L.btn_clear_rem+'</button>':'')+
+        '<input id="edit-reminder" type="time" class="form-date" style="flex:1" value="'+escA(editReminderTime)+'">'+
+        (editReminderTime?'<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="clear-reminder">'+L.btn_clear_rem+'</button>':'')+
       '</div>'+
       '<div style="font-size:11px;color:var(--muted);margin-top:5px">'+L.remind_hint+'</div>'+
     '</div>'+
