@@ -583,7 +583,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.79';
+var APP_VERSION = '0.80';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -611,6 +611,7 @@ var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 var recObj=null, recTranscript='';
 var modalRecObj=null, modalTranscript='';
 var dsRecObj=null, dsTranscript='';
+var clRecObj=null, clTranscript='';
 
 /* ── State ── */
 var state={
@@ -629,7 +630,7 @@ var state={
   daySheet:null,
   dsAddText:'', dsAddPri:'mid', dsAiRec:false, dsAiProc:false, dsShowAdd:false, dsAddTime:'',
   selectMode:false, selected:{}, aiAnswer:null, dueReminders:null, pushStatus:'',
-  voiceReply:false, aiAnalyzing:false, aiParseOn:true, aiSplitting:false,
+  voiceReply:false, aiAnalyzing:false, aiParseOn:true, aiSplitting:false, clRec:false, clProc:false,
   fabOpen:false,
   quickAdd:false, qaText:'', qaDate:'', qaTime:'', qaPri:'mid',
   overdueOpen:true, overdueSelected:{}, overdueSelecting:false,
@@ -1109,6 +1110,7 @@ function renderModal(){
       }).join('')+
       '<div class="checklist-edit-row">'+
         '<input id="checklist-new-item" class="form-input" placeholder="'+escA(L.checklist_add_ph)+'" style="flex:1">'+
+        '<button class="day-add-mic" data-role="checklist-mic">'+(state.clRec?'<span class="ai-mic-stop"></span>':state.clProc?IC.spin(16):IC.mic(18,18))+'</button>'+
         '<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="checklist-add-item">'+L.checklist_add_btn+'</button>'+
       '</div>'+
     '</div>'+
@@ -1131,7 +1133,7 @@ function renderModal(){
 
   return '<div class="overlay">'+
     '<div class="scrim" data-role="modal-close"'+sa+'></div>'+
-    '<div class="sheet" data-sheet="modal"'+sha+'>'+
+    '<div class="sheet" data-sheet="modal" data-sheet-drag="modal"'+sha+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+body+'</div>'+
     '</div></div>';
@@ -1204,7 +1206,7 @@ function renderDaySheet(){
 
   return '<div class="overlay">'+
     '<div class="scrim" data-role="day-close"'+sa+'></div>'+
-    '<div class="sheet" data-sheet="day"'+sha+'>'+
+    '<div class="sheet" data-sheet="day" data-sheet-drag="day"'+sha+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+
         '<div style="display:flex;align-items:center;justify-content:space-between">'+
@@ -1371,7 +1373,7 @@ function renderQuickAdd(){
   var sha=' style="animation:sheetup .3s cubic-bezier(.2,.8,.2,1) both"';
   return '<div class="overlay" style="z-index:35">'+
     '<div class="scrim" data-role="qa-cancel"'+sa+'></div>'+
-    '<div class="sheet" data-sheet="qa"'+sha+'>'+
+    '<div class="sheet" data-sheet="qa" data-sheet-drag="qa"'+sha+'>'+
       '<div class="sheet-handle-bar"><span class="sheet-handle"></span></div>'+
       '<div class="sheet-body">'+
         '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.qa_title+'</div>'+
@@ -1611,6 +1613,80 @@ function aiSplitChecklist(){
     }
     state.edit.checklist=data.items.map(function(t){ return checklistItem(t); });
     if(data.name) state.edit.text=data.name;
+    render();
+  });
+}
+// Голосом добавить один или несколько пунктов в чек-лист (не трогая
+// название задачи) — та же анти-дубликатная логика распознавания речи,
+// что и в onAiMic (растущие финалы на Android заменяют накопленный текст,
+// а не складываются), результат разбивается на пункты через ИИ по тем же
+// правилам, что и aiSplitChecklist (составные фразы не рвутся) (2026-07-21).
+function onChecklistMic(){
+  if(state.clProc) return;
+  if(!state.clRec){
+    if(!SpeechRec || !state.edit) return;
+    clTranscript='';
+    var clFinalAcc='', clLastFinalSeg='';
+    var rec=new SpeechRec();
+    rec.lang=LANG_BCP[state.lang]||'ru-RU'; rec.continuous=true; rec.interimResults=true;
+    rec.onresult=function(e){
+      var interim='';
+      for(var i=e.resultIndex;i<e.results.length;i++){
+        var t=e.results[i][0].transcript;
+        if(e.results[i].isFinal){
+          var norm=t.trim();
+          if(norm){
+            var accLow=clFinalAcc.trim().toLowerCase(), normLow=norm.toLowerCase();
+            if(normLow!==clLastFinalSeg){
+              if(!accLow || normLow.indexOf(accLow)===0) clFinalAcc=norm;
+              else clFinalAcc=(clFinalAcc.trim()+' '+norm).trim();
+              clLastFinalSeg=normLow;
+            }
+          }
+        } else interim=t;
+      }
+      var full=(clFinalAcc||interim).trim();
+      if(full) clTranscript=full;
+    };
+    rec.onerror=function(ev){ if(ev.error==='no-speech'||ev.error==='aborted') return; state.clRec=false; state.clProc=false; clRecObj=null; render(); };
+    rec.onend=function(){
+      if(state.clRec){ try{ rec.start(); }catch(e){ state.clRec=false; state.clProc=true; clRecObj=null; render(); voiceAddChecklistItems(clTranscript); } }
+    };
+    rec.start(); clRecObj=rec;
+    state.clRec=true; render();
+  } else {
+    state.clRec=false; state.clProc=true;
+    if(clRecObj){ clRecObj.stop(); clRecObj=null; }
+    render();
+    if(clTranscript) voiceAddChecklistItems(clTranscript);
+    else { state.clProc=false; render(); }
+  }
+}
+function voiceAddChecklistItems(transcript){
+  state.clProc=false;
+  if(!state.edit || !transcript){ render(); return; }
+  if(!isGoogleSignedIn()){
+    handleAuthFailure(function(){ voiceAddChecklistItems(transcript); }, function(){
+      state.aiAnswer=L.ai_need_auth; anim.summary=true; render();
+    });
+    return;
+  }
+  if(!canUseAi()){ state.aiAnswer=L.ai_limit; anim.summary=true; render(); return; }
+  state.clProc=true; render();
+  var prompt=
+    'Split this spoken text into separate checklist items, in the SAME language as the text.\n'+
+    'Text: "'+transcript+'"\n'+
+    'Keep each item as a natural phrase — do NOT split compound descriptive phrases apart (e.g. "рисовый уксус" stays ONE item, not two).\n'+
+    'Return ONLY JSON: {"items":["item1","item2"]}';
+  callAi(prompt,function(err,data){
+    state.clProc=false;
+    if(err||!data||!data.items||!data.items.length){
+      state.aiAnswer=(err&&err.limit)?L.ai_limit:((err&&err.needAuth)?L.ai_need_auth:L.ai_offline);
+      anim.summary=true; render(); return;
+    }
+    var task=currentTask();
+    var list=state.edit.checklist!=null?state.edit.checklist:(task?(task.checklist||[]):[]);
+    state.edit.checklist=list.concat(data.items.map(function(t){ return checklistItem(t); }));
     render();
   });
 }
@@ -2084,7 +2160,9 @@ function closeSheetAnimated(key, done){
   var scrim=sheet.parentElement?sheet.parentElement.querySelector('.scrim'):null;
   _sheetClosing[key]=true;
   sheet.style.animation='none';
-  sheet.style.transform='translateY(0)';
+  // См. комментарий в closeSettings() — при закрытии свайпом transform уже
+  // стоит на точке протяжки, сбрасывать в 0 нельзя (двойное мигание).
+  if(!sheet.style.transform) sheet.style.transform='translateY(0)';
   void sheet.offsetHeight;
   requestAnimationFrame(function(){
     sheet.style.transition='transform .28s cubic-bezier(.4,0,.2,1)';
@@ -2192,7 +2270,12 @@ function closeSettings(){
   // (проявлялось: плавно только когда между открытием и закрытием случался
   // лишний render, напр. после входа через Google).
   sheet.style.animation='none';
-  sheet.style.transform='translateY(0)';
+  // Если закрытие пришло из свайпа — sheet.style.transform уже стоит на
+  // текущей точке протяжки (см. sheetDrag ниже), и её нельзя сбрасывать в 0:
+  // иначе шторка на кадр прыгает обратно наверх и только потом едет вниз —
+  // выглядит как двойное мигание (найдено 2026-07-21). Сбрасываем в 0 только
+  // когда transform ещё не задан явно (закрытие по кнопке/тапу на фон).
+  if(!sheet.style.transform) sheet.style.transform='translateY(0)';
   void sheet.offsetHeight; // форс reflow — фиксируем стартовую точку перехода
   requestAnimationFrame(function(){
     sheet.style.transition='transform .28s cubic-bezier(.4,0,.2,1)';
@@ -2417,8 +2500,14 @@ document.addEventListener('touchend',function(){
   if(!sheetDrag) return;
   var s=sheetDrag; sheetDrag=null;
   if(!s.active) return;
-  if(s.dy>90 && s.key==='settings'){
-    closeSettings();   // плавно доедет вниз от текущей точки + затухание фона, потом уберёт из DOM
+  if(s.dy>90){
+    // Плавно доедет вниз от текущей точки протяжки + затухание фона, потом
+    // уберёт из DOM — каждый ключ закрывается своей штатной функцией, чтобы
+    // не терять их собственную логику очистки состояния (таймеры записи и т.п.).
+    if(s.key==='settings') closeSettings();
+    else if(s.key==='modal') closeModal();
+    else if(s.key==='day') closeDaySheet();
+    else if(s.key==='qa') closeSheetAnimated('qa', function(){ state.quickAdd=false; render(); });
   } else {
     s.sheet.style.transition='transform .25s cubic-bezier(.2,.8,.2,1)';
     s.sheet.style.transform='translateY(0)';
@@ -2454,6 +2543,7 @@ appEl.addEventListener('click',function(e){
     case 'toggle-checklist-item': toggleChecklistItem(sec,id,el.dataset.item); break;
     case 'checklist-del-item':  checklistDelItem(el.dataset.item); break;
     case 'checklist-add-item':  checklistAddItem(); break;
+    case 'checklist-mic':       onChecklistMic(); break;
     case 'ai-split-checklist':  aiSplitChecklist(); break;
     case 'open-paywall':        openPaywall(); break;
     case 'close-paywall':       closePaywall(); break;
