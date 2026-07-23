@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v85';
+var CACHE = 'vtodo-shell-v86';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */
@@ -73,8 +73,11 @@ self.addEventListener('message', function(e){
     if(delay < 0 || delay > 7*24*60*60*1000) return;
     pending[r.id] = setTimeout(function(){
       self.registration.showNotification(r.text, {
+        // apple-touch-icon.png = галочка на navy. НЕ icon.png — тот специально
+        // сделан сплошным navy ради бесшовного сплэша, и как большая иконка
+        // уведомления он выглядел тёмным квадратом (2026-07-23).
         body: r.sub,
-        icon: 'icon.png',
+        icon: 'apple-touch-icon.png',
         badge: 'icon.png',
         tag: r.id,
         renotify: false
@@ -93,8 +96,9 @@ self.addEventListener('push', function(e){
   var body  = n.body  || '';
   e.waitUntil(
     self.registration.showNotification(title, {
+      // apple-touch-icon.png = галочка на navy (см. комментарий выше).
       body: body,
-      icon: 'icon.png',
+      icon: 'apple-touch-icon.png',
       badge: 'icon.png',
       tag: 'reminder',
       renotify: true
