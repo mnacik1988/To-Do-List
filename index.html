@@ -498,6 +498,23 @@ function getGoogleSub(){ try{ return localStorage.getItem('vtodo-google-sub')||'
 // Совпадает с userId воркера ('google:'+sub). Пусто, если не залогинен — тогда
 // ИИ-лимита у пользователя нет вообще (device-id для ИИ больше не используется).
 function getUserKey(){ var s=getGoogleSub(); return s?('google:'+s):''; }
+// Стабильный идентификатор ИМЕННО ЭТОГО устройства (2026-07-23). Нужен, чтобы
+// у одного Google-аккаунта на разных устройствах (напр. iPhone + Android) были
+// РАЗНЫЕ слоты push-подписки и напоминаний на сервере — иначе устройства
+// затирают подписку друг друга (одна sub: на аккаунт) и сталкиваются по ID
+// задач (t1, t2… генерятся локально на каждом). Случайная строка, живёт в
+// localStorage этого устройства/браузера. НЕ связан с личностью — уже НЕ
+// используется для ИИ-лимита (там только google:sub), только для маршрутизации
+// пушей «напоминание уходит на то устройство, где создана задача».
+function getDeviceId(){
+  var d='';
+  try{ d=localStorage.getItem('vtodo-device-id')||''; }catch(e){}
+  if(!d){
+    d='d'+Math.random().toString(36).slice(2)+Date.now().toString(36);
+    try{ localStorage.setItem('vtodo-device-id',d); }catch(e){}
+  }
+  return d;
+}
 function isGoogleSignedIn(){ return !!getGoogleToken(); }
 // Отличается от isGoogleSignedIn(): true, если пользователь КОГДА-ЛИБО входил
 // (есть sub), даже если текущий токен уже протух. Используется для UI —
@@ -583,7 +600,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.84';
+var APP_VERSION = '0.85';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1788,7 +1805,7 @@ function unremindTask(id){
   if(!VAPID_PUBLIC_KEY||!navigator.onLine||!isGoogleSignedIn()) return;
   if(!getSyncedRem()[id]) return; /* не было на сервере — нечего снимать, экономим запись */
   fetch(WORKER_URL+'/unremind',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
-    body:JSON.stringify({taskId:id})}).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); delete s[id]; saveSyncedRem(s); } }).catch(function(){});
+    body:JSON.stringify({taskId:id,deviceId:getDeviceId()})}).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); delete s[id]; saveSyncedRem(s); } }).catch(function(){});
 }
 
 /* ── Overdue actions ── */
@@ -2704,7 +2721,7 @@ function subscribePush(){
       var send=function(sub){
         pushActive=true;
         fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
-          body:JSON.stringify({subscription:sub.toJSON()})
+          body:JSON.stringify({subscription:sub.toJSON(),deviceId:getDeviceId()})
         }).then(function(r){ if(r&&r.ok){ state.pushStatus='ok'; } else { state.pushStatus='error'; } render(); })
           .catch(function(){ state.pushStatus='error'; render(); });
       };
@@ -2722,7 +2739,11 @@ function syncRemindersToServer(){
   syncRemindersTimer=setTimeout(doSyncRemindersToServer,1500);
 }
 /* Снимок отправленных на сервер напоминаний — пишем в KV ТОЛЬКО при реальных изменениях (экономим лимит записи KV) */
-var SYNC_REM_KEY='vtodo-rem-synced';
+// Сменили ключ снимка на -v2 (2026-07-23) при переходе на напоминания
+// «по устройству»: старый снимок считал задачи уже синхронизированными, и
+// клиент НЕ пере-отправил бы их под новыми ключами rem:<аккаунт>:<устройство>:…
+// Пустой -v2 → клиент один раз заново зальёт все напоминания в новом формате.
+var SYNC_REM_KEY='vtodo-rem-synced-v2';
 function getSyncedRem(){ try{ return JSON.parse(localStorage.getItem(SYNC_REM_KEY)||'{}'); }catch(e){ return {}; } }
 function saveSyncedRem(m){ try{ localStorage.setItem(SYNC_REM_KEY,JSON.stringify(m)); }catch(e){} }
 
@@ -2743,14 +2764,14 @@ function doSyncRemindersToServer(){
     var sig=desired[task.id];
     if(!sig || synced[task.id]===sig) return;
     fetch(WORKER_URL+'/remind',{method:'POST',headers:authHeaders,
-      body:JSON.stringify({taskId:task.id,text:task.text,date:task.date,reminderTime:task.reminderTime,ts:new Date(task.date+'T'+task.reminderTime).getTime()})
+      body:JSON.stringify({taskId:task.id,deviceId:getDeviceId(),text:task.text,date:task.date,reminderTime:task.reminderTime,ts:new Date(task.date+'T'+task.reminderTime).getTime()})
     }).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); s[task.id]=sig; saveSyncedRem(s); } }).catch(function(){});
   });
   /* снятые/удалённые/выполненные → убираем с сервера ОДИН раз */
   Object.keys(synced).forEach(function(id){
     if(desired[id]) return;
     fetch(WORKER_URL+'/unremind',{method:'POST',headers:authHeaders,
-      body:JSON.stringify({taskId:id})
+      body:JSON.stringify({taskId:id,deviceId:getDeviceId()})
     }).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); delete s[id]; saveSyncedRem(s); } }).catch(function(){});
   });
 }
