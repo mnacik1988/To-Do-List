@@ -533,7 +533,7 @@ function onGoogleCredential(resp){
     // /subscribe и /remind теперь тоже требуют вход — сразу после успешного
     // входа (первого или после протухания токена) досылаем то, что не
     // смогли отправить, пока юзер не был авторизован.
-    subscribePush(); syncRemindersToServer();
+    subscribePush(); syncRemindersToServer(); pullTasksFromServer();
     if(pendingAiRetry){ var fn=pendingAiRetry; pendingAiRetry=null; fn(); }
     if(state.settings) render();
   }
@@ -600,12 +600,16 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.87';
+var APP_VERSION = '0.88';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
 var _uid=0;
-function uid(){ return 't'+(++_uid); }
+// Постоянный максимум id за всё время жизни устройства (2026-07-24) — см.
+// комментарий в loadStorage(): без этого локальные id могли переиспользоваться
+// после удаления всех задач и сталкиваться с уже синканными syncId.
+var UID_HWM_KEY='vtodo-uid-hwm';
+function uid(){ _uid++; try{ localStorage.setItem(UID_HWM_KEY,String(_uid)); }catch(e){} return 't'+_uid; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escA(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 function fmtT(s){ return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60); }
@@ -620,7 +624,7 @@ function rebalanceSections(){
   allTasks().forEach(function(t){ newSec[dateToSection(t.date)].push(t); });
   state.sections=newSec;
 }
-function T(text,priority,done,desc,date,reminderTime,checklist){ return {id:uid(),text:text,priority:priority,done:!!done,desc:desc||'',date:date||'',reminderTime:reminderTime||'',checklist:checklist||[]}; }
+function T(text,priority,done,desc,date,reminderTime,checklist,syncId,updatedAt){ return {id:uid(),text:text,priority:priority,done:!!done,desc:desc||'',date:date||'',reminderTime:reminderTime||'',checklist:checklist||[],syncId:syncId||'',updatedAt:updatedAt||0}; }
 function checklistItem(text){ return {id:uid(),text:text,done:false}; }
 
 /* ── Speech ── */
@@ -668,7 +672,17 @@ function loadStorage(){
   try{
     var raw=localStorage.getItem(STORE_KEY); if(!raw) return;
     var s=JSON.parse(raw);
-    if(s.sections){ state.sections=s.sections; var max=0; allTasks().forEach(function(t){ var n=parseInt(t.id.slice(1),10); if(n>max)max=n; }); _uid=max; }
+    if(s.sections){
+      state.sections=s.sections;
+      var max=0; allTasks().forEach(function(t){ var n=parseInt(t.id.slice(1),10); if(n>max)max=n; });
+      // Монотонный максимум за ВСЁ время (2026-07-24, для синхронизации задач):
+      // раньше _uid пересчитывался только по ТЕКУЩИМ задачам — если удалить все
+      // задачи, счётчик обнулялся, и следующий t1 мог столкнуться со старым
+      // syncId (deviceId+localId), который уже лежит на сервере под тем же id.
+      // vtodo-uid-hwm никогда не уменьшается, даже когда локальных задач не осталось.
+      var hwm=parseInt(localStorage.getItem(UID_HWM_KEY)||'0',10)||0;
+      _uid=Math.max(max,hwm);
+    }
     // ИИ-резюме НЕ восстанавливаем из хранилища — при каждом запуске начинаем
     // с чистого приглашения (state.summary_default), а не со старого отчёта.
     if(s.theme)   state.theme=s.theme;
@@ -1772,7 +1786,7 @@ function saveEdit(){
 function setPri(pri){ syncEdit(); if(state.edit) state.edit.priority=pri; render(); }
 function toggleDoneModal(){ var m=state.modal; if(m) toggleDone(m.section,m.id); else render(); }
 function deleteTask(){ state.confirmDelete=true; render(); }
-function confirmDeleteYes(){ var m=state.modal; if(!m){state.confirmDelete=false;render();return;} state.sections[m.section]=state.sections[m.section].filter(function(t){return t.id!==m.id;}); state.confirmDelete=false; unremindTask(m.id); scheduleReminders(); closeModal(); }
+function confirmDeleteYes(){ var m=state.modal; if(!m){state.confirmDelete=false;render();return;} state.sections[m.section]=state.sections[m.section].filter(function(t){return t.id!==m.id;}); state.confirmDelete=false; unremindTask(m.id); scheduleReminders(); syncRemindersToServer(); closeModal(); }
 function confirmDeleteNo(){ state.confirmDelete=false; render(); }
 
 /* ── Select mode ── */
@@ -1790,7 +1804,7 @@ function bulkDelete(){
   for(var sec in state.sections){
     state.sections[sec]=state.sections[sec].filter(function(t){ return !state.selected[t.id]; });
   }
-  state.selected={}; state.selectMode=false; scheduleReminders(); render();
+  state.selected={}; state.selectMode=false; scheduleReminders(); syncRemindersToServer(); render();
 }
 function deleteTaskById(sec,id){
   if(sec&&state.sections[sec]){
@@ -1798,7 +1812,7 @@ function deleteTaskById(sec,id){
   } else {
     for(var s in state.sections){ state.sections[s]=state.sections[s].filter(function(t){ return t.id!==id; }); }
   }
-  unremindTask(id); scheduleReminders(); render();
+  unremindTask(id); scheduleReminders(); syncRemindersToServer(); render();
 }
 /* Убрать напоминание с сервера для удалённой задачи (её уже нет в allTasks) */
 function unremindTask(id){
@@ -2774,6 +2788,119 @@ function doSyncRemindersToServer(){
       body:JSON.stringify({taskId:id,deviceId:getDeviceId()})
     }).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); delete s[id]; saveSyncedRem(s); } }).catch(function(){});
   });
+  doSyncTasksToServer();
+}
+
+/* ── Синхронизация задач между СВОИМИ устройствами (2026-07-24) ──
+   Личная синхронизация: задачи одного Google-аккаунта видны на всех его
+   устройствах (телефон+планшет, Android+iPhone) — заодно страховка данных
+   на случай будущего перехода на нативное приложение. НЕ общий список для
+   разных людей — это отдельная будущая фича.
+   Тот же приём диффинга, что у напоминаний выше — пишем в KV только когда
+   содержимое реально изменилось (та самая квота записи, что мы уже дважды
+   сжигали в этом проекте).
+   syncId (НЕ совпадает с локальным id!) — устройство-независимая identity
+   задачи: локальные id генерируются на каждом устройстве отдельно и
+   неизбежно совпадают между устройствами (см. UID_HWM_KEY выше — без
+   монотонного счётчика syncId мог бы столкнуться после удаления всех
+   локальных задач). */
+var SYNC_TASK_KEY='vtodo-task-synced-v1';
+function getSyncedTasks(){ try{ return JSON.parse(localStorage.getItem(SYNC_TASK_KEY)||'{}'); }catch(e){ return {}; } }
+function saveSyncedTasks(m){ try{ localStorage.setItem(SYNC_TASK_KEY,JSON.stringify(m)); }catch(e){} }
+// Сигнатура СОДЕРЖИМОГО задачи (фиксированный порядок полей — JSON.stringify
+// объектного литерала детерминирован) — по ней решаем, изменилась ли задача
+// с последнего успешного синка.
+function taskSyncSig(t){
+  return JSON.stringify({text:t.text,desc:t.desc,priority:t.priority,date:t.date,reminderTime:t.reminderTime,checklist:t.checklist,done:t.done});
+}
+function findTaskBySyncId(sid){
+  var all=allTasks();
+  for(var i=0;i<all.length;i++){ if(all[i].syncId===sid) return all[i]; }
+  return null;
+}
+function removeTaskBySyncIdFromState(sid){
+  for(var sec in state.sections){
+    state.sections[sec]=state.sections[sec].filter(function(t){ return t.syncId!==sid; });
+  }
+}
+
+function doSyncTasksToServer(){
+  if(!navigator.onLine||!isGoogleSignedIn()) return;
+  var authHeaders={'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()};
+  var synced=getSyncedTasks();
+  var desired={};
+  var assignedNew=false;
+  allTasks().forEach(function(task){
+    // Присваиваем syncId лениво, при первой попытке синка — детерминированно
+    // (deviceId+localId), так что даже если запрос прервётся, повтор не
+    // создаст дубликат на сервере.
+    if(!task.syncId){ task.syncId=getDeviceId()+'-'+task.id; assignedNew=true; }
+    desired[task.syncId]=task;
+  });
+  if(assignedNew) saveStorage();
+  Object.keys(desired).forEach(function(sid){
+    var task=desired[sid];
+    var sig=taskSyncSig(task);
+    var prev=synced[sid];
+    if(prev && prev.sig===sig) return; // не менялось с прошлого успешного синка
+    if(!task.updatedAt || !prev || prev.sig!==sig) task.updatedAt=Date.now();
+    fetch(WORKER_URL+'/task',{method:'POST',headers:authHeaders,
+      body:JSON.stringify({syncId:sid,deviceId:getDeviceId(),updatedAt:task.updatedAt,
+        text:task.text,desc:task.desc,priority:task.priority,done:task.done,
+        date:task.date,reminderTime:task.reminderTime,checklist:task.checklist})
+    }).then(function(r){ if(r&&r.ok){ var s=getSyncedTasks(); s[sid]={sig:sig,updatedAt:task.updatedAt}; saveSyncedTasks(s); } }).catch(function(){});
+  });
+  /* пропавшие локально (удалены) → надгробие на сервере, один раз */
+  Object.keys(synced).forEach(function(sid){
+    if(desired[sid]) return;
+    fetch(WORKER_URL+'/task/delete',{method:'POST',headers:authHeaders,
+      body:JSON.stringify({syncId:sid,deviceId:getDeviceId(),updatedAt:Date.now()})
+    }).then(function(r){ if(r&&r.ok){ var s=getSyncedTasks(); delete s[sid]; saveSyncedTasks(s); } }).catch(function(){});
+  });
+}
+
+// Забираем задачи с других устройств этого же аккаунта. Вызывается при входе
+// и при возврате в приложение (visibilitychange) — отдельного поллинг-таймера
+// нет, этого достаточно для сценария "взял другой телефон".
+function pullTasksFromServer(){
+  if(!navigator.onLine||!isGoogleSignedIn()) return;
+  fetch(WORKER_URL+'/tasks',{headers:{'Authorization':'Bearer '+getGoogleToken()}})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(data){
+      if(!data||!data.tasks) return;
+      var synced=getSyncedTasks();
+      var changed=false;
+      data.tasks.forEach(function(rec){
+        var local=findTaskBySyncId(rec.syncId);
+        if(rec.deleted){
+          if(local && rec.updatedAt>=(local.updatedAt||0)){
+            removeTaskBySyncIdFromState(rec.syncId); delete synced[rec.syncId]; changed=true;
+          } else if(!local && synced[rec.syncId]){
+            delete synced[rec.syncId];
+          }
+          return;
+        }
+        if(local){
+          if(rec.updatedAt>(local.updatedAt||0)){
+            Object.assign(local,{text:rec.text,desc:rec.desc,priority:rec.priority,date:rec.date,
+              reminderTime:rec.reminderTime,checklist:rec.checklist,done:rec.done,updatedAt:rec.updatedAt});
+            synced[rec.syncId]={sig:taskSyncSig(local),updatedAt:rec.updatedAt};
+            changed=true;
+          }
+          /* иначе локальная копия новее/такая же — оставляем, уйдёт наверх на следующем синке */
+        } else {
+          var nt=T(rec.text,rec.priority,rec.done,rec.desc,rec.date,rec.reminderTime,rec.checklist,rec.syncId,rec.updatedAt);
+          state.sections.month=state.sections.month.concat([nt]); // временно, rebalanceSections() ниже разложит верно
+          synced[rec.syncId]={sig:taskSyncSig(nt),updatedAt:rec.updatedAt};
+          changed=true;
+        }
+      });
+      if(changed){
+        saveSyncedTasks(synced);
+        rebalanceSections();
+        saveStorage(); scheduleReminders(); syncRemindersToServer(); render();
+      }
+    }).catch(function(){});
 }
 
 /* ── Notifications + Service Worker ── */
@@ -2820,7 +2947,7 @@ function checkReminders(){
 }
 
 setInterval(checkReminders, 30000);
-document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ rebalanceSections(); saveStorage(); render(); checkReminders(); scheduleReminders(); syncRemindersToServer(); } });
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ rebalanceSections(); saveStorage(); render(); checkReminders(); scheduleReminders(); syncRemindersToServer(); pullTasksFromServer(); } });
 
 /* Передаём напоминания в SW для фонового режима */
 function scheduleReminders(){
