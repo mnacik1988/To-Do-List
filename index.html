@@ -602,7 +602,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.90';
+var APP_VERSION = '0.91';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2892,6 +2892,7 @@ function pullTasksFromServer(){
       if(!data||!data.tasks) return;
       var synced=getSyncedTasks();
       var changed=false;
+      var hasReminder=false;
       data.tasks.forEach(function(rec){
         var local=findTaskBySyncId(rec.syncId);
         if(rec.deleted){
@@ -2908,6 +2909,7 @@ function pullTasksFromServer(){
               reminderTime:rec.reminderTime,checklist:rec.checklist,done:rec.done,updatedAt:rec.updatedAt});
             synced[rec.syncId]={sig:taskSyncSig(local),updatedAt:rec.updatedAt};
             changed=true;
+            if(rec.reminderTime) hasReminder=true;
           }
           /* иначе локальная копия новее/такая же — оставляем, уйдёт наверх на следующем синке */
         } else {
@@ -2915,12 +2917,21 @@ function pullTasksFromServer(){
           state.sections.month=state.sections.month.concat([nt]); // временно, rebalanceSections() ниже разложит верно
           synced[rec.syncId]={sig:taskSyncSig(nt),updatedAt:rec.updatedAt};
           changed=true;
+          if(rec.reminderTime) hasReminder=true;
         }
       });
       if(changed){
         saveSyncedTasks(synced);
         rebalanceSections();
         saveStorage(); scheduleReminders(); syncRemindersToServer(); render();
+        // Пуш-напоминание, пришедшее СИНКОМ с другого устройства, никогда не
+        // просило разрешение на уведомления ЗДЕСЬ (ensureNotifPermission
+        // вызывается только когда пользователь сам ставит напоминание на этом
+        // устройстве) — без этого устройство могло вообще не быть подписано
+        // на push, и напоминание, синканное с другого телефона, молча не
+        // приходило (2026-07-24, найдено по жалобе: пуш пришёл только на одно
+        // из двух синхронизированных устройств).
+        if(hasReminder) ensureNotifPermission();
       }
     }).catch(function(){});
 }
