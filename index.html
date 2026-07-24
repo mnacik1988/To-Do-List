@@ -602,7 +602,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.92';
+var APP_VERSION = '0.93';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2837,10 +2837,17 @@ function doSyncTasksToServer(){
     var prev=synced[sid];
     if(prev && prev.sig===sig) return; // не менялось с прошлого успешного синка
     if(!task.updatedAt || !prev || prev.sig!==sig) task.updatedAt=Date.now();
+    // ts считаем ЗДЕСЬ, на клиенте, в часовом поясе пользователя — сервер
+    // (Cloudflare Worker) всегда работает в UTC, и new Date('...T14:17') там
+    // означало бы 14:17 UTC, а не 14:17 по местному времени (нашли живьём
+    // 2026-07-24: fan-out напоминаний регистрировался с ts, сдвинутым на
+    // разницу с UTC — уведомления "никуда не приходили", т.к. реально ждали
+    // неправильного момента).
+    var taskTs=(task.date&&task.reminderTime)?new Date(task.date+'T'+task.reminderTime).getTime():0;
     fetch(WORKER_URL+'/task',{method:'POST',headers:authHeaders,
       body:JSON.stringify({syncId:sid,deviceId:getDeviceId(),updatedAt:task.updatedAt,
         text:task.text,desc:task.desc,priority:task.priority,done:task.done,
-        date:task.date,reminderTime:task.reminderTime,checklist:task.checklist})
+        date:task.date,reminderTime:task.reminderTime,checklist:task.checklist,ts:taskTs})
     }).then(function(r){ if(r&&r.ok){ var s=getSyncedTasks(); s[sid]={sig:sig,updatedAt:task.updatedAt}; saveSyncedTasks(s); } }).catch(function(){});
   });
   /* пропавшие локально (удалены) → надгробие на сервере, один раз */
