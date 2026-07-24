@@ -602,7 +602,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.91';
+var APP_VERSION = '0.92';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1802,7 +1802,7 @@ function saveEdit(){
 function setPri(pri){ syncEdit(); if(state.edit) state.edit.priority=pri; render(); }
 function toggleDoneModal(){ var m=state.modal; if(m) toggleDone(m.section,m.id); else render(); }
 function deleteTask(){ state.confirmDelete=true; render(); }
-function confirmDeleteYes(){ var m=state.modal; if(!m){state.confirmDelete=false;render();return;} state.sections[m.section]=state.sections[m.section].filter(function(t){return t.id!==m.id;}); state.confirmDelete=false; unremindTask(m.id); scheduleReminders(); syncRemindersToServer(); closeModal(); }
+function confirmDeleteYes(){ var m=state.modal; if(!m){state.confirmDelete=false;render();return;} state.sections[m.section]=state.sections[m.section].filter(function(t){return t.id!==m.id;}); state.confirmDelete=false; scheduleReminders(); syncRemindersToServer(); closeModal(); }
 function confirmDeleteNo(){ state.confirmDelete=false; render(); }
 
 /* ── Select mode ── */
@@ -1816,7 +1816,6 @@ function toggleSelectTask(id,section){
 function bulkDelete(){
   var ids=Object.keys(state.selected);
   if(!ids.length) return;
-  ids.forEach(function(id){ unremindTask(id); });
   for(var sec in state.sections){
     state.sections[sec]=state.sections[sec].filter(function(t){ return !state.selected[t.id]; });
   }
@@ -1828,14 +1827,7 @@ function deleteTaskById(sec,id){
   } else {
     for(var s in state.sections){ state.sections[s]=state.sections[s].filter(function(t){ return t.id!==id; }); }
   }
-  unremindTask(id); scheduleReminders(); syncRemindersToServer(); render();
-}
-/* Убрать напоминание с сервера для удалённой задачи (её уже нет в allTasks) */
-function unremindTask(id){
-  if(!VAPID_PUBLIC_KEY||!navigator.onLine||!isGoogleSignedIn()) return;
-  if(!getSyncedRem()[id]) return; /* не было на сервере — нечего снимать, экономим запись */
-  fetch(WORKER_URL+'/unremind',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
-    body:JSON.stringify({taskId:id,deviceId:getDeviceId()})}).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); delete s[id]; saveSyncedRem(s); } }).catch(function(){});
+  scheduleReminders(); syncRemindersToServer(); render();
 }
 
 /* ── Overdue actions ── */
@@ -2774,42 +2766,21 @@ function syncRemindersToServer(){
   if(syncRemindersTimer) clearTimeout(syncRemindersTimer);
   syncRemindersTimer=setTimeout(doSyncRemindersToServer,1500);
 }
-/* Снимок отправленных на сервер напоминаний — пишем в KV ТОЛЬКО при реальных изменениях (экономим лимит записи KV) */
-// Сменили ключ снимка на -v2 (2026-07-23) при переходе на напоминания
-// «по устройству»: старый снимок считал задачи уже синхронизированными, и
-// клиент НЕ пере-отправил бы их под новыми ключами rem:<аккаунт>:<устройство>:…
-// Пустой -v2 → клиент один раз заново зальёт все напоминания в новом формате.
-var SYNC_REM_KEY='vtodo-rem-synced-v2';
-function getSyncedRem(){ try{ return JSON.parse(localStorage.getItem(SYNC_REM_KEY)||'{}'); }catch(e){ return {}; } }
-function saveSyncedRem(m){ try{ localStorage.setItem(SYNC_REM_KEY,JSON.stringify(m)); }catch(e){} }
-
+// Раньше здесь был отдельный клиентский диффинг + POST /remind,/unremind —
+// КАЖДОЕ устройство само регистрировало СВОЁ напоминание, что требовало
+// сначала подтянуть задачу через pull. Если второе устройство не успевало
+// открыться до срока напоминания — оно физически не могло зарегистрироваться
+// вовремя, и push туда не приходил (найдено 2026-07-24 по жалобе: короткое
+// напоминание долетело только на устройство-создатель).
+// РЕШЕНИЕ: сервер теперь сам заводит напоминание сразу на ВСЕ подписанные
+// устройства аккаунта прямо при записи /task (см. fanoutReminder в
+// cloudflare-worker.js) — открывать второе устройство больше не нужно.
+// taskSyncSig() уже включает reminderTime, так что любое изменение
+// напоминания и так уходит на сервер через обычный синк задач — отдельный
+// путь /remind,/unremind стал не нужен, эндпоинты на сервере оставлены
+// нетронутыми (безопасно, просто больше не вызываются отсюда).
 function doSyncRemindersToServer(){
   syncRemindersTimer=null;
-  // /remind, /unremind теперь тоже требуют Google-вход (2026-07-14, тот же
-  // фикс, что и для /subscribe). Без входа просто не синкаем — как только
-  // юзер войдёт, onGoogleCredential сам вызовет syncRemindersToServer().
-  if(!VAPID_PUBLIC_KEY||!navigator.onLine||!isGoogleSignedIn()) return;
-  var authHeaders={'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()};
-  var synced=getSyncedRem();
-  var desired={};
-  allTasks().forEach(function(task){
-    if(task.reminderTime&&task.date&&!task.done){ desired[task.id]=task.date+'|'+task.reminderTime; }
-  });
-  /* добавленные/изменённые → запись в KV только если сигнатура поменялась */
-  allTasks().forEach(function(task){
-    var sig=desired[task.id];
-    if(!sig || synced[task.id]===sig) return;
-    fetch(WORKER_URL+'/remind',{method:'POST',headers:authHeaders,
-      body:JSON.stringify({taskId:task.id,deviceId:getDeviceId(),text:task.text,date:task.date,reminderTime:task.reminderTime,ts:new Date(task.date+'T'+task.reminderTime).getTime()})
-    }).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); s[task.id]=sig; saveSyncedRem(s); } }).catch(function(){});
-  });
-  /* снятые/удалённые/выполненные → убираем с сервера ОДИН раз */
-  Object.keys(synced).forEach(function(id){
-    if(desired[id]) return;
-    fetch(WORKER_URL+'/unremind',{method:'POST',headers:authHeaders,
-      body:JSON.stringify({taskId:id,deviceId:getDeviceId()})
-    }).then(function(r){ if(r&&r.ok){ var s=getSyncedRem(); delete s[id]; saveSyncedRem(s); } }).catch(function(){});
-  });
   doSyncTasksToServer();
 }
 
