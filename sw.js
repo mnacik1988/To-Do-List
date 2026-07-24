@@ -1,6 +1,6 @@
 'use strict';
-var CACHE = 'vtodo-shell-v86';
-var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './sw.js'];
+var CACHE = 'vtodo-shell-v87';
+var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */
 self.addEventListener('install', function(e){
@@ -73,12 +73,17 @@ self.addEventListener('message', function(e){
     if(delay < 0 || delay > 7*24*60*60*1000) return;
     pending[r.id] = setTimeout(function(){
       self.registration.showNotification(r.text, {
-        // apple-touch-icon.png = галочка на navy. НЕ icon.png — тот специально
-        // сделан сплошным navy ради бесшовного сплэша, и как большая иконка
-        // уведомления он выглядел тёмным квадратом (2026-07-23).
+        // icon: apple-touch-icon.png (галочка на navy) — большая иконка в
+        // развёрнутом уведомлении. badge: icon-badge.png — МАЛЕНЬКИЙ значок в
+        // статус-баре; Android красит его силуэтом ПО АЛЬФА-КАНАЛУ картинки.
+        // icon.png/apple-touch-icon.png непрозрачны целиком (сплошной
+        // квадрат-фон) — весь силуэт заливался белым цветом = "белый квадрат"
+        // у часов (2026-07-23). icon-badge.png — та же галочка, но БЕЗ фона,
+        // с настоящей прозрачностью вокруг, поэтому в статус-баре видна
+        // именно форма галочки, а не квадрат.
         body: r.sub,
         icon: 'apple-touch-icon.png',
-        badge: 'icon.png',
+        badge: 'icon-badge.png',
         tag: r.id,
         renotify: false
       });
@@ -96,10 +101,10 @@ self.addEventListener('push', function(e){
   var body  = n.body  || '';
   e.waitUntil(
     self.registration.showNotification(title, {
-      // apple-touch-icon.png = галочка на navy (см. комментарий выше).
+      // См. комментарий у первого showNotification выше про icon vs badge.
       body: body,
       icon: 'apple-touch-icon.png',
-      badge: 'icon.png',
+      badge: 'icon-badge.png',
       tag: 'reminder',
       renotify: true
     })
