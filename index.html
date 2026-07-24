@@ -271,6 +271,7 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 .sec-pill[data-sec="day"]  { background:var(--sage); color:var(--sage-ink); }
 .sec-pill[data-sec="week"] { background:var(--rose); color:var(--rose-ink); }
 .sec-pill[data-sec="month"]{ background:var(--blue); color:var(--blue-ink); }
+.sec-pill[data-sec="undated"]{ background:var(--accent-soft); color:var(--accent-ink); }
 .modal-chip { font-size:10.5px; font-weight:800; padding:5px 9px; border-radius:8px; }
 .close-btn { margin-left:auto; width:31px; height:31px; border-radius:50%; border:none; background:var(--surface2); color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .modal-task-title { font-size:20px; font-weight:800; color:var(--text); line-height:1.25; text-wrap:pretty; }
@@ -601,7 +602,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.89';
+var APP_VERSION = '0.90';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
