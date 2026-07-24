@@ -602,7 +602,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.93';
+var APP_VERSION = '0.94';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2738,7 +2738,20 @@ function urlB64toUint8(str){
   var raw=atob(str); var arr=new Uint8Array(raw.length);
   for(var i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i); return arr;
 }
-var pushActive=false; // есть активная push-подписка → системные уведомления шлёт сервер
+// pushActive — есть активная push-подписка → системные уведомления шлёт
+// сервер. Проблема: это чисто внутрипамятный флаг, который становится true
+// ТОЛЬКО после того как асинхронная цепочка subscribePush() успеет
+// отработать — а checkReminders() может выполниться РАНЬШЕ (типичный сценарий
+// 2026-07-24: тап по уведомлению холодным стартом открывает приложение,
+// visibilitychange сразу зовёт checkReminders(), но subscribePush() к этому
+// моменту ещё не успел подтвердить подписку) — тогда pushActive всё ещё
+// false, checkReminders() считает "push не активен" и шлёт ЛОКАЛЬНОЕ
+// уведомление ПОВЕРХ уже доставленного сервером — задваивание. wasPushOk()
+// читает флаг, сохранённый в прошлый успешный раз (переживает перезагрузку,
+// доступен СИНХРОННО с первого же вызова) — если push хоть раз уже работал
+// на этом устройстве, считаем что сервер справится и в этот раз тоже.
+var pushActive=false;
+function wasPushOk(){ try{ return localStorage.getItem('vtodo-push-was-ok')==='1'; }catch(e){ return false; } }
 function subscribePush(){
   if(!VAPID_PUBLIC_KEY||!('PushManager' in window)||!('serviceWorker' in navigator)) return;
   // /subscribe теперь требует Google-вход (2026-07-14) — раньше подписка
@@ -2748,6 +2761,7 @@ function subscribePush(){
     reg.pushManager.getSubscription().then(function(existing){
       var send=function(sub){
         pushActive=true;
+        try{ localStorage.setItem('vtodo-push-was-ok','1'); }catch(e){}
         fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
           body:JSON.stringify({subscription:sub.toJSON(),deviceId:getDeviceId()})
         }).then(function(r){ if(r&&r.ok){ state.pushStatus='ok'; } else { state.pushStatus='error'; } render(); })
@@ -2947,8 +2961,9 @@ function checkReminders(){
   });
   if(!due.length) return;
   /* Системное уведомление — только как ЗАПАСНОЙ вариант, если push неактивен
-     или мы офлайн (иначе сервер уже пришлёт push → было бы два уведомления). */
-  if(Notification.permission==='granted' && !(pushActive && navigator.onLine)){
+     или мы офлайн (иначе сервер уже пришлёт push → было бы два уведомления).
+     wasPushOk() закрывает гонку холодного старта — см. комментарий выше. */
+  if(Notification.permission==='granted' && !((pushActive||wasPushOk()) && navigator.onLine)){
     due.forEach(function(task){
       try{ new Notification(task.text,{body:'Напоминание · '+dateLabel(task.date)+' '+task.reminderTime,icon:'icon.png',tag:task.id}); }catch(e){}
     });
