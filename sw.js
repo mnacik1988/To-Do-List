@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v94';
+var CACHE = 'vtodo-shell-v95';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */
@@ -99,13 +99,22 @@ self.addEventListener('push', function(e){
   var n = data.notification || data;
   var title = n.title || 'Напоминание';
   var body  = n.body  || '';
+  // tag должен быть УНИКАЛЬНЫМ на каждую задачу. Был жёстко 'reminder' у всех —
+  // из-за этого Android считал каждое новое напоминание ОБНОВЛЕНИЕМ уже
+  // висящего в шторке: текст молча подменялся, без звука, вибрации и всплывающей
+  // плашки. Пока пользователь не смахнёт предыдущее, все следующие приходят
+  // незаметно — выглядит как «уведомления вообще не приходят» (найдено на
+  // реальном устройстве 2026-07-25 через adb logcat + dumpsys notification).
+  // Сервер присылает tag = syncId задачи: разные задачи не перекрывают друг
+  // друга, а повторная отправка ТОГО ЖЕ напоминания по-прежнему не плодит дублей.
+  var tag = n.tag || ('reminder-' + Date.now());
   e.waitUntil(
     self.registration.showNotification(title, {
       // См. комментарий у первого showNotification выше про icon vs badge.
       body: body,
       icon: 'apple-touch-icon.png',
       badge: 'icon-badge.png',
-      tag: 'reminder',
+      tag: tag,
       renotify: true
     })
   );
