@@ -602,7 +602,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.95';
+var APP_VERSION = '0.96';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -910,7 +910,7 @@ var LOCAL_PARSE={
 };
 function localParseCfg(){ return LOCAL_PARSE[state.lang]||LOCAL_PARSE.ru; }
 function localNumToInt(s,cfg){ var n=parseInt(s); return isNaN(n)?(cfg.numWords[s]||1):n; }
-function localParseDate(text){
+function localParseDate(text, fallback){
   var cfg=localParseCfg();
   var t=text.toLowerCase(); var d=new Date(todayStr());
   if(t.indexOf(cfg.dayAfterTomorrow)>=0){ d.setDate(d.getDate()+2); return fmtDate(d); }
@@ -924,7 +924,10 @@ function localParseDate(text){
   var dm=t.match(cfg.ordinalDayRe);
   if(dm){ var day=parseInt(dm[1]); var cur=d.getDate(); var target=new Date(d.getFullYear(),d.getMonth(),day); if(day<cur) target.setMonth(target.getMonth()+1); return fmtDate(target); }
   for(var dow in cfg.dow){ if(t.indexOf(dow)>=0){ var tDow=cfg.dow[dow]; var cDow=d.getDay(); var diff=(tDow-cDow+7)%7; if(diff===0) diff=7; d.setDate(d.getDate()+diff); return fmtDate(d); } }
-  return todayStr();
+  // Дата в голосе не названа. По умолчанию — сегодня (привычное поведение
+  // в списке дел), но из раздела «Задачи» приходит fallback='' — там дело
+  // бессрочное, пока пользователь не сказал «завтра»/«в понедельник» и т.п.
+  return fallback===undefined?todayStr():fallback;
 }
 function localParseTime(text){
   var cfg=localParseCfg();
@@ -1915,22 +1918,26 @@ function onFabMic(){
 
 // Общий разбор голоса локальным (не-ИИ) парсером — используется и при
 // сбое/отсутствии ИИ, и при ручном выключателе (см. ниже).
-function addTaskLocallyFromVoice(transcript, dayDate){
-  var localDate=dayDate||localParseDate(transcript);
+function addTaskLocallyFromVoice(transcript, dayDate, undated){
+  var localDate=dayDate||localParseDate(transcript, undated?'':undefined);
   var localText=localCleanText(transcript)||transcript;
   var localTime=localParseTime(transcript);
   if(dayDate) state.dsShowAdd=false;
-  addTasksBatch([{text:localText,priority:'mid',date:localDate,reminderTime:localTime}], state.view==='undated');
+  addTasksBatch([{text:localText,priority:'mid',date:localDate,reminderTime:localTime}], undated);
 }
 function processTranscript(transcript){
   var dayDate=state.daySheet?state.daySheet.date:null;
   var today=todayStr();
+  // Запоминаем раздел СЕЙЧАС, а не в колбэке ИИ: пока летит запрос, юзер
+  // может уйти в другую вкладку, а задача должна попасть туда, где он её
+  // наговорил. Раздел «Задачи» = дела без срока (см. dateToSection).
+  var undated=state.view==='undated';
   // Ручной выключатель ИИ-разбора голоса (настройки → переключатель) —
   // пользователь сам решил не тратить дневной лимит на эту задачу, разбираем
   // локально сразу, без обращения к серверу вообще.
   if(!state.aiParseOn){
     state.processing=false;
-    addTaskLocallyFromVoice(transcript, dayDate);
+    addTaskLocallyFromVoice(transcript, dayDate, undated);
     render();
     return;
   }
@@ -1947,7 +1954,13 @@ function processTranscript(transcript){
     '1. ADD new tasks — user dictates new task(s) to create.\n'+
     'If the user names a place to go (store, pharmacy, etc.) followed by a list of specific items/errands there, do NOT create a separate generic "go to X" task — the item tasks already imply the trip. Only create one task per item.\n'+
     'If the user dictates a bare list of items to buy/get WITHOUT naming a place (e.g. "купить молоко, хлеб, помидоры, огурцы" / "buy milk, bread, tomatoes, cucumbers") — do NOT create one task per item and do NOT put the list in "text". Instead create ONE task with a short generic name (e.g. "Покупки" / "Groceries", in the voice message\'s language) and put each item as a separate string in "checklist".\n'+
-    'Return: {"type":"add","tasks":[{"text":"task name without dates/times/filler","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty","checklist":["item1","item2"] or omit/empty if not a shopping list}]}\n\n'+
+    'Return: {"type":"add","tasks":[{"text":"task name without dates/times/filler","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty","checklist":["item1","item2"] or omit/empty if not a shopping list}]}\n'+
+    // Без этой строки модель ВСЕГДА подставляет сегодняшнюю дату (её просят
+    // форматом выше) — и надиктованное в разделе «Задачи» улетало в список
+    // дел на сегодня. Страховка на клиенте всё равно стоит ниже: модель
+    // может по привычке вернуть дату, а раздел обещает бессрочность.
+    (undated?'The user is in the "no deadline / someday" section. Return "date":"" (empty string) unless the voice message explicitly names a day or date. Do NOT default to today.\n':'')+
+    '\n'+
     '2. EDIT existing task — ONLY when the user is clearly continuing/modifying the SAME task action already in the list (e.g. adding a reminder, moving the date, renaming, changing priority for THAT exact errand). Matching a task by a shared name/keyword (e.g. same person\'s name) is NOT enough — a different action/verb about the same person or place is a NEW task, not an edit. When in doubt, prefer ADD over EDIT.\n'+
     'Return: {"type":"edit","find":"exact or partial task text to find","changes":{"text":"new name if renamed","date":"YYYY-MM-DD if changed","reminderTime":"HH:MM if set/changed","priority":"high|mid|low if changed"}}\n'+
     'Only include fields that actually change. "find" must match part of an existing task text.\n\n'+
@@ -1957,13 +1970,13 @@ function processTranscript(transcript){
   callAi(prompt,function(err,data){
     state.processing=false;
     if(err&&(err.limit||err.needAuth)){
-      addTaskLocallyFromVoice(transcript, dayDate);
+      addTaskLocallyFromVoice(transcript, dayDate, undated);
       if(err.limit&&maybeShowPaywallOnLimit()) return;
       state.aiAnswer=err.needAuth?L.ai_need_auth:L.ai_limit;
       render(); return;
     }
     if(err||!data||!data.type){
-      addTaskLocallyFromVoice(transcript, dayDate);
+      addTaskLocallyFromVoice(transcript, dayDate, undated);
       // Раньше тут ничего не показывалось — при обрыве сети/сбое ИИ задача
       // тихо создавалась "топорно" (без чек-листа, без нормализации текста),
       // а юзер не понимал, почему. Теперь честно предупреждаем, как и при
@@ -1989,7 +2002,13 @@ function processTranscript(transcript){
       }
     } else if(data.type==='add'&&data.tasks&&data.tasks.length){
       if(dayDate){ data.tasks.forEach(function(t){ t.date=dayDate; }); state.dsShowAdd=false; }
-      addTasksBatch(data.tasks, state.view==='undated');
+      // Страховка к подсказке в промпте: если модель всё же вернула
+      // сегодняшнее число, считаем это её привычкой, а не словами юзера, —
+      // в разделе «Задачи» такое обнуляем. Названную дату («завтра», «в
+      // понедельник») не трогаем: она отличается от сегодняшней. Время
+      // напоминания тоже оставляет дату — иначе напоминание некуда ставить.
+      else if(undated){ data.tasks.forEach(function(t){ if(t.date===today&&!t.reminderTime) t.date=''; }); }
+      addTasksBatch(data.tasks, undated);
     } else if(data.type==='query'){
       state.aiAnswer=data.answer||'—';
       if(state.voiceReply) speak(state.aiAnswer);
@@ -1997,7 +2016,7 @@ function processTranscript(transcript){
       state.view='list';
       anim.summary=true; render();
     } else {
-      addTaskLocallyFromVoice(transcript, dayDate);
+      addTaskLocallyFromVoice(transcript, dayDate, undated);
     }
   });
 }
