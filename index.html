@@ -602,7 +602,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.96';
+var APP_VERSION = '0.97';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2420,13 +2420,26 @@ function closeSettings(){
   });
   settingsCloseTimer=setTimeout(function(){ settingsCloseTimer=null; state.settings=false; render(); },300);
 }
+// Раньше чистило только localStorage — задачи, напоминания и push-подписки,
+// уже засинканные на сервер (см. doSyncTasksToServer), там и оставались,
+// хотя privacy.html/delete-data.html обещают, что "Очистить все данные"
+// удаляет их и там тоже. Нашли и закрыли 2026-07-26: сперва зовём
+// /account/wipe (только у вошедших — без входа синка вообще не было и
+// стирать на сервере нечего), и в любом случае, даже если сервер недоступен,
+// чистим локально — кнопка не должна зависать офлайн.
 function clearAllData(){
-  try{
-    var keys=[];
-    for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('vtodo-')===0) keys.push(k); }
-    keys.forEach(function(k){ localStorage.removeItem(k); });
-  }catch(e){}
-  location.reload();
+  function wipeLocal(){
+    try{
+      var keys=[];
+      for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('vtodo-')===0) keys.push(k); }
+      keys.forEach(function(k){ localStorage.removeItem(k); });
+    }catch(e){}
+    location.reload();
+  }
+  if(!isGoogleSignedIn()){ wipeLocal(); return; }
+  fetch(WORKER_URL+'/account/wipe',{method:'POST',
+    headers:{'Authorization':'Bearer '+getGoogleToken()}
+  }).then(wipeLocal).catch(wipeLocal);
 }
 
 /* ── Calendar ── */
