@@ -8,8 +8,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mynado">
-<meta name="theme-color" content="#f5f2ec" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a1922" media="(prefers-color-scheme: dark)">
+<!-- Единственный тег, без media-условия: раньше их было два, переключаемых
+     через prefers-color-scheme — то есть по СИСТЕМНОЙ теме телефона. Ручной
+     переключатель ☀️/🌙 внутри приложения красит только содержимое страницы
+     (data-theme), а верхнюю плашку не трогал вообще — расхождение видно,
+     когда юзер переключил тему в приложении, а тема телефона осталась
+     прежней (найдено 2026-07-27). Теперь JS сам держит content в ногу с
+     state.theme — см. render(). -->
+<meta name="theme-color" content="#f5f2ec" id="theme-color-meta">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -602,7 +608,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '0.97';
+var APP_VERSION = '0.98';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1503,6 +1509,8 @@ function render(){
 
   var app=document.getElementById('app');
   app.dataset.theme=state.theme;
+  var themeColorMeta=document.getElementById('theme-color-meta');
+  if(themeColorMeta) themeColorMeta.content=state.theme==='dark'?'#1a1922':'#f5f2ec';
 
   var activeTasks=state.tab==='day'?getTodayOnlyTasks():(state.sections[state.tab]||[]);
   var activeTitle=L.tab_day;
