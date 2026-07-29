@@ -609,7 +609,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.04';
+var APP_VERSION = '1.05';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1639,7 +1639,6 @@ function renderGroupsListScreen(){
         '</div>'+
         '<span class="pri-chip" data-pri="mid">'+esc(groupRoleLabel(g.role))+'</span>'+
       '</div>'+
-      IC.chev+
     '</button>';
   }).join('');
   var createBlock=state.gCreateOpen
