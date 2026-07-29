@@ -609,7 +609,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.00';
+var APP_VERSION = '1.01';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1731,8 +1731,8 @@ function renderBottomNav(){
   return '<div class="bottom-nav">'+
     '<button class="nav-btn'+(state.view==='list'?' active':'')+'" data-role="nav-list">'+IC.list+'<span>'+L.nav_list+'</span></button>'+
     '<button class="nav-btn'+(state.view==='undated'?' active':'')+'" data-role="nav-undated">'+IC.tasksSq+'<span>'+L.nav_undated+'</span></button>'+
-    '<button class="nav-btn'+(state.view==='calendar'?' active':'')+'" data-role="nav-cal">'+IC.cal+'<span>'+L.nav_cal+'</span></button>'+
     '<button class="nav-btn'+(state.view==='groups'?' active':'')+'" data-role="nav-groups">'+IC.groups+'<span>'+L.nav_groups+'</span></button>'+
+    '<button class="nav-btn'+(state.view==='calendar'?' active':'')+'" data-role="nav-cal">'+IC.cal+'<span>'+L.nav_cal+'</span></button>'+
   '</div>';
 }
 
