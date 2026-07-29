@@ -468,10 +468,23 @@ function sessionTokenExpiringSoon(){
     return exp<Date.now()/1000+14*24*3600; // осталось меньше 14 дней
   }catch(e){ return false; }
 }
+// retryPushIfNeeded: subscribePush() запускается СИНХРОННО в самом начале
+// загрузки страницы (см. Init внизу файла) — раньше, чем успевает
+// отработать initGoogleSignIn()/maybeRefreshAuth() (он стартует только
+// через 300мс ПОСЛЕ window.load, а это уже позже разбора инлайн-скрипта).
+// Если в этот ранний момент сохранённая сессия оказалась протухшей,
+// subscribePush() честно ставит pushStatus='needAuth' — но потом сессия
+// тихо обновляется, а статус так и остаётся «needAuth» навсегда, потому
+// что ничего не пробует подписку заново. Юзер видит одновременно зелёное
+// "Вошли как email" И жёлтое "Войдите через Google, чтобы получать push" —
+// противоречие (найдено 2026-07-29 по скриншоту живого юзера). Как только
+// сессия успешно обновилась — если статус именно "needAuth" (а не другая
+// причина), пробуем подписку ещё раз.
+function retryPushIfNeeded(){ if(state.pushStatus==='needAuth') subscribePush(); }
 function exchangeForSessionToken(idToken){
   fetch(WORKER_URL+'/auth/session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({idToken:idToken})})
     .then(function(r){return r.json();})
-    .then(function(data){ if(data && data.token) setSessionToken(data.token, data.exp); })
+    .then(function(data){ if(data && data.token){ setSessionToken(data.token, data.exp); retryPushIfNeeded(); } })
     .catch(function(){});
 }
 function refreshSessionToken(){
@@ -479,7 +492,7 @@ function refreshSessionToken(){
   if(!tok) return;
   fetch(WORKER_URL+'/auth/refresh',{method:'POST',headers:{'Authorization':'Bearer '+tok}})
     .then(function(r){return r.json();})
-    .then(function(data){ if(data && data.token) setSessionToken(data.token, data.exp); })
+    .then(function(data){ if(data && data.token){ setSessionToken(data.token, data.exp); retryPushIfNeeded(); } })
     .catch(function(){});
 }
 function getGoogleToken(){
@@ -609,7 +622,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.06';
+var APP_VERSION = '1.07';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
