@@ -622,7 +622,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.07';
+var APP_VERSION = '1.08';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3255,6 +3255,7 @@ appEl.addEventListener('click',function(e){
     case 'nav-undated':         state.view='undated'; render(); break;
     case 'nav-groups':
       if(state.view==='groups'&&state.groupOpen){ closeGroup(); break; }
+      if(state.view!=='groups'){ state.groupOpen=null; state.groupSub='tasks'; }
       state.view='groups'; render();
       if(!state.groupsLoaded) fetchMyGroups();
       break;
