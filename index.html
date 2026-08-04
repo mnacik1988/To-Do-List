@@ -626,7 +626,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.10';
+var APP_VERSION = '1.11';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3103,7 +3103,7 @@ document.addEventListener('touchmove',function(e){
   if(!touchDrag.moved){
     if(Math.abs(y-touchDrag.startY)<6) return;
     touchDrag.moved=true;
-    touchDrag.row.style.opacity='0.5';
+    touchDrag.wrap.style.opacity='0.5';
     touchDrag.wrap.style.transform='scale(0.98)';
     touchClone.style.display='';
   }
@@ -3136,8 +3136,7 @@ document.addEventListener('touchend',function(){
     arr.splice(toIdx+(fromIdx<toIdx?0:1),0,moved);
     state.sections[sec]=arr;
   }
-  if(touchDrag.row){ touchDrag.row.style.opacity=''; }
-  if(touchDrag.wrap){ touchDrag.wrap.style.transform=''; }
+  if(touchDrag.wrap){ touchDrag.wrap.style.opacity=''; touchDrag.wrap.style.transform=''; }
   if(touchClone){ touchClone.remove(); touchClone=null; }
   touchDrag=null; render();
 },{passive:true});
