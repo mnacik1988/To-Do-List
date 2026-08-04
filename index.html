@@ -626,7 +626,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.11';
+var APP_VERSION = '1.12';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3147,7 +3147,11 @@ var pressTimer=null, swipe=null, openSwipeEl=null, suppressClick=false;
 function closeSwipe(){
   if(!openSwipeEl) return;
   var r=openSwipeEl.querySelector&&openSwipeEl.querySelector('[data-role="task-row"]');
-  if(r){ r.style.transition='transform .2s'; r.style.transform='translateX(0)'; }
+  if(r){
+    r.style.transition='transform .2s'; r.style.transform='translateX(0)';
+    var c=r.querySelector('.pri-chip');
+    if(c){ c.style.transition='opacity .2s'; c.style.opacity=''; }
+  }
   openSwipeEl=null;
 }
 
@@ -3157,7 +3161,7 @@ appEl.addEventListener('touchstart',function(e){
   if(e.target.closest('[data-role="drag-handle"]')) return;
   var row=e.target.closest('[data-role="task-row"]'); if(!row) return;
   var t=e.touches[0];
-  swipe={row:row,wrap:row.closest('.task-row-wrap'),startX:t.clientX,startY:t.clientY,dx:0,active:false,id:row.dataset.id,sec:row.dataset.sec};
+  swipe={row:row,wrap:row.closest('.task-row-wrap'),chipEl:row.querySelector('.pri-chip'),startX:t.clientX,startY:t.clientY,dx:0,active:false,id:row.dataset.id,sec:row.dataset.sec};
   if(pressTimer) clearTimeout(pressTimer);
   pressTimer=setTimeout(function(){
     if(swipe && !swipe.active){
@@ -3190,6 +3194,10 @@ document.addEventListener('touchmove',function(e){
   if(x<-96) x=-96+(x+96)*0.35;
   swipe.dx=x;
   swipe.row.style.transform='translateX('+x+'px)';
+  if(swipe.chipEl){
+    swipe.chipEl.style.transition='none';
+    swipe.chipEl.style.opacity=String(Math.max(0,1-Math.abs(x)/70));
+  }
 },{passive:false});
 
 document.addEventListener('touchend',function(){
@@ -3199,11 +3207,14 @@ document.addEventListener('touchend',function(){
   if(!s.active) return;
   suppressClick=true; setTimeout(function(){ suppressClick=false; },400);
   s.row.style.transition='transform .2s';
+  if(s.chipEl) s.chipEl.style.transition='opacity .2s';
   if(s.dx<-48){
     s.row.style.transform='translateX(-88px)';
+    if(s.chipEl) s.chipEl.style.opacity='0';
     openSwipeEl=s.wrap;
   } else {
     s.row.style.transform='translateX(0)';
+    if(s.chipEl) s.chipEl.style.opacity='';
     if(openSwipeEl===s.wrap) openSwipeEl=null;
   }
 },{passive:true});
