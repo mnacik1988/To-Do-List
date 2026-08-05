@@ -619,9 +619,27 @@ function maybeRefreshAuth(){
     if(googleTokenExpiringSoon()) silentGoogleRefresh();
   }
 }
+var googleSignInReady=false;
 function initGoogleSignIn(){
-  if(!window.google || !google.accounts || !google.accounts.id) return;
+  if(googleSignInReady) return;
+  if(!window.google || !google.accounts || !google.accounts.id){
+    // Скрипт Google (async) иногда не успевает догрузиться за 300мс после
+    // window.load, особенно на мобильной сети — раньше это было ОДНОЙ
+    // попыткой без повтора, и если не срослось, вход так и не
+    // инициализировался вообще: видимая кнопка есть, а настоящей невидимой
+    // под ней — нет, клик вхолостую (баг, пойманный вживую 2026-08-05).
+    // Теперь пробуем снова, пока скрипт действительно не появится.
+    setTimeout(initGoogleSignIn,300);
+    return;
+  }
+  googleSignInReady=true;
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: true });
+  // Экран входа (renderAuthGate) и/или Настройки уже могли отрисоваться ДО того,
+  // как этот скрипт догрузился (медленная сеть/мобайл) — тогда настоящая
+  // невидимая кнопка Google так и не встала под видимую, клик был вхолостую
+  // (баг, пойманный вживую 2026-08-05: "кнопка не работает сразу"). Перерисовка
+  // здесь ставит её на место постфактум, без дополнительного действия юзера.
+  render();
   maybeRefreshAuth();
   // Раз в 10 минут проверяем, не пора ли продлить сессию (пока приложение открыто).
   setInterval(maybeRefreshAuth, 600000);
@@ -632,7 +650,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.14';
+var APP_VERSION = '1.15';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
