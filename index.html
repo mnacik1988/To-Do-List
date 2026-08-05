@@ -144,7 +144,7 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 
 .pri-bar { width:18px; flex:none; border:none; cursor:pointer; padding:0; }
 .overdue-sec { border-radius:14px; overflow:hidden; border:1.5px solid var(--pri-high); }
-.overdue-sec-hd { display:flex; align-items:center; gap:8px; padding:11px 14px; background:var(--pri-high); cursor:pointer; -webkit-user-select:none; user-select:none; }
+.overdue-sec-hd { display:flex; align-items:center; gap:8px; padding:11px 14px; background:var(--pri-high); cursor:pointer; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
 .overdue-sec-title { font-size:11px; font-weight:800; letter-spacing:.07em; color:var(--pri-high-ink); flex:1; }
 .overdue-sec-body { background:var(--screen); }
 .pri-bar[data-pri="high"]{ background:var(--pri-high); }
@@ -646,7 +646,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.22';
+var APP_VERSION = '1.23';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1053,9 +1053,14 @@ function renderOverdueSection(){
     :'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg>';
   var warnSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--pri-high-ink)"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
+  // margin-left держит зазор от текста заголовка ЗАМЕТНО больше, чем общий
+  // flex-gap строки (8px) — на узком экране телефона палец легко промахивался
+  // мимо переключения свёрнуть/развернуть прямо на эту кнопку, а поскольку
+  // визуально почти ничего не менялось (список и так был закрыт), тап
+  // выглядел так, будто ничего не работает (баг-репорт 2026-08-05).
   var selBtn=state.overdueSelecting
-    ?'<button style="font-size:11px;font-weight:800;color:var(--pri-high-ink);background:rgba(0,0,0,.1);border:none;padding:5px 10px;border-radius:20px;cursor:pointer;flex:none" data-role="overdue-cancel-sel">'+L.btn_cancel+'</button>'
-    :'<button style="font-size:11px;font-weight:800;color:var(--pri-high-ink);background:rgba(0,0,0,.1);border:none;padding:5px 10px;border-radius:20px;cursor:pointer;flex:none" data-role="overdue-start-sel">'+L.overdue_sel+'</button>';
+    ?'<button style="font-size:11px;font-weight:800;color:var(--pri-high-ink);background:rgba(0,0,0,.1);border:none;padding:5px 10px;border-radius:20px;cursor:pointer;flex:none;margin-left:8px" data-role="overdue-cancel-sel">'+L.btn_cancel+'</button>'
+    :'<button style="font-size:11px;font-weight:800;color:var(--pri-high-ink);background:rgba(0,0,0,.1);border:none;padding:5px 10px;border-radius:20px;cursor:pointer;flex:none;margin-left:8px" data-role="overdue-start-sel">'+L.overdue_sel+'</button>';
 
   var body='';
   if(isOpen){
