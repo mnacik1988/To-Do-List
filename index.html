@@ -646,7 +646,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.21';
+var APP_VERSION = '1.22';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -719,7 +719,7 @@ var state={
   selectMode:false, selected:{}, aiAnswer:null, dueReminders:null, pushStatus:'',
   voiceReply:false, aiAnalyzing:false, aiParseOn:true, aiSplitting:false, clRec:false, clProc:false,
   fabOpen:false,
-  quickAdd:false, qaText:'', qaDate:'', qaTime:'', qaPri:'mid',
+  quickAdd:false, qaText:'', qaDesc:'', qaDate:'', qaTime:'', qaPri:'mid',
   overdueOpen:true, overdueSelected:{}, overdueSelecting:false,
   clearConfirm:false,
   paywall:false,
@@ -1520,6 +1520,10 @@ function renderQuickAdd(){
           '<div class="field-label">'+L.field_name+'</div>'+
           '<input id="qa-text" class="day-add-input" style="width:100%;box-sizing:border-box" placeholder="'+escA(L.task_ph)+'" maxlength="120" value="'+escA(state.qaText)+'">'+
         '</div>'+
+        '<div>'+
+          '<div class="field-label">'+L.desc+'</div>'+
+          '<textarea id="qa-desc" class="day-add-input" style="width:100%;box-sizing:border-box;min-height:60px;resize:vertical" maxlength="500">'+esc(state.qaDesc)+'</textarea>'+
+        '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<div style="flex:1">'+
             '<div class="field-label">'+L.field_date+'</div>'+
@@ -1927,6 +1931,8 @@ function render(){
   wireIC(document.getElementById('ds-time'),function(e){state.dsAddTime=e.target.value;});
   var qat=document.getElementById('qa-text'),qad=document.getElementById('qa-date'),qati=document.getElementById('qa-time');
   if(qat){ qat.addEventListener('input',function(e){state.qaText=e.target.value;}); setTimeout(function(){if(qat)qat.focus();},80); }
+  var qade=document.getElementById('qa-desc');
+  if(qade) qade.addEventListener('input',function(e){state.qaDesc=e.target.value;});
   wireIC(qad,function(e){state.qaDate=e.target.value;});
   wireIC(qati,function(e){state.qaTime=e.target.value;});
   var gci=document.getElementById('g-create-input');
@@ -2424,7 +2430,7 @@ function addTasksBatch(tasks, keepEmptyDate){
     var date=t.date||(keepEmptyDate?'':today); var sec=dateToSection(date);
     var safePri=(['high','mid','low'].indexOf(t.priority)>=0)?t.priority:'mid';
     var checklist=Array.isArray(t.checklist)?t.checklist.filter(function(s){return s&&String(s).trim();}).map(function(s){return checklistItem(String(s).trim());}):[];
-    var newTask=T(t.text,safePri,false,'',date,t.reminderTime||'',checklist);
+    var newTask=T(t.text,safePri,false,t.desc||'',date,t.reminderTime||'',checklist);
     state.sections[sec]=[newTask].concat(state.sections[sec]);
     anim.taskIds[newTask.id]=true; lastSec=sec;
   });
@@ -3379,14 +3385,14 @@ appEl.addEventListener('click',function(e){
     case 'fab-toggle':          state.fabOpen=!state.fabOpen; render(); break;
     case 'fab-scrim':           state.fabOpen=false; render(); break;
     case 'fab-dial-mic':        state.fabOpen=false; onFabMic(); break;
-    case 'fab-dial-text':       state.fabOpen=false; state.quickAdd=true; state.qaText=''; state.qaDate=state.view==='undated'?'':todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
+    case 'fab-dial-text':       state.fabOpen=false; state.quickAdd=true; state.qaText=''; state.qaDesc=''; state.qaDate=state.view==='undated'?'':todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
     case 'qa-cancel':           closeSheetAnimated('qa', function(){ state.quickAdd=false; render(); }); break;
     case 'qa-set-pri':          state.qaPri=el.dataset.pri; render(); break;
     case 'qa-save':
       var qText=(state.qaText||'').trim();
       if(!qText) break;
       state.quickAdd=false;
-      addTasksBatch([{text:qText,priority:state.qaPri,date:state.qaDate,reminderTime:state.qaTime||''}], state.view==='undated');
+      addTasksBatch([{text:qText,desc:(state.qaDesc||'').trim(),priority:state.qaPri,date:state.qaDate,reminderTime:state.qaTime||''}], state.view==='undated');
       break;
     case 'fab-mic':             onFabMic(); break;
     case 'ai-mic':              onAiMic(); break;
