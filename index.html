@@ -646,7 +646,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.20';
+var APP_VERSION = '1.21';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -672,6 +672,11 @@ function setUidAlias(uidVal,alias){
 function displayUid(uidVal){ return getUidAliases()[uidVal]||uidVal; }
 function uid(){ _uid++; try{ localStorage.setItem(UID_HWM_KEY,String(_uid)); }catch(e){} return 't'+_uid; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Голос/ИИ ставят текст в state программно, минуя maxlength у <input> —
+// обрезаем здесь же, чтобы длинные распознанные/сгенерированные фразы не
+// протекали мимо тех же лимитов, что и при ручном вводе.
+var LEN_TITLE=120, LEN_DESC=500, LEN_CHECKLIST_ITEM=40;
+function clampLen(s,n){ return (s==null?'':String(s)).slice(0,n); }
 function escA(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 function fmtT(s){ return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60); }
 function pad(n){ return n<10?'0'+n:String(n); }
@@ -685,8 +690,8 @@ function rebalanceSections(){
   allTasks().forEach(function(t){ newSec[dateToSection(t.date)].push(t); });
   state.sections=newSec;
 }
-function T(text,priority,done,desc,date,reminderTime,checklist,syncId,updatedAt){ return {id:uid(),text:text,priority:priority,done:!!done,desc:desc||'',date:date||'',reminderTime:reminderTime||'',checklist:checklist||[],syncId:syncId||'',updatedAt:updatedAt||0}; }
-function checklistItem(text){ return {id:uid(),text:text,done:false}; }
+function T(text,priority,done,desc,date,reminderTime,checklist,syncId,updatedAt){ return {id:uid(),text:clampLen(text,LEN_TITLE),priority:priority,done:!!done,desc:clampLen(desc,LEN_DESC),date:date||'',reminderTime:reminderTime||'',checklist:checklist||[],syncId:syncId||'',updatedAt:updatedAt||0}; }
+function checklistItem(text){ return {id:uid(),text:clampLen(text,LEN_CHECKLIST_ITEM),done:false}; }
 
 /* ── Speech ── */
 var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1207,8 +1212,8 @@ function renderModal(){
       '<span class="edit-hd-title">'+L.edit_hd+'</span>'+
       '<button class="close-btn" data-role="modal-close" style="margin-left:auto">'+IC.close+'</button>'+
     '</div>'+
-    '<div><div class="field-label">'+L.field_name+'</div><input id="edit-text" class="form-input" value="'+escA(editText)+'"></div>'+
-    '<div><div class="field-label">'+L.desc+'</div><textarea id="edit-desc" class="form-textarea" rows="3">'+esc(editDesc)+'</textarea></div>'+
+    '<div><div class="field-label">'+L.field_name+'</div><input id="edit-text" class="form-input" maxlength="120" value="'+escA(editText)+'"></div>'+
+    '<div><div class="field-label">'+L.desc+'</div><textarea id="edit-desc" class="form-textarea" rows="3" maxlength="500">'+esc(editDesc)+'</textarea></div>'+
     '<div><div class="field-label">'+L.checklist_hd+'</div>'+
       '<button class="btn-outline" style="width:100%;margin-bottom:8px;font-size:12.5px"'+(state.aiSplitting?' disabled':'')+' data-role="ai-split-checklist">'+(state.aiSplitting?L.checklist_ai_split_loading:L.checklist_ai_split_btn)+'</button>'+
       editChecklist.map(function(item){
@@ -1218,7 +1223,7 @@ function renderModal(){
         '</div>';
       }).join('')+
       '<div class="checklist-edit-row">'+
-        '<input id="checklist-new-item" class="form-input" placeholder="'+escA(L.checklist_add_ph)+'" style="flex:1">'+
+        '<input id="checklist-new-item" class="form-input" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="40" style="flex:1">'+
         '<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="checklist-add-item">'+L.checklist_add_btn+'</button>'+
       '</div>'+
     '</div>'+
@@ -1296,7 +1301,7 @@ function renderDaySheet(){
 
   var addForm=state.dsShowAdd
     ?'<div style="display:flex;gap:10px;align-items:center">'+
-        '<input id="ds-input" class="day-add-input" placeholder="'+escA(L.task_ph)+'" value="'+escA(state.dsAddText)+'">'+
+        '<input id="ds-input" class="day-add-input" placeholder="'+escA(L.task_ph)+'" maxlength="120" value="'+escA(state.dsAddText)+'">'+
         '<div style="position:relative;width:48px;height:48px;flex:none">'+
           (state.recording?'<span style="position:absolute;inset:0;border-radius:50%;background:var(--accent);animation:pulse 1.8s ease-out infinite;pointer-events:none"></span>':'')+
           '<button class="day-add-mic" data-role="ds-ai-mic">'+(state.recording?'<span class="ai-mic-stop"></span>':state.processing?IC.spin(16):IC.mic(18,18))+'</button>'+
@@ -1513,7 +1518,7 @@ function renderQuickAdd(){
         '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.qa_title+'</div>'+
         '<div>'+
           '<div class="field-label">'+L.field_name+'</div>'+
-          '<input id="qa-text" class="day-add-input" style="width:100%;box-sizing:border-box" placeholder="'+escA(L.task_ph)+'" value="'+escA(state.qaText)+'">'+
+          '<input id="qa-text" class="day-add-input" style="width:100%;box-sizing:border-box" placeholder="'+escA(L.task_ph)+'" maxlength="120" value="'+escA(state.qaText)+'">'+
         '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<div style="flex:1">'+
@@ -1634,7 +1639,7 @@ function renderGroupEditSheet(){
       '<div class="sheet-body">'+
         '<div>'+
           '<div class="field-label">'+L.field_name+'</div>'+
-          '<input id="g-edit-text" class="day-add-input" style="width:100%;box-sizing:border-box" value="'+escA(ed.text)+'">'+
+          '<input id="g-edit-text" class="day-add-input" style="width:100%;box-sizing:border-box" maxlength="120" value="'+escA(ed.text)+'">'+
         '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<div style="flex:1">'+
@@ -1653,13 +1658,13 @@ function renderGroupEditSheet(){
         '</div>'+
         '<div>'+
           '<div class="field-label">'+L.desc+'</div>'+
-          '<textarea id="g-edit-desc" class="day-add-input" style="width:100%;box-sizing:border-box;min-height:60px;resize:vertical">'+esc(ed.desc)+'</textarea>'+
+          '<textarea id="g-edit-desc" class="day-add-input" style="width:100%;box-sizing:border-box;min-height:60px;resize:vertical" maxlength="500">'+esc(ed.desc)+'</textarea>'+
         '</div>'+
         '<div>'+
           '<div class="field-label">'+L.checklist_hd+'</div>'+
           checklistHtml+
           '<div style="display:flex;gap:8px;margin-top:6px">'+
-            '<input id="g-edit-cl-new" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.checklist_add_ph)+'" value="'+escA(state.gEditNewItem)+'">'+
+            '<input id="g-edit-cl-new" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="40" value="'+escA(state.gEditNewItem)+'">'+
             '<button class="btn-outline" style="flex:none" data-role="g-add-cl-item">'+L.checklist_add_btn+'</button>'+
           '</div>'+
         '</div>'+
@@ -1725,7 +1730,7 @@ function renderGroupTasksScreen(){
         :'<div style="padding:0 4px 10px"><button class="btn-outline" style="width:100%;font-size:12.5px" data-role="group-leave">'+L.groups_leave_btn+'</button></div>')+
       (canAdd
         ?'<div style="display:flex;gap:8px;padding:0 4px 10px">'+
-            '<input id="g-add-input" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.groups_add_task_ph)+'" value="'+escA(state.gAddText)+'">'+
+            '<input id="g-add-input" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.groups_add_task_ph)+'" maxlength="120" value="'+escA(state.gAddText)+'">'+
             '<button class="btn-primary" style="flex:none;padding:0 14px" data-role="group-add-task">'+IC.plus+'</button>'+
           '</div>'
         :'')+
@@ -2019,7 +2024,7 @@ function aiSplitChecklist(){
       anim.summary=true; render(); return;
     }
     state.edit.checklist=data.items.map(function(t){ return checklistItem(t); });
-    if(data.name) state.edit.text=data.name;
+    if(data.name) state.edit.text=clampLen(data.name,LEN_TITLE);
     render();
   });
 }
@@ -2503,11 +2508,13 @@ function aiApply(transcript){
 function applyEdit(data,isEdit,m,note){
   var validPri=['high','mid','low'];
   var newRem=data.reminderTime===null?'':(data.reminderTime||null);
+  var dataText=data.text?clampLen(data.text,LEN_TITLE):data.text;
+  var dataDesc=data.desc?clampLen(data.desc,LEN_DESC):data.desc;
   if(isEdit){
     var ed=state.edit||{};
     state.edit=Object.assign({},ed,{
-      text:data.text||ed.text,
-      desc:data.desc?data.desc:ed.desc,
+      text:dataText||ed.text,
+      desc:dataDesc?dataDesc:ed.desc,
       priority:(validPri.indexOf(data.priority)>=0?data.priority:null)||ed.priority,
       date:data.date?data.date:ed.date,
       reminderTime:newRem!==null?newRem:ed.reminderTime,
@@ -2517,7 +2524,7 @@ function applyEdit(data,isEdit,m,note){
       if(t.id!==m.id) return t;
       var sp=(validPri.indexOf(data.priority)>=0?data.priority:null)||t.priority;
       var rt=newRem!==null?newRem:t.reminderTime;
-      return Object.assign({},t,{text:data.text||t.text,desc:data.desc?data.desc:t.desc,priority:sp,date:data.date?data.date:t.date,reminderTime:rt});
+      return Object.assign({},t,{text:dataText||t.text,desc:dataDesc?dataDesc:t.desc,priority:sp,date:data.date?data.date:t.date,reminderTime:rt});
     });
   }
   saveStorage();
@@ -2866,7 +2873,7 @@ function pullGroupMembers(){
 
 function groupAddTask(){
   var g=state.groupOpen; if(!g||(g.role!=='admin'&&g.role!=='editor')) return;
-  var text=(state.gAddText||'').trim(); if(!text) return;
+  var text=clampLen((state.gAddText||'').trim(),LEN_TITLE); if(!text) return;
   var syncId=getDeviceId()+'-g'+Date.now().toString(36);
   var now=Date.now();
   var newTask={syncId:syncId,text:text,desc:'',priority:state.gAddPri,done:false,date:'',checklist:[],deviceId:getDeviceId(),updatedAt:now,createdBy:getUserKey(),updatedBy:getUserKey()};
@@ -2966,7 +2973,7 @@ function groupEditToggleNotify(uidVal){
 }
 function groupEditAddChecklistItem(){
   if(!state.gEdit) return;
-  var text=(state.gEditNewItem||'').trim(); if(!text) return;
+  var text=clampLen((state.gEditNewItem||'').trim(),LEN_CHECKLIST_ITEM); if(!text) return;
   state.gEdit.checklist.push({id:uid(),text:text,done:false});
   state.gEditNewItem='';
   render();
@@ -2985,12 +2992,13 @@ function groupEditDelChecklistItem(itemId){
 function saveGroupEdit(){
   var g=state.groupOpen, ed=state.gEdit;
   if(!g||!ed) return;
-  var text=(ed.text||'').trim(); if(!text) return;
+  var text=clampLen((ed.text||'').trim(),LEN_TITLE); if(!text) return;
+  var desc=clampLen(ed.desc||'',LEN_DESC);
   var now=Date.now();
   var ts=(ed.date&&ed.reminderTime)?new Date(ed.date+'T'+ed.reminderTime).getTime():0;
   var payload={
     groupId:g.groupId, syncId:ed.syncId, deviceId:getDeviceId(), updatedAt:now, ts:ts,
-    text:text, desc:ed.desc||'', priority:ed.priority, date:ed.date||'', reminderTime:ed.reminderTime||'',
+    text:text, desc:desc, priority:ed.priority, date:ed.date||'', reminderTime:ed.reminderTime||'',
     checklist:ed.checklist||[], notifyUids:ed.notify||[]
   };
   var done=false;
@@ -2998,7 +3006,7 @@ function saveGroupEdit(){
     if(t.syncId!==ed.syncId) return t;
     done=t.done;
     return Object.assign({},t,{
-      text:text,desc:ed.desc||'',priority:ed.priority,date:ed.date||'',reminderTime:ed.reminderTime||'',
+      text:text,desc:desc,priority:ed.priority,date:ed.date||'',reminderTime:ed.reminderTime||'',
       checklist:ed.checklist||[],notifyUids:ed.notify||[]
     });
   });
