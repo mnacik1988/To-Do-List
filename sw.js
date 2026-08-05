@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v115';
+var CACHE = 'vtodo-shell-v116';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */
