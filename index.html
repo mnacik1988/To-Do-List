@@ -569,6 +569,15 @@ function onGoogleCredential(resp){
 function promptGoogleSignIn(){
   if(window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
 }
+// Мост для тестовой WebView-обёртки (K:\Projects\Mynado-Android\webview) —
+// обычный WebView не показывает окно входа Google (GSI/One Tap внутри
+// WebView блокируется самим Google как "disallowed_useragent"). Обёртка
+// открывает вход через Chrome Custom Tabs и после успеха вызывает эту
+// функцию с ID-токеном. В боевой TWA-версии и в обычном браузере
+// window.AndroidAuth не существует — код ниже никогда не выполняется.
+window.onAndroidGoogleCredential = function(idToken){
+  onGoogleCredential({credential: idToken});
+};
 // Токен Google живёт ~1 час. Раньше (v0.36) фоновое тихое обновление было
 // намеренно отключено — оно конфликтовало с видимой кнопкой Google (сбрасывало
 // её тёмный вид). С тех пор кнопка стала полностью невидимой (см.
@@ -646,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.25';
+var APP_VERSION = '1.26';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1968,7 +1977,11 @@ function render(){
   if(savedScroll>0) requestAnimationFrame(function(){ var el=document.querySelector('.sheet-body'); if(el) el.scrollTop=savedScroll; });
 
   var gSlot=document.getElementById('google-signin-slot');
-  if(gSlot && window.google && google.accounts && google.accounts.id){
+  // В WebView-обёртке настоящая кнопка Google не рендерится вообще (см.
+  // window.AndroidAuth выше) — обычный WebView всё равно не смог бы её
+  // показать (Google блокирует GSI внутри WebView), а лишний пустой слот
+  // только мешал бы клику по видимой кнопке дойти до диспетчера.
+  if(gSlot && !window.AndroidAuth && window.google && google.accounts && google.accounts.id){
     gSlot.innerHTML='';
     // Настоящая кнопка Google рендерится невидимо (opacity:0 у слота-обёртки),
     // поверх неё наша визуальная кнопка. Растягиваем на всю ширину контейнера,
@@ -3360,6 +3373,10 @@ appEl.addEventListener('click',function(e){
     case 'toggle-settings':     openSettings(); break;
     case 'settings-close':      closeSettings(); break;
     case 'settings-sign-out':      signOutDevice(); break;
+    // В WebView-обёртке под настоящей кнопкой Google ничего нет (см. ниже,
+    // renderButton там не вызывается) — клик по видимой кнопке долетает
+    // сюда и уходит нативному мосту.
+    case 'google-signin-visual':   if(window.AndroidAuth && window.AndroidAuth.startGoogleSignIn) window.AndroidAuth.startGoogleSignIn(); break;
     case 'settings-clear':         state.clearConfirm=true; render(); break;
     case 'settings-clear-confirm': clearAllData(); break;
     case 'settings-clear-cancel':  state.clearConfirm=false; render(); break;
