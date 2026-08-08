@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.27';
+var APP_VERSION = '1.28';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -703,7 +703,46 @@ function T(text,priority,done,desc,date,reminderTime,checklist,syncId,updatedAt)
 function checklistItem(text){ return {id:uid(),text:clampLen(text,LEN_CHECKLIST_ITEM),done:false}; }
 
 /* ── Speech ── */
-var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+// Нативный мост распознавания речи для WebView-обёртки
+// (K:\Projects\Mynado-Android\webview). Обычный WebView НЕ умеет
+// webkitSpeechRecognition (объект есть, но при .start() виснет навсегда без
+// результата — облачное распознавание Google подключено только к самому
+// Chrome, не к движку WebView; проверено вживую 2026-08-06). Нативная
+// обёртка выставляет window.AndroidSpeech поверх android.speech.SpeechRecognizer
+// (с EXTRA_PREFER_OFFLINE — работает и без интернета, если скачан офлайн-пакет
+// языка). NativeSpeechRec повторяет ровно тот интерфейс SpeechRecognition,
+// который используют onFabMic/onAiMic/onChecklistMic (.lang/.continuous/
+// .interimResults/.start()/.stop()/.onresult/.onerror/.onend + событие с
+// e.resultIndex и e.results[i][0].transcript/.isFinal), поэтому все три
+// голосовых потока работают без единой правки в них. В боевой TWA/браузере
+// window.AndroidSpeech не существует — весь этот блок не задействуется.
+var nativeSpeechActive=null;
+function NativeSpeechRec(){
+  this.lang='ru-RU'; this.continuous=false; this.interimResults=false;
+  this.onstart=null; this.onresult=null; this.onerror=null; this.onend=null;
+}
+NativeSpeechRec.prototype.start=function(){
+  nativeSpeechActive=this;
+  try{
+    window.AndroidSpeech.start(this.lang||'ru-RU', !!this.interimResults);
+    if(this.onstart) this.onstart();
+  }catch(e){ if(this.onerror) this.onerror({error:'native-start-failed'}); }
+};
+NativeSpeechRec.prototype.stop=function(){ try{ window.AndroidSpeech.stop(); }catch(e){} };
+NativeSpeechRec.prototype.abort=function(){ try{ window.AndroidSpeech.stop(); }catch(e){} };
+// Колбэки, которые дёргает нативный код через evaluateJavascript.
+window.__nativeSpeechResult=function(transcript, isFinal){
+  var rec=nativeSpeechActive; if(!rec||!rec.onresult) return;
+  var one=[{transcript:String(transcript||'')}]; one.isFinal=!!isFinal;
+  rec.onresult({resultIndex:0, results:[one]});
+};
+window.__nativeSpeechError=function(err){
+  var rec=nativeSpeechActive; if(rec&&rec.onerror) rec.onerror({error:String(err||'')});
+};
+window.__nativeSpeechEnd=function(){
+  var rec=nativeSpeechActive; nativeSpeechActive=null; if(rec&&rec.onend) rec.onend();
+};
+var SpeechRec = window.AndroidSpeech ? NativeSpeechRec : (window.SpeechRecognition || window.webkitSpeechRecognition);
 var recObj=null, recTranscript='';
 var modalRecObj=null, modalTranscript='';
 var dsRecObj=null, dsTranscript='';
