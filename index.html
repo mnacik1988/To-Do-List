@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.28';
+var APP_VERSION = '1.29';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -921,12 +921,16 @@ function allTasks(){ return state.sections.day.concat(state.sections.week,state.
 // нужно сделать, и число не должно застревать, если единственная задача
 // уже вычеркнута (баг-репорт 2026-08-05 — счётчик показывал "1 задач"
 // одновременно с пустым состоянием "Добавьте первую задачу").
+// Счётчик карточки «ИИ-РЕЗЮМЕ» — только задачи из вида «Список» (сегодня+
+// просрочено+неделя+месяц). Бессрочные задачи (раздел «Задачи»/undated)
+// СОЗНАТЕЛЬНО не считаются: они не показаны в этом виде, и их включение
+// путало пользователя — число в карточке не сходилось с тем, что на экране
+// (правка по фидбеку Александра 2026-08-08).
 function totalTasks(){
   return getTodayOnlyTasks().filter(function(t){return !t.done;}).length
     +getOverdueTasks().length
     +state.sections.week.filter(function(t){return !t.done;}).length
-    +state.sections.month.filter(function(t){return !t.done;}).length
-    +(state.sections.undated?state.sections.undated.filter(function(t){return !t.done;}).length:0);
+    +state.sections.month.filter(function(t){return !t.done;}).length;
 }
 function currentTask(){ if(!state.modal)return null; var s=state.modal.section,id=state.modal.id,list=state.sections[s]||[]; for(var i=0;i<list.length;i++) if(list[i].id===id) return list[i]; return null; }
 function tasksForDate(str){ return allTasks().filter(function(t){return t.date===str;}); }
