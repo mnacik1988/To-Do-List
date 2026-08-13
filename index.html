@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.29';
+var APP_VERSION = '1.30';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3795,6 +3795,14 @@ function markFired(taskId, rt){ var f=getFired(); f[taskId+':'+rt]=Date.now(); t
 /* Проверка напоминаний — окно 24 часа, баннер всегда, системное если разрешено */
 function checkReminders(){
   var now=Date.now(); var fired=getFired(); var due=[];
+  // Чистим старые отметки сработавших напоминаний. Окно проверки ниже — 24ч,
+  // так что всё старше недели уже не нужно. Без этого vtodo-fired копился бы
+  // в localStorage вечно (по одному ключу на каждое сработавшее напоминание,
+  // включая давно удалённые задачи) — аудит 2026-08-12. Пишем обратно только
+  // если реально что-то удалили, чтобы не дёргать localStorage каждые 30с.
+  var pruneCut=now-7*86400000, pruned=false;
+  for(var fk in fired){ if(fired[fk]<pruneCut){ delete fired[fk]; pruned=true; } }
+  if(pruned){ try{ localStorage.setItem(FIRED_KEY,JSON.stringify(fired)); }catch(e){} }
   allTasks().forEach(function(task){
     if(!task.reminderTime||!task.date||task.done) return;
     var key=task.id+':'+task.reminderTime;
