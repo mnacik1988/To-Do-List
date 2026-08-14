@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.31';
+var APP_VERSION = '1.32';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3280,29 +3280,46 @@ document.addEventListener('touchmove',function(e){
   /* find target */
   var list=document.getElementById('task-list'); if(!list) return;
   var rows=list.querySelectorAll('[data-role="task-row"]');
-  var targetId=null;
+  var targetId=null, firstOtherId=null;
   rows.forEach(function(r){
     if(r.dataset.id===touchDrag.id) return;
+    if(firstOtherId===null) firstOtherId=r.dataset.id;
     var rect=r.getBoundingClientRect();
     if(y>rect.top) targetId=r.dataset.id;
-    r.style.borderBottom='';
+    r.style.borderBottom=''; r.style.borderTop='';
   });
-  if(targetId){ var tEl=list.querySelector('[data-id="'+targetId+'"]'); if(tEl) tEl.style.borderBottom='2px solid var(--accent)'; }
+  // Палец выше вообще всех строк (тащим задачу на самое первое место) — раньше
+  // targetId в этом случае оставался null НАВСЕГДА, и touchend просто ничего
+  // не делал: перетащить задачу в начало списка было невозможно, хотя вниз, к
+  // последней позиции, всё работало (там цель находится всегда — последняя
+  // строка). Найдено по жалобе Александра «вверх тянется плохо, вниз хорошо»
+  // (2026-08-14). Отдельный флаг dropAtTop покрывает именно этот случай.
+  touchDrag.dropAtTop=(!targetId&&!!firstOtherId);
+  if(touchDrag.dropAtTop){
+    var fEl=list.querySelector('[data-id="'+firstOtherId+'"]'); if(fEl) fEl.style.borderTop='2px solid var(--accent)';
+  } else if(targetId){
+    var tEl=list.querySelector('[data-id="'+targetId+'"]'); if(tEl) tEl.style.borderBottom='2px solid var(--accent)';
+  }
   touchDrag.targetId=targetId;
 },{passive:false});
 
 document.addEventListener('touchend',function(){
   if(!touchDrag) return;
   var sec=touchDrag.section; var arr=state.sections[sec].slice();
-  var fromIdx=-1,toIdx=-1;
-  for(var i=0;i<arr.length;i++){
-    if(arr[i].id===touchDrag.id) fromIdx=i;
-    if(arr[i].id===touchDrag.targetId) toIdx=i;
-  }
-  if(fromIdx>=0&&toIdx>=0&&fromIdx!==toIdx){
-    var moved=arr.splice(fromIdx,1)[0];
-    arr.splice(toIdx+(fromIdx<toIdx?0:1),0,moved);
+  var fromIdx=-1;
+  for(var i=0;i<arr.length;i++){ if(arr[i].id===touchDrag.id) fromIdx=i; }
+  if(fromIdx>=0&&touchDrag.dropAtTop){
+    var movedTop=arr.splice(fromIdx,1)[0];
+    arr.unshift(movedTop);
     state.sections[sec]=arr;
+  } else {
+    var toIdx=-1;
+    for(var j=0;j<arr.length;j++){ if(arr[j].id===touchDrag.targetId) toIdx=j; }
+    if(fromIdx>=0&&toIdx>=0&&fromIdx!==toIdx){
+      var moved=arr.splice(fromIdx,1)[0];
+      arr.splice(toIdx+(fromIdx<toIdx?0:1),0,moved);
+      state.sections[sec]=arr;
+    }
   }
   if(touchDrag.wrap){ touchDrag.wrap.style.opacity=''; touchDrag.wrap.style.transform=''; }
   if(touchClone){ touchClone.remove(); touchClone=null; }
