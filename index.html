@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.32';
+var APP_VERSION = '1.33';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2166,7 +2166,7 @@ function onChecklistMic(){
       render();
     };
     rec.onend=function(){
-      if(state.clRec){ try{ rec.start(); }catch(e){ state.clRec=false; state.clProc=true; clRecObj=null; render(); voiceAddChecklistItems(clTranscript); } }
+      if(state.clRec){ try{ rec.start(); }catch(e){ state.clRec=false; state.clProc=true; clRecObj=null; render(); var clToProcess=clTranscript; clTranscript=''; voiceAddChecklistItems(clToProcess); } }
     };
     rec.start(); clRecObj=rec;
     state.clRec=true; render();
@@ -2174,7 +2174,7 @@ function onChecklistMic(){
     state.clRec=false; state.clProc=true;
     if(clRecObj){ clRecObj.stop(); clRecObj=null; }
     render();
-    if(clTranscript) voiceAddChecklistItems(clTranscript);
+    if(clTranscript){ var clStopText=clTranscript; clTranscript=''; voiceAddChecklistItems(clStopText); }
     else { state.clProc=false; render(); }
   }
 }
@@ -2370,7 +2370,15 @@ function onFabMic(){
         if(e.error==='not-allowed'||e.error==='service-not-allowed') state.micDenied=true;
         clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render();
       };
-      rec.onend=function(){ if(state.recording){ try{ rec.start(); }catch(e){ clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); } } else { recObj=null; if(recTranscript){ state.processing=true; render(); processTranscript(recTranscript); } else render(); } };
+      // Чистим recTranscript ДО вызова processTranscript (а не после) — на
+      // некоторых Android-движках 'onend' иногда срабатывает ДВАЖДЫ за один
+      // цикл остановки записи (та же природа квирков, что и растущие финалы
+      // в комментарии выше). Раньше recTranscript не очищался вообще —
+      // повторное срабатывание onend находило тот же старый текст и создавало
+      // ВТОРУЮ, идентичную задачу (баг с телефона Александра, две «Устранить
+      // течь», 2026-08-14). Локальная копия — на случай, если сам
+      // processTranscript асинхронно читает recTranscript ещё раз.
+      rec.onend=function(){ if(state.recording){ try{ rec.start(); }catch(e){ clearInterval(timerIv); timerIv=null; state.recording=false; recObj=null; render(); } } else { recObj=null; if(recTranscript){ var toProcess=recTranscript; recTranscript=''; state.processing=true; render(); processTranscript(toProcess); } else render(); } };
       state.micDenied=false;
       rec.start(); recObj=rec;
     }
@@ -2577,14 +2585,14 @@ function onAiMic(){
       render();
     };
     rec.onend=function(){
-      if(state.aiRec){ try{ rec.start(); }catch(e){ state.aiRec=false; state.aiProc=true; modalRecObj=null; render(); aiApply(modalTranscript); } }
+      if(state.aiRec){ try{ rec.start(); }catch(e){ state.aiRec=false; state.aiProc=true; modalRecObj=null; render(); var mToProcess=modalTranscript; modalTranscript=''; aiApply(mToProcess); } }
     };
     rec.start(); modalRecObj=rec;
     state.aiRec=true; render();
   } else {
     syncEdit(); state.aiRec=false; state.aiProc=true;
     if(modalRecObj){ modalRecObj.stop(); modalRecObj=null; }
-    render(); if(modalTranscript) aiApply(modalTranscript);
+    render(); if(modalTranscript){ var mStopText=modalTranscript; modalTranscript=''; aiApply(mStopText); }
   }
 }
 
