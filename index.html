@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.38';
+var APP_VERSION = '1.39';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -779,7 +779,6 @@ var state={
   gCreateOpen:false, gCreateName:'',
   gInviteId:'', gInviteRole:'editor', gInviteErr:'',
   gAddText:'', gAddPri:'mid',
-  gIdCopied:false,
   gEdit:null, gEditNewItem:'',
   // Своя шторка вместо системных confirm()/prompt() — см. renderAsk().
   // {mode:'confirm'|'prompt', text, danger, value}; коллбэк лежит в _askFn.
@@ -1135,6 +1134,15 @@ function getOverdueTasks(){
 }
 function getTodayOnlyTasks(){
   var today=todayStr();
+  // Ветка `!t.date` выглядит мёртвой (аудит 2026-08-17 так её и пометил):
+  // dateToSection('') возвращает 'undated', а rebalanceSections() гоняется при
+  // старте и при каждом возврате в приложение, так что бездатная задача в day
+  // оказаться не должна. ОСТАВЛЕНА СОЗНАТЕЛЬНО как страховка: getOverdueTasks()
+  // требует непустой t.date, поэтому без этого условия задача с пустой датой,
+  // если она всё же попадёт в day, не попадёт НИ в «Сегодня», НИ в
+  // «Просрочено» — то есть исчезнет с экрана, продолжая лежать в данных.
+  // Пропажа задач в этом проекте уже была настоящим багом; цена страховки —
+  // одно лишнее условие, цена ошибки — «у меня пропали задачи».
   return state.sections.day.filter(function(t){ return !t.date||t.date>=today; });
 }
 function renderOverdueSection(){
@@ -2343,12 +2351,19 @@ function saveEdit(){
     var text=(e.text||'').trim()||L.untitled;
     var newSec=dateToSection(e.date);
     var editedChecklist=e.checklist||[];
+    var prevChecklist=(currentTask()||{}).checklist||[];
     var patch={text:text,desc:e.desc,priority:e.priority,date:e.date,reminderTime:e.reminderTime||'',checklist:editedChecklist};
     // Состав чек-листа мог поменяться (добавили/убрали пункт) — если он не
     // пуст, done задачи всегда пересчитывается от факта "все пункты отмечены",
     // а не остаётся со старого значения (иначе задача может застрять
     // "выполненной" после добавления нового неотмеченного пункта).
     if(editedChecklist.length) patch.done=editedChecklist.every(function(i){return i.done;});
+    // Удалили ВСЕ пункты — раньше пересчёт сюда не доходил (стоял под
+    // условием выше), и задача оставалась зачёркнутой, хотя того, на чём
+    // держалось «выполнено», больше нет (аудит 2026-08-17). Сбрасываем только
+    // если чек-лист БЫЛ: у задачи, где его отродясь не было, done ставится
+    // руками галочкой и трогать его тут нельзя.
+    else if(prevChecklist.length) patch.done=false;
     if(newSec!==m.section){
       var updated=null;
       state.sections[m.section]=state.sections[m.section].filter(function(t){if(t.id===m.id){updated=Object.assign({},t,patch);return false;}return true;});
