@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v137';
+var CACHE = 'vtodo-shell-v138';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 
 /* ── Install: кешируем приложение ── */
@@ -97,7 +97,14 @@ self.addEventListener('push', function(e){
   var data = {};
   try { data = e.data.json(); } catch(err) {}
   var n = data.notification || data;
-  var title = n.title || 'Напоминание';
+  // Запасной заголовок на случай, если сервер не прислал свой. Раньше тут было
+  // русское «Напоминание» — у иноязычного юзера всё приложение переведено, а
+  // уведомление приходило русским (аудит 2026-08-17, п.№6). Переводов здесь
+  // взять неоткуда: service worker живёт отдельно от страницы и не видит
+  // TRANSLATIONS, а push может прийти когда страница вообще не запускалась.
+  // Имя приложения нейтрально в любом языке. На практике ветка почти мёртвая —
+  // сервер всегда шлёт title (текст задачи), см. sendDueReminders.
+  var title = n.title || 'Mynado';
   var body  = n.body  || '';
   // tag должен быть УНИКАЛЬНЫМ на каждую задачу. Был жёстко 'reminder' у всех —
   // из-за этого Android считал каждое новое напоминание ОБНОВЛЕНИЕМ уже
