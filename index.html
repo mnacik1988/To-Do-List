@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.33';
+var APP_VERSION = '1.34';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3681,6 +3681,20 @@ function doSyncRemindersToServer(){
 var SYNC_TASK_KEY='vtodo-task-synced-v1';
 function getSyncedTasks(){ try{ return JSON.parse(localStorage.getItem(SYNC_TASK_KEY)||'{}'); }catch(e){ return {}; } }
 function saveSyncedTasks(m){ try{ localStorage.setItem(SYNC_TASK_KEY,JSON.stringify(m)); }catch(e){} }
+// Страховка от случайного удаления при синке (2026-08-15, жалоба Александра
+// — вся задача с чек-листом пропала на iPhone+Android без его участия).
+// Раньше "пропавшая локально" задача получала НАСТОЯЩЕЕ надгробие на
+// сервере уже на ПЕРВОЙ же проверке (doSyncTasksToServer с дебаунсом всего
+// 1.5с) — любая мимолётная нестыковка состояния (гонка рендера, отложенный
+// pull с другого устройства, да что угодно — мы уже ловили в этом файле
+// похожую гонку с дублированием голосовых задач) необратимо удаляла задачу
+// СРАЗУ и ВЕЗДЕ, на всех устройствах. Теперь отсутствие задачи должно
+// подтвердиться в течение 5 минут (тот же запас, что REMINDER_WINDOW_MS на
+// сервере) — если задача за это время "вернулась" (например, реально была
+// временной нестыковкой), удаление отменяется без следа.
+var PENDING_DELETE_KEY='vtodo-pending-delete', PENDING_DELETE_GRACE_MS=300000;
+function getPendingDeletes(){ try{ return JSON.parse(localStorage.getItem(PENDING_DELETE_KEY)||'{}'); }catch(e){ return {}; } }
+function savePendingDeletes(m){ try{ localStorage.setItem(PENDING_DELETE_KEY,JSON.stringify(m)); }catch(e){} }
 // Сигнатура СОДЕРЖИМОГО задачи (фиксированный порядок полей — JSON.stringify
 // объектного литерала детерминирован) — по ней решаем, изменилась ли задача
 // с последнего успешного синка.
@@ -3731,13 +3745,25 @@ function doSyncTasksToServer(){
         date:task.date,reminderTime:task.reminderTime,checklist:task.checklist,ts:taskTs})
     }).then(function(r){ if(r&&r.ok){ var s=getSyncedTasks(); s[sid]={sig:sig,updatedAt:task.updatedAt}; saveSyncedTasks(s); } }).catch(function(){});
   });
-  /* пропавшие локально (удалены) → надгробие на сервере, один раз */
+  /* пропавшие локально (удалены) → надгробие на сервере, но только после
+     того, как отсутствие подтвердится 5 минут подряд — см. комментарий у
+     PENDING_DELETE_GRACE_MS выше. */
+  var pending=getPendingDeletes(), pendingChanged=false, now=Date.now();
   Object.keys(synced).forEach(function(sid){
-    if(desired[sid]) return;
+    if(desired[sid]){
+      if(pending[sid]!==undefined){ delete pending[sid]; pendingChanged=true; } // задача вернулась — отменяем
+      return;
+    }
+    if(pending[sid]===undefined){ pending[sid]=now; pendingChanged=true; return; } // впервые заметили пропажу — ждём
+    if(now-pending[sid]<PENDING_DELETE_GRACE_MS) return; // ещё не истекло
+    delete pending[sid]; pendingChanged=true;
     fetch(WORKER_URL+'/task/delete',{method:'POST',headers:authHeaders,
       body:JSON.stringify({syncId:sid,deviceId:getDeviceId(),updatedAt:Date.now()})
     }).then(function(r){ if(r&&r.ok){ var s=getSyncedTasks(); delete s[sid]; saveSyncedTasks(s); } }).catch(function(){});
   });
+  // Убираем из pending всё, чего больше даже нет в synced (уже стёрлось иначе).
+  Object.keys(pending).forEach(function(sid){ if(!synced[sid]){ delete pending[sid]; pendingChanged=true; } });
+  if(pendingChanged) savePendingDeletes(pending);
 }
 
 // Забираем задачи с других устройств этого же аккаунта. Вызывается при входе
