@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.36';
+var APP_VERSION = '1.37';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3362,7 +3362,13 @@ function clearAllData(){
   if(!isGoogleSignedIn()){ wipeLocal(); return; }
   fetch(WORKER_URL+'/account/wipe',{method:'POST',
     headers:{'Authorization':'Bearer '+getGoogleToken()}
-  }).then(wipeLocal).catch(wipeLocal);
+  }).then(function(){
+    // /account/wipe сносит sub:/rem: на сервере, но САМА подписка в браузере
+    // оставалась активной — устройство продолжало числиться подписанным и
+    // при следующем входе молча переиспользовало старый endpoint
+    // (см. ветку `if(existing)` в subscribePush). Снимаем и её.
+    return unsubscribePushForSignOut();
+  }).catch(function(){}).then(wipeLocal);
 }
 
 // Мягкий выход — в отличие от clearAllData() НИЧЕГО не трогает на сервере
@@ -3372,14 +3378,71 @@ function clearAllData(){
 // задачи целы на сервере. Чистим и vtodo-v2/vtodo-task-synced-v1 тоже —
 // иначе, если потом на этом же устройстве войдут ДРУГИМ аккаунтом, чужие
 // локальные задачи могли бы примешаться и уйти на сервер новому юзеру.
+// Снимает push-подписку ЭТОГО устройства: сначала на сервере (иначе там
+// остаётся живая sub:<аккаунт>:<устройство> + уже разложенные rem:-записи),
+// потом в самом браузере. Возвращает промис, который ВСЕГДА резолвится —
+// выход не должен зависеть от сети (аудит 2026-08-17, п.№2).
+function unsubscribePushForSignOut(){
+  return new Promise(function(resolve){
+    // Потолок ожидания: без сети fetch может висеть долго, а человек ждёт
+    // выхода. Локальную часть выхода это не задерживает — она идёт в любом
+    // случае, просто серверная запись останется до следующего входа.
+    var done=false;
+    var finish=function(){ if(done) return; done=true; resolve(); };
+    setTimeout(finish,4000);
+    if(!('serviceWorker' in navigator)){ finish(); return; }
+    navigator.serviceWorker.ready.then(function(reg){
+      return reg.pushManager.getSubscription();
+    }).then(function(sub){
+      if(!sub) return;
+      var endpoint=sub.endpoint;
+      // ВАЖНО: отписку в браузере делаем ВСЕГДА, даже если токен протух и на
+      // сервер сходить нечем. Из аккаунта чаще всего выходят как раз когда
+      // сессия просрочена — а проверка isGoogleSignedIn() ПЕРЕД всем блоком
+      // (как было в первой версии этого фикса) в этом самом частом случае
+      // пропускала вообще всё, и утечка оставалась. Смерть endpoint'а —
+      // решающая половина: сервер при следующей рассылке получит 410, а
+      // устройство перестаёт получать чужие напоминания сразу.
+      var serverPart=isGoogleSignedIn()
+        ? fetch(WORKER_URL+'/unsubscribe',{method:'POST',
+            headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
+            body:JSON.stringify({deviceId:getDeviceId(),endpoint:endpoint})
+          }).catch(function(){})
+        : Promise.resolve();
+      // Сначала сервер, потом браузер: серверу нужен ещё живой endpoint,
+      // чтобы сверить его со старой (без deviceId) записью sub:<аккаунт>.
+      return serverPart.then(function(){ return sub.unsubscribe().catch(function(){}); });
+    }).then(finish).catch(finish);
+  });
+}
+
+// Мягкий выход: НИЧЕГО не трогает на сервере, кроме push-подписки этого
+// устройства (см. выше) — задачи остаются целы, ровно как нужно при переезде
+// на новый телефон.
 function signOutDevice(){
   try{ if(window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); }catch(e){}
-  try{
-    ['vtodo-google-jwt','vtodo-google-jwt-exp','vtodo-google-email','vtodo-google-sub',
-     'vtodo-session-jwt','vtodo-session-jwt-exp',
-     'vtodo-v2','vtodo-task-synced-v1'].forEach(function(k){ localStorage.removeItem(k); });
-  }catch(e){}
-  location.reload();
+  unsubscribePushForSignOut().then(function(){
+    try{
+      // Раньше чистился только этот список — и остальные vtodo-ключи
+      // переживали выход. Самое неприятное: vtodo-ai-limit-info с чужим PRO
+      // (следующий аккаунт на этом телефоне до ответа /limit видел чужой
+      // бейдж и лимит), плюс vtodo-fired/vtodo-paywall-shown/vtodo-push-was-ok
+      // от прошлого владельца. Проще и надёжнее снести ВСЁ пространство
+      // vtodo-* и оставить лишь то, что осмысленно пережить выход:
+      // vtodo-device-id (иначе на сервере копятся мёртвые слоты устройств
+      // при каждом перезаходе) и vtodo-uid-hwm (монотонный счётчик id —
+      // если его обнулить, новые локальные id столкнутся со старыми syncId,
+      // уже лежащими на сервере, см. комментарий у UID_HWM_KEY).
+      var keep={'vtodo-device-id':1,'vtodo-uid-hwm':1};
+      var kill=[];
+      for(var i=0;i<localStorage.length;i++){
+        var k=localStorage.key(i);
+        if(k&&k.indexOf('vtodo-')===0&&!keep[k]) kill.push(k);
+      }
+      kill.forEach(function(k){ localStorage.removeItem(k); });
+    }catch(e){}
+    location.reload();
+  });
 }
 
 /* ── Calendar ── */
