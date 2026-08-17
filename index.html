@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.35';
+var APP_VERSION = '1.36';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3024,27 +3024,126 @@ function openGroup(groupId){
 }
 function closeGroup(){ state.groupOpen=null; state.groupSub='tasks'; render(); }
 
-function pullGroupTasks(){
-  var g=state.groupOpen; if(!g) return;
-  fetch(WORKER_URL+'/group/tasks?groupId='+encodeURIComponent(g.groupId),{headers:{'Authorization':'Bearer '+getGoogleToken()}})
-    .then(function(r){ return r.ok?r.json():null; })
-    .then(function(data){ state.groupTasks=(data&&data.tasks)?data.tasks:[]; state.groupTasksLoaded=true; render(); })
-    .catch(function(){ state.groupTasksLoaded=true; render(); });
+/* ── Автообновление общих списков (2026-08-17, аудит п.№3) ──
+   Раньше pullGroupTasks() звался ТОЛЬКО из openGroup(): visibilitychange
+   подтягивал личные задачи, а групповые — нет. Для фичи «общий список на
+   несколько живых людей» это ломало главный сценарий: чтобы увидеть, что
+   напарник добавил или отметил задачу, приходилось выйти из группы и зайти
+   заново. Теперь тянем и при возврате в приложение, и лёгким поллингом,
+   пока экран группы открыт.
+   Наивный поллинг тут ОПАСЕН по двум причинам, обе учтены ниже:
+   1) render() пересобирает весь DOM — обновление в момент, когда человек
+      печатает, сбрасывало бы фокус, каретку и закрывало клавиатуру. Поэтому
+      сравниваем сигнатуру содержимого и вообще не трогаем DOM, если ничего
+      не изменилось (тот же приём диффинга, что у синка задач в KV).
+   2) KV у Cloudflare ЭВЕНТУАЛЬНО согласован — чтение сразу после своей же
+      записи может вернуть старые данные и визуально ОТКАТИТЬ только что
+      сделанное. Поэтому опрос молчит, пока свои записи в полёте, и ещё
+      GROUP_WRITE_SETTLE_MS после последней. */
+function groupListSig(list){
+  return JSON.stringify((list||[]).map(function(t){
+    return [t.syncId,t.text,t.desc,t.priority,t.done,t.date,t.reminderTime,t.checklist,t.notifyUids];
+  }));
 }
-function pullGroupTrash(){
+// Счётчик своих незавершённых записей + момент последней. Пока он не ноль
+// (или прошло мало времени), опрос не перетирает оптимистично показанное.
+var groupWriteBusy=0, groupWriteDoneAt=0, GROUP_WRITE_SETTLE_MS=5000;
+function groupWriteStart(){ groupWriteBusy++; }
+function groupWriteEnd(){ groupWriteBusy=Math.max(0,groupWriteBusy-1); groupWriteDoneAt=Date.now(); }
+
+function pullGroupTasks(quiet){
   var g=state.groupOpen; if(!g) return;
-  fetch(WORKER_URL+'/group/tasks?groupId='+encodeURIComponent(g.groupId)+'&trash=1',{headers:{'Authorization':'Bearer '+getGoogleToken()}})
+  var gid=g.groupId;
+  fetch(WORKER_URL+'/group/tasks?groupId='+encodeURIComponent(gid),{headers:{'Authorization':'Bearer '+getGoogleToken()}})
     .then(function(r){ return r.ok?r.json():null; })
-    .then(function(data){ state.groupTrash=(data&&data.tasks)?data.tasks:[]; state.groupTrashLoaded=true; render(); })
-    .catch(function(){ state.groupTrashLoaded=true; render(); });
+    .then(function(data){
+      // Группу могли закрыть или переключить, пока запрос летел — иначе
+      // ответ старой группы затирал бы список новой.
+      if(!state.groupOpen||state.groupOpen.groupId!==gid) return;
+      var next=(data&&data.tasks)?data.tasks:[];
+      if(quiet){
+        if(!groupPollSafe()) return; // свои записи ещё не осели — ответ мог быть устаревшим
+        if(groupListSig(next)===groupListSig(state.groupTasks)) return; // ничего не изменилось
+      }
+      state.groupTasks=next; state.groupTasksLoaded=true; render();
+    })
+    .catch(function(){ if(quiet) return; if(!state.groupOpen||state.groupOpen.groupId!==gid) return; state.groupTasksLoaded=true; render(); });
 }
-function pullGroupMembers(){
+function pullGroupTrash(quiet){
   var g=state.groupOpen; if(!g) return;
-  fetch(WORKER_URL+'/group/members?groupId='+encodeURIComponent(g.groupId),{headers:{'Authorization':'Bearer '+getGoogleToken()}})
+  var gid=g.groupId;
+  fetch(WORKER_URL+'/group/tasks?groupId='+encodeURIComponent(gid)+'&trash=1',{headers:{'Authorization':'Bearer '+getGoogleToken()}})
     .then(function(r){ return r.ok?r.json():null; })
-    .then(function(data){ state.groupMembers=(data&&data.members)?data.members:[]; state.groupMembersLoaded=true; render(); })
-    .catch(function(){ state.groupMembersLoaded=true; render(); });
+    .then(function(data){
+      if(!state.groupOpen||state.groupOpen.groupId!==gid) return;
+      var next=(data&&data.tasks)?data.tasks:[];
+      if(quiet){
+        if(!groupPollSafe()) return;
+        if(groupListSig(next)===groupListSig(state.groupTrash)) return;
+      }
+      state.groupTrash=next; state.groupTrashLoaded=true; render();
+    })
+    .catch(function(){ if(quiet) return; if(!state.groupOpen||state.groupOpen.groupId!==gid) return; state.groupTrashLoaded=true; render(); });
 }
+function pullGroupMembers(quiet){
+  var g=state.groupOpen; if(!g) return;
+  var gid=g.groupId;
+  fetch(WORKER_URL+'/group/members?groupId='+encodeURIComponent(gid),{headers:{'Authorization':'Bearer '+getGoogleToken()}})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(data){
+      if(!state.groupOpen||state.groupOpen.groupId!==gid) return;
+      var next=(data&&data.members)?data.members:[];
+      if(quiet){
+        if(!groupPollSafe()) return;
+        if(JSON.stringify(next)===JSON.stringify(state.groupMembers)) return;
+      }
+      state.groupMembers=next; state.groupMembersLoaded=true; render();
+    })
+    .catch(function(){ if(quiet) return; if(!state.groupOpen||state.groupOpen.groupId!==gid) return; state.groupMembersLoaded=true; render(); });
+}
+
+/* Можно ли сейчас незаметно обновить экран группы. Одна проверка на все
+   поводы промолчать — вызывается и перед запросом, и ещё раз при ответе
+   (за время полёта человек мог начать печатать). */
+function groupPollSafe(){
+  if(document.visibilityState!=='visible') return false;
+  if(!navigator.onLine||!isGoogleSignedIn()) return false;
+  if(state.view!=='groups'||!state.groupOpen) return false;
+  // Открыта шторка редактирования/подтверждения — render() пересобрал бы её
+  // прямо под пальцем.
+  if(state.gEdit||state.ask) return false;
+  // Человек печатает (новая задача, приглашение, название группы) — молчим,
+  // иначе перерисовка съест введённый текст и уберёт клавиатуру.
+  var ae=document.activeElement;
+  if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA')) return false;
+  // Свои записи ещё в полёте или только что прошли — KV мог не догнать.
+  if(groupWriteBusy>0) return false;
+  if(Date.now()-groupWriteDoneAt<GROUP_WRITE_SETTLE_MS) return false;
+  return true;
+}
+// Нижний предел между опросами, независимо от поводa. Нужен потому, что
+// groupPollTick зовётся НЕ только по интервалу, но и на каждый
+// visibilitychange — а тот приходит пачками (быстрое переключение между
+// приложениями, шторка уведомлений, смена фокуса). Замерено в браузере
+// 2026-08-17: без этого предела получалось ~16 запросов за 26 секунд вместо
+// одного. Квоту KV в этом проекте уже дважды сжигали, так что дешёвая
+// защита тут уместнее, чем надежда на аккуратность поводов.
+var GROUP_POLL_MIN_GAP_MS=8000, groupPollLastAt=0;
+// Одиночный интервал, который сам решает, надо ли что-то делать — так не
+// приходится заводить start/stop в каждом пути навигации (тот же приём, что
+// у setInterval(checkReminders) ниже).
+function groupPollTick(){
+  if(!groupPollSafe()) return;
+  // Предел проверяем ЗДЕСЬ, а не в groupPollSafe(): та вызывается второй раз
+  // при получении ответа, и метка, поставленная перед запросом, гасила бы
+  // собственный ответ.
+  if(Date.now()-groupPollLastAt<GROUP_POLL_MIN_GAP_MS) return;
+  groupPollLastAt=Date.now();
+  if(state.groupSub==='members') pullGroupMembers(true);
+  else if(state.groupSub==='trash') pullGroupTrash(true);
+  else pullGroupTasks(true);
+}
+setInterval(groupPollTick, 20000);
 
 function groupAddTask(){
   var g=state.groupOpen; if(!g||(g.role!=='admin'&&g.role!=='editor')) return;
@@ -3054,10 +3153,11 @@ function groupAddTask(){
   var newTask={syncId:syncId,text:text,desc:'',priority:state.gAddPri,done:false,date:'',checklist:[],deviceId:getDeviceId(),updatedAt:now,createdBy:getUserKey(),updatedBy:getUserKey()};
   state.groupTasks=[newTask].concat(state.groupTasks);
   state.gAddText=''; render();
+  groupWriteStart();
   fetch(WORKER_URL+'/group/task',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({
     groupId:g.groupId, syncId:syncId, deviceId:getDeviceId(), updatedAt:now,
     text:text, desc:'', priority:state.gAddPri, done:false, date:'', checklist:[]
-  })}).then(function(r){ if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ pullGroupTasks(); });
+  })}).then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
 function groupToggleDone(syncId){
@@ -3066,27 +3166,30 @@ function groupToggleDone(syncId){
   state.groupTasks=state.groupTasks.map(function(t){ if(t.syncId===syncId){ task=Object.assign({},t,{done:!t.done}); return task; } return t; });
   render();
   if(!task) return;
+  groupWriteStart();
   fetch(WORKER_URL+'/group/task',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({
     groupId:g.groupId, syncId:syncId, deviceId:getDeviceId(), updatedAt:Date.now(),
     text:task.text, desc:task.desc||'', priority:task.priority, done:task.done, date:task.date||'', checklist:task.checklist||[]
-  })}).then(function(r){ if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ pullGroupTasks(); });
+  })}).then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
 function groupDeleteTask(syncId){
   var g=state.groupOpen; if(!g||g.role!=='admin') return;
   state.groupTasks=state.groupTasks.filter(function(t){ return t.syncId!==syncId; });
   render();
+  groupWriteStart();
   fetch(WORKER_URL+'/group/task/delete',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:g.groupId,syncId:syncId})})
-    .then(function(r){ if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ pullGroupTasks(); });
+    .then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
 function groupRestoreTask(syncId){
   var g=state.groupOpen; if(!g||g.role!=='admin') return;
   state.groupTrash=state.groupTrash.filter(function(t){ return t.syncId!==syncId; });
   render();
+  groupWriteStart();
   fetch(WORKER_URL+'/group/task/restore',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:g.groupId,syncId:syncId})})
-    .then(function(r){ if(r&&r.ok) pullGroupTasks(); else pullGroupTrash(); })
-    .catch(function(){ pullGroupTrash(); });
+    .then(function(r){ groupWriteEnd(); if(r&&r.ok) pullGroupTasks(); else pullGroupTrash(); })
+    .catch(function(){ groupWriteEnd(); pullGroupTrash(); });
 }
 
 function groupInviteMember(){
@@ -3187,8 +3290,9 @@ function saveGroupEdit(){
   });
   state.gEdit=null;
   render();
+  groupWriteStart();
   fetch(WORKER_URL+'/group/task',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify(Object.assign({done:done},payload))})
-    .then(function(r){ if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ pullGroupTasks(); });
+    .then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
 function groupChangeRole(uidVal,role){
@@ -3964,7 +4068,12 @@ function checkReminders(){
 }
 
 setInterval(checkReminders, 30000);
-document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ rebalanceSections(); saveStorage(); render(); checkReminders(); scheduleReminders(); syncRemindersToServer(); pullTasksFromServer(); } });
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ rebalanceSections(); saveStorage(); render(); checkReminders(); scheduleReminders(); syncRemindersToServer(); pullTasksFromServer();
+  // Общие группы тоже — раньше при возврате в приложение обновлялись только
+  // ЛИЧНЫЕ задачи, и правки напарника в общем списке было не видно, пока не
+  // выйдешь из группы и не зайдёшь заново (аудит 2026-08-17, п.№3).
+  groupPollTick();
+} });
 
 /* Передаём напоминания в SW для фонового режима */
 function scheduleReminders(){
