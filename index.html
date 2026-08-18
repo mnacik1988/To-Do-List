@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.39';
+var APP_VERSION = '1.40';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3989,6 +3989,22 @@ function saveSyncedTasks(m){ try{ localStorage.setItem(SYNC_TASK_KEY,JSON.string
 var PENDING_DELETE_KEY='vtodo-pending-delete', PENDING_DELETE_GRACE_MS=300000;
 function getPendingDeletes(){ try{ return JSON.parse(localStorage.getItem(PENDING_DELETE_KEY)||'{}'); }catch(e){ return {}; } }
 function savePendingDeletes(m){ try{ localStorage.setItem(PENDING_DELETE_KEY,JSON.stringify(m)); }catch(e){} }
+// Выдержка в 5 минут была бы бесполезна без ЭТОГО: сама по себе она только
+// откладывает надгробие, а перепроверить его потом некому — периодического
+// синка задач в приложении нет, и холодный старт задачи наверх не отправляет.
+// Из-за этого удаление уходило на сервер, только если пользователь случайно
+// свернёт и развернёт приложение позже чем через 5 минут; иначе задача
+// оставалась жить на других устройствах навсегда (жалоба Александра
+// 2026-08-18: «удаляю в нативной — в других версиях не удаляется»).
+// Планируем один отложенный повтор синка, когда выдержка истечёт.
+var pendingDeleteTimer=null;
+function schedulePendingDeleteSweep(){
+  if(pendingDeleteTimer) return; // повтор уже запланирован
+  pendingDeleteTimer=setTimeout(function(){
+    pendingDeleteTimer=null;
+    doSyncTasksToServer(); // он сам решит, истекла ли выдержка, и при нужде запланирует ещё раз
+  }, PENDING_DELETE_GRACE_MS+5000);
+}
 // Сигнатура СОДЕРЖИМОГО задачи (фиксированный порядок полей — JSON.stringify
 // объектного литерала детерминирован) — по ней решаем, изменилась ли задача
 // с последнего успешного синка.
@@ -4062,6 +4078,8 @@ function doSyncTasksToServer(){
   // Убираем из pending всё, чего больше даже нет в synced (уже стёрлось иначе).
   Object.keys(pending).forEach(function(sid){ if(!synced[sid]){ delete pending[sid]; pendingChanged=true; } });
   if(pendingChanged) savePendingDeletes(pending);
+  // Остались отложенные удаления — вернуться к ним, когда выдержка истечёт.
+  if(Object.keys(pending).length) schedulePendingDeleteSweep();
 }
 
 // Забираем задачи с других устройств этого же аккаунта. Вызывается при входе
@@ -4237,6 +4255,12 @@ refreshAiLimit();
 // сворачивания/разворачивания приложения. pullTasksFromServer() сам
 // проверяет isGoogleSignedIn(), безопасно звать безусловно (2026-07-24).
 pullTasksFromServer();
+// ...и отправить СВОИ изменения тоже. Раньше при холодном старте шёл только
+// pull: отложенное удаление (см. PENDING_DELETE_GRACE_MS), записанное в прошлый
+// запуск, так и лежало непереданным, пока пользователь не свернёт-развернёт
+// приложение. Теперь выдержка к этому моменту давно истекла и надгробие уходит
+// сразу (2026-08-18). Сам doSyncTasksToServer() проверяет сеть и вход.
+doSyncTasksToServer();
 </script>
 </body>
 </html>
