@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.41';
+var APP_VERSION = '1.42';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2379,7 +2379,7 @@ function saveEdit(){
 function setPri(pri){ syncEdit(); if(state.edit) state.edit.priority=pri; render(); }
 function toggleDoneModal(){ var m=state.modal; if(m) toggleDone(m.section,m.id); else render(); }
 function deleteTask(){ state.confirmDelete=true; render(); }
-function confirmDeleteYes(){ var m=state.modal; if(!m){state.confirmDelete=false;render();return;} state.sections[m.section]=state.sections[m.section].filter(function(t){return t.id!==m.id;}); state.confirmDelete=false; scheduleReminders(); syncRemindersToServer(); closeModal(); }
+function confirmDeleteYes(){ var m=state.modal; if(!m){state.confirmDelete=false;render();return;} markExplicitDelete(function(t){ return t.id===m.id; }); state.sections[m.section]=state.sections[m.section].filter(function(t){return t.id!==m.id;}); state.confirmDelete=false; scheduleReminders(); syncRemindersToServer(); closeModal(); }
 function confirmDeleteNo(){ state.confirmDelete=false; render(); }
 
 /* ── Select mode ── */
@@ -2393,12 +2393,14 @@ function toggleSelectTask(id,section){
 function bulkDelete(){
   var ids=Object.keys(state.selected);
   if(!ids.length) return;
+  markExplicitDelete(function(t){ return !!state.selected[t.id]; });
   for(var sec in state.sections){
     state.sections[sec]=state.sections[sec].filter(function(t){ return !state.selected[t.id]; });
   }
   state.selected={}; state.selectMode=false; scheduleReminders(); syncRemindersToServer(); render();
 }
 function deleteTaskById(sec,id){
+  markExplicitDelete(function(t){ return t.id===id; });
   if(sec&&state.sections[sec]){
     state.sections[sec]=state.sections[sec].filter(function(t){ return t.id!==id; });
   } else {
@@ -2427,6 +2429,7 @@ function overdueReschedule(){
 }
 function overdueDelete(){
   var ids=state.overdueSelected;
+  markExplicitDelete(function(t){ return !!ids[t.id]; });
   for(var sec in state.sections){
     state.sections[sec]=state.sections[sec].filter(function(t){ return !ids[t.id]; });
   }
@@ -4034,6 +4037,29 @@ function saveSyncedTasks(m){ try{ localStorage.setItem(SYNC_TASK_KEY,JSON.string
 var PENDING_DELETE_KEY='vtodo-pending-delete', PENDING_DELETE_GRACE_MS=300000;
 function getPendingDeletes(){ try{ return JSON.parse(localStorage.getItem(PENDING_DELETE_KEY)||'{}'); }catch(e){ return {}; } }
 function savePendingDeletes(m){ try{ localStorage.setItem(PENDING_DELETE_KEY,JSON.stringify(m)); }catch(e){} }
+// Явное удаление пользователем — ОТДЕЛЬНО от «задача куда-то делась».
+// В этом и была ошибка исходной задумки (2026-08-18): выдержка вводилась
+// против МОЛЧАЛИВОГО исчезновения задачи из-за гонки, но применялась и к
+// осознанному нажатию «Удалить». А раз надгробие откладывалось, задача
+// оставалась на сервере — и pullTasksFromServer при первом же обращении
+// не находил её локально и ВОСКРЕШАЛ. После чего сработка «задача
+// вернулась» отменяла удаление навсегда. Симптомы Александра ровно эти:
+// «в других версиях не удаляется» и «задачи потом снова появляются».
+// Теперь явное удаление уходит немедленно, а выдержка остаётся только для
+// случая, ради которого задумывалась.
+var EXPLICIT_DELETE_KEY='vtodo-explicit-delete';
+function getExplicitDeletes(){ try{ return JSON.parse(localStorage.getItem(EXPLICIT_DELETE_KEY)||'{}'); }catch(e){ return {}; } }
+function saveExplicitDeletes(m){ try{ localStorage.setItem(EXPLICIT_DELETE_KEY,JSON.stringify(m)); }catch(e){} }
+// Зовётся ДО удаления из state — потом syncId уже не достать.
+function markExplicitDelete(pred){
+  var m=getExplicitDeletes(), changed=false;
+  allTasks().forEach(function(t){
+    if(!pred(t)) return;
+    if(!t.syncId) return; // на сервер не попадала — удалять там нечего
+    m[t.syncId]=Date.now(); changed=true;
+  });
+  if(changed) saveExplicitDeletes(m);
+}
 // Выдержка в 5 минут была бы бесполезна без ЭТОГО: сама по себе она только
 // откладывает надгробие, а перепроверить его потом некому — периодического
 // синка задач в приложении нет, и холодный старт задачи наверх не отправляет.
@@ -4104,26 +4130,41 @@ function doSyncTasksToServer(){
         lang:state.lang})
     }).then(function(r){ if(r&&r.ok){ var s=getSyncedTasks(); s[sid]={sig:sig,updatedAt:task.updatedAt}; saveSyncedTasks(s); } }).catch(function(){});
   });
-  /* пропавшие локально (удалены) → надгробие на сервере, но только после
-     того, как отсутствие подтвердится 5 минут подряд — см. комментарий у
-     PENDING_DELETE_GRACE_MS выше. */
+  /* Пропавшие локально задачи → надгробие на сервере.
+     ЯВНОЕ удаление (пользователь нажал «Удалить») уходит немедленно: намерение
+     однозначное, ждать нечего. НЕЯВНОЕ (задача просто исчезла из state — гонка
+     рендера, кривой merge и т.п.) по-прежнему выдерживается PENDING_DELETE_GRACE_MS,
+     ради чего выдержка и вводилась в v1.34. Смешивать эти два случая было
+     ошибкой: см. большой комментарий у EXPLICIT_DELETE_KEY. */
   var pending=getPendingDeletes(), pendingChanged=false, now=Date.now();
-  Object.keys(synced).forEach(function(sid){
-    if(desired[sid]){
-      if(pending[sid]!==undefined){ delete pending[sid]; pendingChanged=true; } // задача вернулась — отменяем
-      return;
-    }
-    if(pending[sid]===undefined){ pending[sid]=now; pendingChanged=true; return; } // впервые заметили пропажу — ждём
-    if(now-pending[sid]<PENDING_DELETE_GRACE_MS) return; // ещё не истекло
-    delete pending[sid]; pendingChanged=true;
+  var explicit=getExplicitDeletes(), explicitChanged=false;
+  function sendTombstone(sid){
     fetch(WORKER_URL+'/task/delete',{method:'POST',headers:authHeaders,
       body:JSON.stringify({syncId:sid,deviceId:getDeviceId(),updatedAt:Date.now()})
     }).then(function(r){ if(r&&r.ok){ var s=getSyncedTasks(); delete s[sid]; saveSyncedTasks(s); } }).catch(function(){});
+  }
+  Object.keys(synced).forEach(function(sid){
+    if(desired[sid]){
+      // Задача на месте — снимаем оба вида пометок.
+      if(pending[sid]!==undefined){ delete pending[sid]; pendingChanged=true; }
+      if(explicit[sid]!==undefined){ delete explicit[sid]; explicitChanged=true; }
+      return;
+    }
+    if(explicit[sid]!==undefined){
+      delete explicit[sid]; explicitChanged=true;
+      if(pending[sid]!==undefined){ delete pending[sid]; pendingChanged=true; }
+      sendTombstone(sid); return;
+    }
+    if(pending[sid]===undefined){ pending[sid]=now; pendingChanged=true; return; } // впервые заметили пропажу — ждём
+    if(now-pending[sid]<PENDING_DELETE_GRACE_MS) return;                            // ещё не истекло
+    delete pending[sid]; pendingChanged=true;
+    sendTombstone(sid);
   });
-  // Убираем из pending всё, чего больше даже нет в synced (уже стёрлось иначе).
+  // Убираем пометки для того, чего больше нет даже в synced (стёрлось иначе).
   Object.keys(pending).forEach(function(sid){ if(!synced[sid]){ delete pending[sid]; pendingChanged=true; } });
+  Object.keys(explicit).forEach(function(sid){ if(!synced[sid]){ delete explicit[sid]; explicitChanged=true; } });
   if(pendingChanged) savePendingDeletes(pending);
-  // Остались отложенные удаления — вернуться к ним, когда выдержка истечёт.
+  if(explicitChanged) saveExplicitDeletes(explicit);
   if(Object.keys(pending).length) schedulePendingDeleteSweep();
 }
 
@@ -4137,6 +4178,7 @@ function pullTasksFromServer(){
     .then(function(data){
       if(!data||!data.tasks) return;
       var synced=getSyncedTasks();
+      var pendingNow=getPendingDeletes(), explicitNow=getExplicitDeletes();
       var changed=false;
       var hasReminder=false;
       data.tasks.forEach(function(rec){
@@ -4159,6 +4201,19 @@ function pullTasksFromServer(){
           }
           /* иначе локальная копия новее/такая же — оставляем, уйдёт наверх на следующем синке */
         } else {
+          // НЕ воскрешаем задачу, которую пользователь ЯВНО удалил на этом
+          // устройстве: её надгробие уйдёт ближайшим синком, но сервер прямо
+          // сейчас всё ещё присылает её как живую. Без этой проверки pull
+          // создавал её заново, а следом срабатывало «задача вернулась» и
+          // отменяло удаление НАВСЕГДА (жалоба Александра 2026-08-18:
+          // «удаляю — не удаляется в других версиях, задачи потом снова
+          // появляются»).
+          // ВАЖНО: только явное удаление. Для НЕЯВНОЙ пропажи (pending)
+          // воскрешение — это и есть спасение, ради которого выдержка
+          // задумывалась: задача исчезла из-за гонки, сервер вернул её,
+          // следующий синк отменит удаление. Запрещать здесь и pending —
+          // значит вернуть исходный баг с пропажей задач.
+          if(explicitNow[rec.syncId]!==undefined) return;
           var nt=T(rec.text,rec.priority,rec.done,rec.desc,rec.date,rec.reminderTime,rec.checklist,rec.syncId,rec.updatedAt);
           state.sections.month=state.sections.month.concat([nt]); // временно, rebalanceSections() ниже разложит верно
           synced[rec.syncId]={sig:taskSyncSig(nt),updatedAt:rec.updatedAt};
