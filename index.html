@@ -429,12 +429,32 @@ var LANG_BCP={ru:'ru-RU',en:'en-US',uk:'uk-UA',de:'de-DE',fr:'fr-FR'};
 var L = TRANSLATIONS.ru;
 function applyLang(lang, noRender){
   if(!TRANSLATIONS[lang]) lang='ru';
+  var prevLang=state.lang;
   state.lang=lang; L=TRANSLATIONS[lang];
   PRI_LABEL={high:L.pri_high,mid:L.pri_mid,low:L.pri_low};
   TAB_META=[{key:'day',title:L.tab_day},{key:'week',title:L.tab_week},{key:'month',title:L.tab_month}];
   DOW_RU=L.days_short; DOW_FULL=L.days_full; MON_RU=L.months_full; MON_RU_G=L.months_gen;
   EMPTY_HINTS={day:L.empty_day,week:L.empty_week,month:L.empty_month,undated:L.empty_undated};
   try{ localStorage.setItem('vtodo-lang',lang); }catch(e){}
+  // Текст push-уведомления собирает СЕРВЕР, а язык он берёт из задачи в
+  // момент её сохранения (см. lang в doSyncTasksToServer). Значит после
+  // смены языка все УЖЕ заведённые напоминания продолжали бы приходить на
+  // старом языке — навсегда, потому что taskSyncSig() язык не учитывает и
+  // повторной отправки не происходит (найдено 2026-08-18, когда Александр
+  // проверял п.№6 и поставил напоминание ДО переключения языка).
+  // Сбрасываем подпись только у задач с активным напоминанием — их единицы,
+  // а гонять из-за смены языка ВЕСЬ список значило бы жечь квоту записи KV,
+  // которую в этом проекте уже дважды выжигали.
+  if(!noRender && prevLang!==lang && isGoogleSignedIn()){
+    try{
+      var sy=getSyncedTasks(), touched=false;
+      allTasks().forEach(function(t){
+        if(!t.syncId||!t.reminderTime||!t.date||t.done) return;
+        if(sy[t.syncId]){ sy[t.syncId].sig=''; touched=true; } // подпись не совпадёт — уйдёт заново
+      });
+      if(touched){ saveSyncedTasks(sy); syncRemindersToServer(); }
+    }catch(e){}
+  }
   if(!noRender){ state.summary=L.summary_default; render(); }
 }
 var STORE_KEY = 'vtodo-v2';
@@ -655,7 +675,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.43';
+var APP_VERSION = '1.44';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
