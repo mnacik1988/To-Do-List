@@ -655,7 +655,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.40';
+var APP_VERSION = '1.41';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2542,6 +2542,14 @@ function processTranscript(transcript){
     'If the user names a place to go (store, pharmacy, etc.) followed by a list of specific items/errands there, do NOT create a separate generic "go to X" task — the item tasks already imply the trip. Only create one task per item.\n'+
     'If the user dictates a bare list of items to buy/get WITHOUT naming a place (e.g. "купить молоко, хлеб, помидоры, огурцы" / "buy milk, bread, tomatoes, cucumbers") — do NOT create one task per item and do NOT put the list in "text". Instead create ONE task with a short generic name (e.g. "Покупки" / "Groceries", in the voice message\'s language) and put each item as a separate string in "checklist".\n'+
     'Return: {"type":"add","tasks":[{"text":"task name without dates/times/filler","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty","checklist":["item1","item2"] or omit/empty if not a shopping list}]}\n'+
+    // Без этого правила ЛОМАЛСЯ ЛЮБОЙ следующий список покупок (баг-репорт
+    // Александра 2026-08-18). Причина в правиле выше: оно велит называть
+    // всякий надиктованный список одинаково — «Покупки». Как только такая
+    // задача уже висит, модель видит её среди кандидатов и трактует новый
+    // список как ПРАВКУ старого, а applyAiEdit чек-лист не применял вовсе —
+    // продиктованные пункты молча исчезали, лимит при этом списывался.
+    'A newly dictated list of things to buy or get is ALWAYS a NEW task (type "add"), even if a similar shopping task (for example "Покупки" or "Groceries") already exists. Never treat a fresh list as an edit of that task. The ONLY exception is when the user explicitly asks to add to the existing one (for example "добавь в покупки", "add to my groceries") — then use type "edit" with "checklistAdd".\n'+
+    'If a not-completed task with that same generic name already exists, give the new one a slightly more specific name from its content (for example "Покупки в аптеке") so the two are told apart.\n'+
     // Без этой строки модель ВСЕГДА подставляет сегодняшнюю дату (её просят
     // форматом выше) — и надиктованное в разделе «Задачи» улетало в список
     // дел на сегодня. Страховка на клиенте всё равно стоит ниже: модель
@@ -2549,7 +2557,7 @@ function processTranscript(transcript){
     (undated?'The user is in the "no deadline / someday" section. Return "date":"" (empty string) unless the voice message explicitly names a day or date. Do NOT default to today.\n':'')+
     '\n'+
     '2. EDIT existing task — ONLY when the user is clearly continuing/modifying the SAME task action already in the list (e.g. adding a reminder, moving the date, renaming, changing priority for THAT exact errand). Matching a task by a shared name/keyword (e.g. same person\'s name) is NOT enough — a different action/verb about the same person or place is a NEW task, not an edit. When in doubt, prefer ADD over EDIT.\n'+
-    'Return: {"type":"edit","find":"exact or partial task text to find","changes":{"text":"new name if renamed","date":"YYYY-MM-DD if changed","reminderTime":"HH:MM if set/changed","priority":"high|mid|low if changed"}}\n'+
+    'Return: {"type":"edit","find":"exact or partial task text to find","changes":{"text":"new name if renamed","date":"YYYY-MM-DD if changed","reminderTime":"HH:MM if set/changed","priority":"high|mid|low if changed","checklistAdd":["item1","item2"] only when the user asks to add items to that task checklist}}\n'+
     'Only include fields that actually change. "find" must match part of an existing task text.\n\n'+
     '3. QUESTION — user asks something about their tasks.\n'+
     'Return: {"type":"query","answer":"brief answer in same language","section":"day|week|month or empty"}\n\n'+
@@ -2572,8 +2580,8 @@ function processTranscript(transcript){
       render(); return;
     }
     if(data.type==='edit'&&data.find){
-      var ok=applyAiEdit(data.find,data.changes||{});
-      if(ok){
+      var editRes=applyAiEdit(data.find,data.changes||{});
+      if(editRes==='ok'){
         rebalanceSections();
         var editedTask=null;
         for(var s in state.sections){ state.sections[s].forEach(function(t){ if(t.text.toLowerCase().indexOf(data.find.toLowerCase())>=0) editedTask=t; }); }
@@ -2582,6 +2590,13 @@ function processTranscript(transcript){
         if(state.voiceReply) speak(msg);
         anim.summary=true; render();
         scheduleReminders(); syncRemindersToServer();
+      } else if(editRes==='nochange'){
+        // Задачу нашли, но применить оказалось нечего (модель вернула правку
+        // без понятных нам полей). Раньше такой ответ молча проглатывался, а
+        // лимит уже был списан — ровно на это жаловался Александр 18.08.
+        // Лучше создать задачу из сказанного, чем потерять надиктованное.
+        addTaskLocallyFromVoice(transcript, dayDate, undated);
+        render();
       } else {
         state.aiAnswer='Задача не найдена: «'+esc(data.find)+'»';
         if(state.voiceReply) speak(state.aiAnswer);
@@ -2609,7 +2624,7 @@ function processTranscript(transcript){
 }
 
 function applyAiEdit(find, changes){
-  if(!find||!changes) return false;
+  if(!find||!changes) return 'notfound';
   var fl=find.toLowerCase();
   var found=null, foundSec=null;
   for(var sec in state.sections){
@@ -2617,12 +2632,42 @@ function applyAiEdit(find, changes){
       if(!found&&!t.done&&t.text.toLowerCase().indexOf(fl)>=0){ found=t; foundSec=sec; }
     });
   }
-  if(!found) return false;
+  if(!found) return 'notfound';
   var patch={};
   if(changes.text&&changes.text.trim()) patch.text=changes.text.trim();
   if(changes.date) patch.date=changes.date;
   if(changes.reminderTime!==undefined) patch.reminderTime=changes.reminderTime;
   if(changes.priority&&['high','mid','low'].indexOf(changes.priority)>=0) patch.priority=changes.priority;
+  // Дописывание пунктов в чек-лист. Раньше этой ветки не было ВООБЩЕ: если
+  // модель возвращала правку с пунктами, они молча пропадали, а лимит уже
+  // был списан. Именно так ломался второй список покупок — модель видела
+  // висящую задачу «Покупки» и трактовала новый список как правку
+  // (баг-репорт Александра 2026-08-18). Дубли не плодим: пункт с таким же
+  // текстом просто не добавляем.
+  if(Array.isArray(changes.checklistAdd)&&changes.checklistAdd.length){
+    var merged=(found.checklist||[]).slice();
+    var seen={};
+    merged.forEach(function(i){ seen[String(i.text).trim().toLowerCase()]=true; });
+    var addedAny=false;
+    changes.checklistAdd.forEach(function(raw){
+      var txt=String(raw==null?'':raw).trim(); if(!txt) return;
+      var low=txt.toLowerCase(); if(seen[low]) return;
+      seen[low]=true; merged.push(checklistItem(txt)); addedAny=true;
+    });
+    if(addedAny){
+      patch.checklist=merged;
+      // Новый неотмеченный пункт снимает «выполнено» — иначе задача осталась
+      // бы зачёркнутой с невыполненным пунктом внутри (та же логика, что в
+      // saveEdit и toggleChecklistItem).
+      patch.done=merged.every(function(i){return i.done;});
+    }
+  }
+  // Модель сказала «правка», но применять оказалось нечего. Раньше мы всё
+  // равно возвращали true, и юзер видел галочку «готово», хотя не изменилось
+  // ничего. Возвращаем false — вызывающий код тогда создаст задачу из речи,
+  // чтобы сказанное не пропало впустую.
+  var touched=false; for(var pk in patch){ touched=true; break; }
+  if(!touched) return 'nochange';
   var newSec=patch.date?dateToSection(patch.date):foundSec;
   if(newSec!==foundSec){
     var updated=null;
@@ -2631,7 +2676,7 @@ function applyAiEdit(find, changes){
   } else {
     state.sections[foundSec]=state.sections[foundSec].map(function(t){ return t.id===found.id?Object.assign({},t,patch):t; });
   }
-  return true;
+  return 'ok';
 }
 
 // keepEmptyDate: не подставлять "сегодня" за пустую дату — используется при
