@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.46';
+var APP_VERSION = '1.47';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2055,7 +2055,7 @@ function renderBottomNav(){
   return '<div class="bottom-nav">'+
     '<button class="nav-btn'+(state.view==='list'?' active':'')+'" data-role="nav-list">'+IC.list+'<span>'+L.nav_list+'</span></button>'+
     '<button class="nav-btn'+(state.view==='undated'?' active':'')+'" data-role="nav-undated">'+IC.tasksSq+'<span>'+L.nav_undated+'</span></button>'+
-    '<button class="nav-btn'+(state.view==='groups'?' active':'')+'" data-role="nav-groups">'+IC.groups+'<span>'+L.nav_groups+'</span></button>'+
+    '<button class="nav-btn'+(state.view==='groups'?' active':'')+'" data-role="nav-groups" style="position:relative">'+IC.groups+(hasGroupUpdates()?'<span style="position:absolute;top:6px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:var(--pri-high-ink)"></span>':'')+'<span>'+L.nav_groups+'</span></button>'+
     '<button class="nav-btn'+(state.view==='calendar'?' active':'')+'" data-role="nav-cal">'+IC.cal+'<span>'+L.nav_cal+'</span></button>'+
   '</div>';
 }
@@ -3129,6 +3129,29 @@ function closeSettings(){
    сразу (несколько живых людей правят один список), плюс разные роли что
    разрешают, что нет. Проще и надёжнее держать отдельно, чем подмешивать
    особые случаи в уже сложный личный путь. */
+// Отметки «когда я последний раз видел эту группу». Сравниваем с lastChange
+// из /groups и рисуем точку на вкладке, если кто-то что-то менял после.
+// Пуш на каждую задачу сознательно НЕ делаем: в группе из нескольких человек
+// это превратится в поток уведомлений и в расход квоты (вопрос Александра
+// 2026-08-18). Точка — тихий вариант: не будит телефон, но не даёт пропустить.
+var GROUP_SEEN_KEY='vtodo-group-seen';
+function getGroupSeen(){ try{ return JSON.parse(localStorage.getItem(GROUP_SEEN_KEY)||'{}'); }catch(e){ return {}; } }
+function markGroupSeen(gid){
+  if(!gid) return;
+  var m=getGroupSeen(); m[gid]=Date.now();
+  try{ localStorage.setItem(GROUP_SEEN_KEY,JSON.stringify(m)); }catch(e){}
+}
+// Есть ли хоть одна группа с чужими изменениями с прошлого захода.
+function hasGroupUpdates(){
+  var seen=getGroupSeen();
+  for(var i=0;i<state.groupsList.length;i++){
+    var g=state.groupsList[i];
+    if(!g.lastChange) continue;
+    if(g.lastChange>(seen[g.groupId]||0)) return true;
+  }
+  return false;
+}
+
 function groupAuthHeaders(){ return {'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()}; }
 function groupRoleLabel(role){
   return role==='admin'?L.groups_role_admin:role==='editor'?L.groups_role_editor:role==='viewer_check'?L.groups_role_viewer_check:L.groups_role_viewer;
@@ -3161,6 +3184,7 @@ function openGroup(groupId){
   var g=null;
   for(var i=0;i<state.groupsList.length;i++) if(state.groupsList[i].groupId===groupId) g=state.groupsList[i];
   if(!g) return;
+  markGroupSeen(groupId); // свои заходы точку не зажигают
   state.groupOpen=g; state.groupSub='tasks';
   state.groupTasks=[]; state.groupTasksLoaded=false;
   state.groupTrash=[]; state.groupTrashLoaded=false;
@@ -3211,7 +3235,7 @@ function pullGroupTasks(quiet){
         if(!groupPollSafe()) return; // свои записи ещё не осели — ответ мог быть устаревшим
         if(groupListSig(next)===groupListSig(state.groupTasks)) return; // ничего не изменилось
       }
-      state.groupTasks=next; state.groupTasksLoaded=true; render();
+      state.groupTasks=next; state.groupTasksLoaded=true; markGroupSeen(gid); render();
     })
     .catch(function(){ if(quiet) return; if(!state.groupOpen||state.groupOpen.groupId!==gid) return; state.groupTasksLoaded=true; render(); });
 }
@@ -3303,7 +3327,7 @@ function groupAddTask(){
   fetch(WORKER_URL+'/group/task',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({
     groupId:g.groupId, syncId:syncId, deviceId:getDeviceId(), updatedAt:now,
     text:text, desc:'', priority:state.gAddPri, done:false, date:'', checklist:[]
-  })}).then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
+  })}).then(function(r){ groupWriteEnd(); markGroupSeen(g.groupId); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
 function groupToggleDone(syncId){
@@ -3316,7 +3340,7 @@ function groupToggleDone(syncId){
   fetch(WORKER_URL+'/group/task',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({
     groupId:g.groupId, syncId:syncId, deviceId:getDeviceId(), updatedAt:Date.now(),
     text:task.text, desc:task.desc||'', priority:task.priority, done:task.done, date:task.date||'', checklist:task.checklist||[]
-  })}).then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
+  })}).then(function(r){ groupWriteEnd(); markGroupSeen(g.groupId); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
 function groupDeleteTask(syncId){
@@ -3325,7 +3349,7 @@ function groupDeleteTask(syncId){
   render();
   groupWriteStart();
   fetch(WORKER_URL+'/group/task/delete',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:g.groupId,syncId:syncId})})
-    .then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
+    .then(function(r){ groupWriteEnd(); markGroupSeen(g.groupId); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
 function groupRestoreTask(syncId){
@@ -3334,7 +3358,7 @@ function groupRestoreTask(syncId){
   render();
   groupWriteStart();
   fetch(WORKER_URL+'/group/task/restore',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:g.groupId,syncId:syncId})})
-    .then(function(r){ groupWriteEnd(); if(r&&r.ok) pullGroupTasks(); else pullGroupTrash(); })
+    .then(function(r){ groupWriteEnd(); markGroupSeen(g.groupId); if(r&&r.ok) pullGroupTasks(); else pullGroupTrash(); })
     .catch(function(){ groupWriteEnd(); pullGroupTrash(); });
 }
 
@@ -3438,7 +3462,7 @@ function saveGroupEdit(){
   render();
   groupWriteStart();
   fetch(WORKER_URL+'/group/task',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify(Object.assign({done:done},payload))})
-    .then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
+    .then(function(r){ groupWriteEnd(); markGroupSeen(g.groupId); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
 function groupChangeRole(uidVal,role){
@@ -4056,7 +4080,7 @@ function subscribePush(){
         pushActive=true;
         try{ localStorage.setItem('vtodo-push-was-ok','1'); }catch(e){}
         fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
-          body:JSON.stringify({subscription:sub.toJSON(),deviceId:getDeviceId()})
+          body:JSON.stringify({subscription:sub.toJSON(),deviceId:getDeviceId(),lang:state.lang})
         }).then(function(r){ if(r&&r.ok){ state.pushStatus='ok'; } else { state.pushStatus='error'; } render(); })
           .catch(function(){ state.pushStatus='error'; render(); });
       };
@@ -4397,6 +4421,9 @@ document.addEventListener('visibilitychange',function(){ if(document.visibilityS
   // Общие группы тоже — раньше при возврате в приложение обновлялись только
   // ЛИЧНЫЕ задачи, и правки напарника в общем списке было не видно, пока не
   // выйдешь из группы и не зайдёшь заново (аудит 2026-08-17, п.№3).
+  // Список групп тоже — точка на вкладке должна появляться САМА, не дожидаясь
+  // захода в раздел. Это одно чтение на возврат в приложение.
+  if(isGoogleSignedIn()) fetchMyGroups();
   groupPollTick();
 } });
 
