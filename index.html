@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.49';
+var APP_VERSION = '1.50';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2364,39 +2364,89 @@ function onChecklistMic(){
     else { state.clProc=false; render(); }
   }
 }
+// Разбор надиктованного чек-листа БЕЗ ИИ. Нужен как запасной путь: до этого
+// микрофон чек-листа работал только через ИИ, и при выключенном ИИ-разборе,
+// исчерпанном лимите или без сети надиктованное просто ВЫБРАСЫВАЛОСЬ с
+// сообщением об ошибке (просьба Александра 2026-08-19).
+// Делим по запятым и союзам — так составные названия остаются целыми
+// («рисовый уксус» не разваливается на два пункта, ради чего в ИИ-промпте
+// стоит отдельная оговорка).
+// ⚠️ Предел честно известен: распознавание речи далеко не всегда ставит
+// запятые. Сказанное на одном дыхании «купить молоко хлеб сыр» придёт одной
+// строкой без разделителей и станет ОДНИМ пунктом. Это всё равно лучше, чем
+// потерять фразу целиком: пункт можно поправить руками.
+var CL_LOCAL={
+  ru:{conj:['и','да'],       lead:['купить','купи','добавь','добавить','нужно','надо','взять']},
+  en:{conj:['and'],          lead:['buy','add','get','need']},
+  uk:{conj:['і','та','й'],   lead:['купити','купи','додай','додати','треба','потрібно']},
+  de:{conj:['und'],          lead:['kaufen','hinzufügen','besorgen']},
+  fr:{conj:['et'],           lead:['acheter','ajouter']}
+};
+function localSplitChecklistItems(text){
+  var t=String(text==null?'':text).trim();
+  if(!t) return [];
+  var cfg=CL_LOCAL[voiceLangCode()]||CL_LOCAL.ru;
+  // Срезаем вводное «купить …», иначе оно прилипнет к первому пункту.
+  var low=t.toLowerCase();
+  for(var i=0;i<cfg.lead.length;i++){
+    if(low.indexOf(cfg.lead[i]+' ')===0){ t=t.slice(cfg.lead[i].length).trim(); break; }
+  }
+  var re=new RegExp('[,;]| +(?:'+cfg.conj.join('|')+') +','i');
+  var out=[];
+  t.split(re).forEach(function(part){
+    var s=String(part==null?'':part).replace(/^[-–—• ]+/,'').trim();
+    if(s) out.push(clampLen(s,LEN_CHECKLIST_ITEM));
+  });
+  return out;
+}
+// Общая точка добавления пунктов — и для ИИ, и для локального разбора.
+function putChecklistItems(items){
+  if(!items||!items.length){ render(); return; }
+  var made=items.map(function(t){ return checklistItem(t); });
+  if(state.edit){
+    var task=currentTask();
+    var list=state.edit.checklist!=null?state.edit.checklist:(task?(task.checklist||[]):[]);
+    state.edit.checklist=list.concat(made);
+    render();
+  } else {
+    // Режим просмотра задачи (без редактирования): дописываем прямо в задачу
+    // в state.sections и сохраняем — render() в конце вызывает saveStorage.
+    appendChecklistToTask(made);
+  }
+}
+
 function voiceAddChecklistItems(transcript){
   state.clProc=false;
   if(!transcript || (!state.edit && !state.modal)){ render(); return; }
+  // Локальный разбор — когда ИИ недоступен или сознательно выключен.
+  // Раньше в этих случаях надиктованное просто пропадало.
+  var fallback=function(note){
+    var items=localSplitChecklistItems(transcript);
+    if(!items.length){ if(note){ state.aiAnswer=note; anim.summary=true; } render(); return; }
+    putChecklistItems(items);
+  };
+  if(!state.aiParseOn||!navigator.onLine){ fallback(''); return; }
   if(!isGoogleSignedIn()){
     handleAuthFailure(function(){ voiceAddChecklistItems(transcript); }, function(){
-      state.aiAnswer=L.ai_need_auth; anim.summary=true; render();
+      fallback(L.ai_need_auth);
     });
     return;
   }
-  if(!canUseAi()){ state.aiAnswer=L.ai_limit; anim.summary=true; render(); return; }
+  if(!canUseAi()){ fallback(L.ai_limit); return; }
   state.clProc=true; render();
   var prompt=
-    'Split this spoken text into separate checklist items, in the SAME language as the text.\n'+
-    'Text: "'+transcript+'"\n'+
-    'Keep each item as a natural phrase — do NOT split compound descriptive phrases apart (e.g. "рисовый уксус" stays ONE item, not two).\n'+
+    'Split this spoken text into separate checklist items, in the SAME language as the text.' + String.fromCharCode(10)+
+    'Text: "'+transcript+'"' + String.fromCharCode(10)+
+    'Keep each item as a natural phrase — do NOT split compound descriptive phrases apart (e.g. "рисовый уксус" stays ONE item, not two).' + String.fromCharCode(10)+
     'Return ONLY JSON: {"items":["item1","item2"]}';
   callAi(prompt,function(err,data){
     state.clProc=false;
     if(err||!data||!data.items||!data.items.length){
-      state.aiAnswer=(err&&err.limit)?L.ai_limit:((err&&err.needAuth)?L.ai_need_auth:L.ai_offline);
-      anim.summary=true; render(); return;
+      // ИИ не смог — разбираем сами, а не теряем сказанное.
+      fallback((err&&err.limit)?L.ai_limit:((err&&err.needAuth)?L.ai_need_auth:L.ai_offline));
+      return;
     }
-    var items=data.items.map(function(t){ return checklistItem(t); });
-    if(state.edit){
-      var task=currentTask();
-      var list=state.edit.checklist!=null?state.edit.checklist:(task?(task.checklist||[]):[]);
-      state.edit.checklist=list.concat(items);
-      render();
-    } else {
-      // Режим просмотра задачи (без редактирования): дописываем прямо в задачу
-      // в state.sections и сохраняем — render() в конце вызывает saveStorage.
-      appendChecklistToTask(items);
-    }
+    putChecklistItems(data.items);
   });
 }
 function appendChecklistToTask(items){
