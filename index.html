@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.55';
+var APP_VERSION = '1.56';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2450,6 +2450,16 @@ var CL_LOCAL={
 // Максимум слов в пункте списка. Всё длиннее — это проза («Купи пожалуйста
 // домой на вечер продукты»), а не позиция, и в чек-лист ей не место.
 var CL_MAX_WORDS=4;
+// Узкий список ИМЕННО покупочных глаголов — признак «это перечисление, а не
+// одно дело». Держим отдельно от CL_LOCAL.lead: там глаголы широкие
+// («надо», «взять», «добавь»), и по ним признак сработал бы на обычных делах.
+var CL_BUY={ru:['купить','купи','куплю'],en:['buy'],uk:['купити','купи'],de:['kaufen','besorgen'],fr:['acheter']};
+function hasBuyVerb(text){
+  var low=String(text==null?'':text).toLowerCase();
+  var list=CL_BUY[voiceLangCode()]||CL_BUY.ru;
+  for(var i=0;i<list.length;i++) if(low.indexOf(list[i]+' ')>=0) return true;
+  return false;
+}
 function localSplitChecklistItems(text){
   var t=String(text==null?'':text).trim();
   if(!t) return [];
@@ -2767,10 +2777,17 @@ function addTaskLocallyFromVoice(transcript, dayDate, undated){
   // на 120 символах — остальное пропадало. Теперь пробуем разложить его на
   // чек-лист, а сам оригинал кладём в описание.
   var items=[], desc='';
-  if(String(transcript||'').length>VOICE_LONG_CHARS){
+  // Длина — не единственный признак списка. Живьём 21.08: «На вечер надо
+  // купить хлеб сметану и рисовый уксус» — 48 символов, до порога не дотянуло,
+  // и вся фраза уехала в название вместо чек-листа. Поэтому второй, независимый
+  // признак: явный глагол ПОКУПКИ. Именно покупки, а не любой глагол из
+  // CL_LOCAL.lead — «надо позвонить маме и папе» тоже разложилось бы на
+  // «маме»/«папе» и превратилось бы в «Список», чего никто не просил.
+  var raw=String(transcript||'');
+  if(raw.length>VOICE_LONG_CHARS || hasBuyVerb(raw)){
     var split=localSplitChecklistItems(transcript);
     // Один пункт — значит разделителей не нашлось и разбивать было нечего.
-    if(split.length>1){ items=split; desc=transcript; }
+    if(split.length>1){ items=split; desc=raw; }
   }
   // Название: если получился список — короткое родовое, иначе как раньше.
   var title=items.length?L.voice_list_title:localText;
