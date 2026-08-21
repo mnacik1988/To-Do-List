@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.56';
+var APP_VERSION = '1.57';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2460,10 +2460,45 @@ function hasBuyVerb(text){
   for(var i=0;i<list.length;i++) if(low.indexOf(list[i]+' ')>=0) return true;
   return false;
 }
-function localSplitChecklistItems(text){
+// Служебные слова голосовой КОМАНДЫ. Нужны только в режиме listOnly (микрофон
+// внутри чек-листа): там человек не диктует список молча, он отдаёт приказ —
+// «Добавь ещё в чек-лист макароны, гречку и молоко». Раньше приказ съедал
+// первый товар: снимался ровно один глагол («добавь»), а «ещё в чек-лист»
+// оставалось приклеенным к «макароны гречку», кусок вырастал за CL_MAX_WORDS
+// и молча выбрасывался как проза — в списке оставалось одно «молоко»
+// (найдено живьём 21.08).
+var CL_CMD={
+  ru:['ещё','еще','в','во','на','к','ко','мне','себе','туда','сюда','чек-лист','чеклист','чек','лист','список','списка','пункт','пункты','также','тоже','так','же','ну','вот'],
+  en:['to','the','my','into','checklist','check','list','item','items','also','more'],
+  uk:['ще','в','у','на','до','мені','собі','чек-лист','чеклист','чек','лист','список','також','теж'],
+  de:['noch','in','die','der','zur','zum','checkliste','liste','auch','mir'],
+  fr:['encore','dans','la','le','au','checklist','liste','aussi','moi']
+};
+// Снимаем ВЕСЬ приказ целиком, а не один глагол: идём по словам с начала,
+// пока они служебные, и останавливаемся на первом содержательном.
+function stripCommandPrefix(text,cfg){
+  var raw=String(text==null?'':text).trim();
+  var cmd=CL_CMD[voiceLangCode()]||CL_CMD.ru;
+  var words=raw.split(/ +/), i=0;
+  while(i<words.length){
+    var w=words[i].toLowerCase().replace(/[^0-9a-zа-яёіїєґäöüßàâçèéêîôùû'-]/g,'');
+    if(w && cmd.indexOf(w)<0 && cfg.lead.indexOf(w)<0 && (cfg.drop||[]).indexOf(w)<0) break;
+    i++;
+  }
+  // Если служебным оказалось всё до единого слова — значит мы ошиблись
+  // в разметке, а не человек. Возвращаем исходное, терять текст нельзя.
+  var rest=words.slice(i).join(' ').replace(/^[\s,;.:—–-]+/,'').trim();
+  return rest||raw;
+}
+// listOnly — «здесь весь текст и есть список» (микрофон чек-листа). В этом
+// режиме нет прозы, которую надо отсеивать, поэтому фильтр CL_MAX_WORDS
+// выключается: лучше некрасивый пункт «макароны гречку» (человек не сделал
+// паузы, распознавание не поставило запятую), чем молча потерянный продукт.
+function localSplitChecklistItems(text,listOnly){
   var t=String(text==null?'':text).trim();
   if(!t) return [];
   var cfg=CL_LOCAL[voiceLangCode()]||CL_LOCAL.ru;
+  if(listOnly) t=stripCommandPrefix(t,cfg);
   // Делим и по точкам тоже, не только по запятым: надиктованное сообщение
   // обычно содержит вступление отдельными предложениями («Виталя. Купи...»),
   // и без этого всё вступление слипалось с первой позицией списка.
@@ -2490,7 +2525,7 @@ function localSplitChecklistItems(text){
       if(cw && (cfg.drop||[]).indexOf(cw)<0){ allFiller=false; break; }
     }
     if(allFiller) return;
-    if(words.length>CL_MAX_WORDS) return;   // проза, а не пункт
+    if(!listOnly && words.length>CL_MAX_WORDS) return;   // проза, а не пункт
     out.push(clampLen(s,LEN_CHECKLIST_ITEM));
   });
   return out;
@@ -2520,7 +2555,8 @@ function voiceAddChecklistItems(transcript){
   // Локальный разбор — когда ИИ недоступен или сознательно выключен.
   // Раньше в этих случаях надиктованное просто пропадало.
   var fallback=function(note){
-    var items=localSplitChecklistItems(transcript);
+    // listOnly: это микрофон ВНУТРИ чек-листа, всё сказанное — список.
+    var items=localSplitChecklistItems(transcript,true);
     if(!items.length){ if(note){ state.aiAnswer=note; anim.summary=true; } render(); return; }
     putChecklistItems(items);
   };
