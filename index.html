@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.57';
+var APP_VERSION = '1.58';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -801,7 +801,7 @@ var state={
   // другом (просьба Александра 2026-08-18).
   voiceLang:'',
   fabOpen:false,
-  quickAdd:false, qaText:'', qaDesc:'', qaDate:'', qaTime:'', qaPri:'mid',
+  quickAdd:false, qaText:'', qaDesc:'', qaDate:'', qaTime:'', qaPri:'mid', qaChecklist:[],
   overdueOpen:true, overdueSelected:{}, overdueSelecting:false,
   clearConfirm:false,
   paywall:false,
@@ -1771,6 +1771,24 @@ function renderQuickAdd(){
           '<div class="field-label">'+L.desc+'</div>'+
           '<textarea id="qa-desc" class="day-add-input" style="width:100%;box-sizing:border-box;min-height:60px;resize:vertical" maxlength="500">'+esc(state.qaDesc)+'</textarea>'+
         '</div>'+
+        // Разбивка на чек-лист прямо ЗДЕСЬ, а не только в редактировании
+        // (просьба Александра 21.08): человеку прислали список, он вставляет
+        // его в описание — и раньше, чтобы получить чек-лист, приходилось
+        // сохранить задачу, открыть её, нажать «Редактировать» и только там
+        // разбивать. Четыре лишних действия на ровном месте.
+        // Кнопка показывается ВСЕГДА, а не «когда есть текст»: ввод в поля
+        // обновляет state без перерисовки, и условная кнопка появлялась бы
+        // с задержкой до следующего render() — выглядело бы как поломка.
+        '<div>'+
+          '<div class="field-label">'+L.checklist_hd+'</div>'+
+          '<button class="btn-outline" style="width:100%;margin-bottom:8px;font-size:12.5px"'+(state.aiSplitting?' disabled':'')+' data-role="ai-split-checklist">'+(state.aiSplitting?L.checklist_ai_split_loading:L.checklist_ai_split_btn)+'</button>'+
+          (state.qaChecklist||[]).map(function(item){
+            return '<div class="checklist-edit-row">'+
+              '<span class="checklist-text" style="flex:1">'+esc(item.text)+'</span>'+
+              '<button class="checklist-item-del" data-role="qa-checklist-del" data-item="'+item.id+'">'+IC.trash+'</button>'+
+            '</div>';
+          }).join('')+
+        '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<div style="flex:1">'+
             '<div class="field-label">'+L.field_date+'</div>'+
@@ -2318,18 +2336,29 @@ function checklistAddItem(){
 // только 120 символов. Описание держит 500 (столько же клампит и сервер,
 // см. LEN_DESC в воркере — врозь поднимать нельзя, текст молча обрежется
 // при синхронизации). Замечание Александра 2026-08-19.
+// Работает в ДВУХ местах: карточка редактирования и форма «Новая задача».
+// Разница только в том, откуда читать текст и куда класть результат —
+// сам разбор, промпт, лимиты и локальный запасной путь общие.
 function aiSplitChecklist(){
-  if(!state.edit) return;
-  syncEdit();
-  var fromDesc=!!(state.edit.desc||'').trim();
-  var text=(fromDesc?state.edit.desc:(state.edit.text||'')).trim();
+  var inQa=!!state.quickAdd;
+  if(!inQa && !state.edit) return;
+  if(!inQa) syncEdit();   // в форме создания поля пишут в state сами, по input
+  var curTitle=(inQa?state.qaText:state.edit.text)||'';
+  var curDesc =(inQa?state.qaDesc:state.edit.desc)||'';
+  var fromDesc=!!curDesc.trim();
+  var text=(fromDesc?curDesc:curTitle).trim();
   if(!text) return;
   // Имя от модели принимаем, только если разбирали САМО название. Иначе
   // затёрли бы то, что человек уже написал руками.
   var applyName=function(name){
     if(!name) return;
-    if(fromDesc && (state.edit.text||'').trim()) return;
-    state.edit.text=clampLen(name,LEN_TITLE);
+    if(fromDesc && curTitle.trim()) return;
+    if(inQa) state.qaText=clampLen(name,LEN_TITLE);
+    else state.edit.text=clampLen(name,LEN_TITLE);
+  };
+  var setItems=function(list){
+    var made=list.map(function(t){ return checklistItem(t); }).filter(function(it){ return !!it.text; });
+    if(inQa) state.qaChecklist=made; else state.edit.checklist=made;
   };
   // Без ИИ тоже должно работать — та же логика, что в v1.50 для микрофона
   // чек-листа: недоступность ИИ не повод терять уже введённый текст.
@@ -2337,7 +2366,11 @@ function aiSplitChecklist(){
     state.aiSplitting=false;
     var items=localSplitChecklistItems(text);
     if(items.length>1){
-      state.edit.checklist=items.map(function(t){ return checklistItem(t); });
+      setItems(items);
+      // ИИ придумывает название сам, локальный разбор — нет. В форме создания
+      // пустое название = кнопка «Добавить задачу» молча ничего не делает
+      // (qa-save выходит на пустом тексте). Подставляем родовое.
+      if(!curTitle.trim()) applyName(L.voice_list_title);
     } else if(note){
       state.aiAnswer=note; anim.summary=true;
     }
@@ -2362,7 +2395,7 @@ function aiSplitChecklist(){
       fallback((err&&err.limit)?L.ai_limit:((err&&err.needAuth)?L.ai_need_auth:L.ai_offline));
       return;
     }
-    state.edit.checklist=data.items.map(function(t){ return checklistItem(t); });
+    setItems(data.items);
     applyName(data.name);
     render();
   });
@@ -3022,7 +3055,13 @@ function addTasksBatch(tasks, keepEmptyDate){
   tasks.forEach(function(t){
     var date=t.date||(keepEmptyDate?'':today); var sec=dateToSection(date);
     var safePri=(['high','mid','low'].indexOf(t.priority)>=0)?t.priority:'mid';
-    var checklist=Array.isArray(t.checklist)?t.checklist.filter(function(s){return s&&String(s).trim();}).map(function(s){return checklistItem(String(s).trim());}):[];
+    // Принимаем и строки (голосовой/ИИ-разбор), и готовые объекты пункта
+    // (форма «Новая задача» хранит state.qaChecklist уже объектами, чтобы
+    // показывать их со своими id и кнопкой удаления). Раньше объект молча
+    // превращался в «[object Object]» — поймано локальным прогоном 21.08.
+    var checklist=Array.isArray(t.checklist)?t.checklist.map(function(s){
+      return (s&&typeof s==='object')?String(s.text==null?'':s.text):String(s==null?'':s);
+    }).filter(function(s){return s.trim();}).map(function(s){return checklistItem(s.trim());}):[];
     var newTask=T(t.text,safePri,false,t.desc||'',date,t.reminderTime||'',checklist);
     state.sections[sec]=[newTask].concat(state.sections[sec]);
     anim.taskIds[newTask.id]=true; lastSec=sec;
@@ -4187,7 +4226,7 @@ document.addEventListener('touchend',function(){
     if(s.key==='settings') closeSettings();
     else if(s.key==='modal') closeModal();
     else if(s.key==='day') closeDaySheet();
-    else if(s.key==='qa') closeSheetAnimated('qa', function(){ state.quickAdd=false; render(); });
+    else if(s.key==='qa') closeSheetAnimated('qa', function(){ state.quickAdd=false; state.qaChecklist=[]; render(); });
     else if(s.key==='gedit') closeGroupEdit();
   } else {
     s.sheet.style.transition='transform .25s cubic-bezier(.2,.8,.2,1)';
@@ -4256,14 +4295,18 @@ appEl.addEventListener('click',function(e){
     case 'fab-toggle':          state.fabOpen=!state.fabOpen; render(); break;
     case 'fab-scrim':           state.fabOpen=false; render(); break;
     case 'fab-dial-mic':        state.fabOpen=false; onFabMic(); break;
-    case 'fab-dial-text':       state.fabOpen=false; state.quickAdd=true; state.qaText=''; state.qaDesc=''; state.qaDate=state.view==='undated'?'':todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
-    case 'qa-cancel':           closeSheetAnimated('qa', function(){ state.quickAdd=false; render(); }); break;
+    case 'fab-dial-text':       state.fabOpen=false; state.quickAdd=true; state.qaText=''; state.qaDesc=''; state.qaChecklist=[]; state.qaDate=state.view==='undated'?'':todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
+    case 'qa-cancel':           closeSheetAnimated('qa', function(){ state.quickAdd=false; state.qaChecklist=[]; render(); }); break;
     case 'qa-set-pri':          state.qaPri=el.dataset.pri; render(); break;
+    case 'qa-checklist-del':
+      state.qaChecklist=(state.qaChecklist||[]).filter(function(it){ return it.id!==el.dataset.item; });
+      render(); break;
     case 'qa-save':
       var qText=(state.qaText||'').trim();
       if(!qText) break;
       state.quickAdd=false;
-      addTasksBatch([{text:qText,desc:(state.qaDesc||'').trim(),priority:state.qaPri,date:state.qaDate,reminderTime:state.qaTime||''}], state.view==='undated');
+      addTasksBatch([{text:qText,desc:(state.qaDesc||'').trim(),priority:state.qaPri,date:state.qaDate,reminderTime:state.qaTime||'',checklist:state.qaChecklist||[]}], state.view==='undated');
+      state.qaChecklist=[];
       break;
     case 'fab-mic':             onFabMic(); break;
     case 'ai-mic':              onAiMic(); break;
