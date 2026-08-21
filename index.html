@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.54';
+var APP_VERSION = '1.55';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -722,7 +722,15 @@ function rebalanceSections(){
   state.sections=newSec;
 }
 function T(text,priority,done,desc,date,reminderTime,checklist,syncId,updatedAt){ return {id:uid(),text:clampLen(text,LEN_TITLE),priority:priority,done:!!done,desc:clampLen(desc,LEN_DESC),date:date||'',reminderTime:reminderTime||'',checklist:checklist||[],syncId:syncId||'',updatedAt:updatedAt||0}; }
-function checklistItem(text){ return {id:uid(),text:clampLen(text,LEN_CHECKLIST_ITEM),done:false}; }
+// Ведущие маркеры списка и знаки препинания срезаем ЗДЕСЬ, в единственной
+// точке создания пункта — иначе чистить пришлось бы в трёх местах (ИИ-разбор,
+// локальный разбор, ручной ввод). Замечено живьём 21.08: у части пунктов из
+// ИИ-разбора в начале оставалась точка («. молоко»), модель иногда возвращает
+// список уже размеченным.
+function cleanChecklistText(text){
+  return String(text==null?'':text).replace(/^[\s\-–—•*·.,;:)\]]+/,'').trim();
+}
+function checklistItem(text){ return {id:uid(),text:clampLen(cleanChecklistText(text),LEN_CHECKLIST_ITEM),done:false}; }
 
 /* ── Speech ── */
 // Нативный мост распознавания речи для WebView-обёртки
@@ -2480,7 +2488,10 @@ function localSplitChecklistItems(text){
 // Общая точка добавления пунктов — и для ИИ, и для локального разбора.
 function putChecklistItems(items){
   if(!items||!items.length){ render(); return; }
-  var made=items.map(function(t){ return checklistItem(t); });
+  // После срезания маркеров кусок может схлопнуться в пустоту («—», «.»).
+  // Пустая строка с чекбоксом хуже, чем её отсутствие.
+  var made=items.map(function(t){ return checklistItem(t); }).filter(function(it){ return !!it.text; });
+  if(!made.length){ render(); return; }
   if(state.edit){
     var task=currentTask();
     var list=state.edit.checklist!=null?state.edit.checklist:(task?(task.checklist||[]):[]);
