@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.53';
+var APP_VERSION = '1.54';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2421,12 +2421,23 @@ function onChecklistMic(){
 // запятые. Сказанное на одном дыхании «купить молоко хлеб сыр» придёт одной
 // строкой без разделителей и станет ОДНИМ пунктом. Это всё равно лучше, чем
 // потерять фразу целиком: пункт можно поправить руками.
+// drop — «вежливость»: приветствия, благодарности, обращения. Отдельная
+// проблема, найденная живьём (21.08): в надиктованном сообщении вступление и
+// концовка часто КОРОТКИЕ («Привет дорогой», «Спасибо») и по длине ничем не
+// отличаются от нормального пункта, поэтому фильтр CL_MAX_WORDS их пропускал,
+// и они попадали в чек-лист наравне с продуктами. ИИ-разбор такое отбрасывает
+// сам, локальному нужен явный список.
 var CL_LOCAL={
-  ru:{conj:['и','да'],       lead:['купить','купи','добавь','добавить','нужно','надо','взять']},
-  en:{conj:['and'],          lead:['buy','add','get','need']},
-  uk:{conj:['і','та','й'],   lead:['купити','купи','додай','додати','треба','потрібно']},
-  de:{conj:['und'],          lead:['kaufen','hinzufügen','besorgen']},
-  fr:{conj:['et'],           lead:['acheter','ajouter']}
+  ru:{conj:['и','да'],       lead:['купить','купи','добавь','добавить','нужно','надо','взять'],
+      drop:['привет','приветик','здравствуй','здравствуйте','добрый','доброе','доброй','утро','утра','день','дня','вечер','вечера','ночи','спасибо','пожалуйста','благодарю','дорогой','дорогая','дорогие','милый','милая','любимый','любимая','целую','люблю','пока','ок','хорошо','слушай','слышишь']},
+  en:{conj:['and'],          lead:['buy','add','get','need'],
+      drop:['hi','hello','hey','good','morning','afternoon','evening','thanks','thank','you','please','dear','love','honey','bye','ok','okay']},
+  uk:{conj:['і','та','й'],   lead:['купити','купи','додай','додати','треба','потрібно'],
+      drop:['привіт','вітаю','добрий','доброго','доброї','ранку','день','вечір','дякую','будь','ласка','дорогий','дорога','люблю','цілую','бувай','добре','гаразд']},
+  de:{conj:['und'],          lead:['kaufen','hinzufügen','besorgen'],
+      drop:['hallo','hi','guten','morgen','tag','abend','danke','bitte','liebe','lieber','schatz','tschüss','ok']},
+  fr:{conj:['et'],           lead:['acheter','ajouter'],
+      drop:['salut','bonjour','bonsoir','merci','plaît','plait','cher','chère','chéri','chérie','bisous','revoir','ok','coucou']}
 };
 // Максимум слов в пункте списка. Всё длиннее — это проза («Купи пожалуйста
 // домой на вечер продукты»), а не позиция, и в чек-лист ей не место.
@@ -2452,7 +2463,16 @@ function localSplitChecklistItems(text){
       if(at>=0){ s=s.slice(at+cfg.lead[k].length+1).trim(); break; }
     }
     if(!s) return;
-    if(s.split(/ +/).length>CL_MAX_WORDS) return;   // проза, а не пункт
+    var words=s.split(/ +/);
+    // Кусок выбрасываем, только если в нём НЕТ ни одного содержательного
+    // слова. Одного «спасибо» рядом с товаром мало, чтобы потерять товар.
+    var allFiller=true;
+    for(var w=0;w<words.length;w++){
+      var cw=words[w].toLowerCase().replace(/[^0-9a-zа-яёіїєґäöüßàâçèéêîôùû']/g,'');
+      if(cw && (cfg.drop||[]).indexOf(cw)<0){ allFiller=false; break; }
+    }
+    if(allFiller) return;
+    if(words.length>CL_MAX_WORDS) return;   // проза, а не пункт
     out.push(clampLen(s,LEN_CHECKLIST_ITEM));
   });
   return out;
