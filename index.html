@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.59';
+var APP_VERSION = '1.60';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1885,11 +1885,16 @@ function renderGroupEditSheet(){
   var priBtns=PRI_ORDER.map(function(k){
     return '<button class="pri-pick-btn'+(ed.priority===k?' sel':'')+'" data-pri="'+k+'" data-role="g-set-pri">'+PRI_LABEL[k]+'</button>';
   }).join('');
+  // Классы те же, что в личной карточке (.checklist-edit-row / .chk-sm /
+  // .checklist-text / .checklist-item-del). Раньше тут были .checklist-item и
+  // .checklist-item-text, которых в стилях НЕТ ВООБЩЕ — строка теряла flex и
+  // разваливалась на три этажа, а .close-btn с margin-left:auto улетал вправо
+  // отдельной строкой (замечено живьём 27.08).
   var checklistHtml=(ed.checklist||[]).map(function(c){
-    return '<div class="checklist-item">'+
-      '<button class="chk'+(c.done?' done':'')+'" data-role="g-toggle-cl-item" data-item="'+escA(c.id)+'">'+(c.done?IC.check:'')+'</button>'+
-      '<span class="checklist-item-text'+(c.done?' done':'')+'">'+esc(c.text)+'</span>'+
-      '<button class="close-btn" data-role="g-del-cl-item" data-item="'+escA(c.id)+'">'+IC.close+'</button>'+
+    return '<div class="checklist-edit-row">'+
+      '<button class="chk-sm'+(c.done?' done':'')+'" data-role="g-toggle-cl-item" data-item="'+escA(c.id)+'">'+(c.done?IC.check:'')+'</button>'+
+      '<span class="checklist-text'+(c.done?' done':'')+'">'+esc(c.text)+'</span>'+
+      '<button class="checklist-item-del" data-role="g-del-cl-item" data-item="'+escA(c.id)+'">'+IC.trash+'</button>'+
     '</div>';
   }).join('');
   var membersHtml=ed.reminderTime
@@ -1931,12 +1936,18 @@ function renderGroupEditSheet(){
         '</div>'+
         '<div>'+
           '<div class="field-label">'+L.checklist_hd+'</div>'+
+          '<button class="btn-outline" style="width:100%;margin-bottom:8px;font-size:12.5px"'+(state.aiSplitting?' disabled':'')+' data-role="ai-split-checklist">'+(state.aiSplitting?L.checklist_ai_split_loading:L.checklist_ai_split_btn)+'</button>'+
           checklistHtml+
           '<div style="display:flex;gap:8px;margin-top:6px">'+
             '<input id="g-edit-cl-new" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="40" value="'+escA(state.gEditNewItem)+'">'+
             '<button class="btn-outline" style="flex:none" data-role="g-add-cl-item">'+L.checklist_add_btn+'</button>'+
           '</div>'+
         '</div>'+
+        // Те же два ИИ-помощника, что и в личной задаче: один для чек-листа,
+        // второй для названия и описания (просьба Александра 27.08 — паритет
+        // групповых задач с личными).
+        renderChecklistAiBlock()+
+        renderAiBlock('edit')+
         '<div style="display:flex;gap:10px">'+
           '<button class="btn-outline" data-role="g-edit-cancel">'+L.btn_cancel+'</button>'+
           '<button class="btn-primary" data-role="g-edit-save">'+L.btn_save+'</button>'+
@@ -2340,11 +2351,12 @@ function checklistAddItem(){
 // Разница только в том, откуда читать текст и куда класть результат —
 // сам разбор, промпт, лимиты и локальный запасной путь общие.
 function aiSplitChecklist(){
-  var inQa=!!state.quickAdd;
-  if(!inQa && !state.edit) return;
-  if(!inQa) syncEdit();   // в форме создания поля пишут в state сами, по input
-  var curTitle=(inQa?state.qaText:state.edit.text)||'';
-  var curDesc =(inQa?state.qaDesc:state.edit.desc)||'';
+  var inG=!!state.gEdit, inQa=!inG&&!!state.quickAdd;
+  if(!inG && !inQa && !state.edit) return;
+  if(!inG && !inQa) syncEdit();   // в формах создания и группы поля пишут в state сами, по input
+  var src=inG?state.gEdit:(inQa?null:state.edit);
+  var curTitle=(inG?src.text:(inQa?state.qaText:src.text))||'';
+  var curDesc =(inG?src.desc:(inQa?state.qaDesc:src.desc))||'';
   var fromDesc=!!curDesc.trim();
   var text=(fromDesc?curDesc:curTitle).trim();
   if(!text) return;
@@ -2353,12 +2365,15 @@ function aiSplitChecklist(){
   var applyName=function(name){
     if(!name) return;
     if(fromDesc && curTitle.trim()) return;
-    if(inQa) state.qaText=clampLen(name,LEN_TITLE);
+    if(inG) state.gEdit.text=clampLen(name,LEN_TITLE);
+    else if(inQa) state.qaText=clampLen(name,LEN_TITLE);
     else state.edit.text=clampLen(name,LEN_TITLE);
   };
   var setItems=function(list){
     var made=list.map(function(t){ return checklistItem(t); }).filter(function(it){ return !!it.text; });
-    if(inQa) state.qaChecklist=made; else state.edit.checklist=made;
+    if(inG) state.gEdit.checklist=made;
+    else if(inQa) state.qaChecklist=made;
+    else state.edit.checklist=made;
   };
   // Без ИИ тоже должно работать — та же логика, что в v1.50 для микрофона
   // чек-листа: недоступность ИИ не повод терять уже введённый текст.
@@ -2408,7 +2423,7 @@ function aiSplitChecklist(){
 function onChecklistMic(){
   if(state.clProc) return;
   if(!state.clRec){
-    if(!SpeechRec || (!state.edit && !state.modal)) return;
+    if(!SpeechRec || (!state.edit && !state.modal && !state.gEdit)) return;
     state.micDenied=false; clTranscript='';
     var clFinalAcc='', clLastFinalSeg='';
     var rec=new SpeechRec();
@@ -2579,7 +2594,12 @@ function putChecklistItems(items){
   // Пустая строка с чекбоксом хуже, чем её отсутствие.
   var made=items.map(function(t){ return checklistItem(t); }).filter(function(it){ return !!it.text; });
   if(!made.length){ render(); return; }
-  if(state.edit){
+  if(state.gEdit){
+    // Форма групповой задачи. Стоит ПЕРВОЙ: state.edit при открытой группе
+    // остаётся от личной карточки и увёл бы пункты не туда.
+    state.gEdit.checklist=(state.gEdit.checklist||[]).concat(made);
+    render();
+  } else if(state.edit){
     var task=currentTask();
     var list=state.edit.checklist!=null?state.edit.checklist:(task?(task.checklist||[]):[]);
     state.edit.checklist=list.concat(made);
@@ -2593,7 +2613,7 @@ function putChecklistItems(items){
 
 function voiceAddChecklistItems(transcript){
   state.clProc=false;
-  if(!transcript || (!state.edit && !state.modal)){ render(); return; }
+  if(!transcript || (!state.edit && !state.modal && !state.gEdit)){ render(); return; }
   // Локальный разбор — когда ИИ недоступен или сознательно выключен.
   // Раньше в этих случаях надиктованное просто пропадало.
   var fallback=function(note){
@@ -3138,9 +3158,12 @@ function onAiMic(){
 
 function aiApply(transcript){
   aiTimeout=null; var m=state.modal;
-  if(!m){state.aiProc=false;render();return;}
-  var isEdit=state.modalMode==='edit';
-  var src=isEdit?(state.edit||{}):currentTask();
+  // Форма групповой задачи. Проверяем ДО state.modal: у группы своей модалки
+  // нет, а state.modal мог остаться от личной карточки, открытой раньше.
+  var inG=!!state.gEdit;
+  if(!m && !inG){state.aiProc=false;render();return;}
+  var isEdit=inG||state.modalMode==='edit';
+  var src=inG?state.gEdit:(isEdit?(state.edit||{}):currentTask());
   if(!src){state.aiProc=false;render();return;}
   var today=todayStr();
   var prompt='You are a task editor. The task is: name="'+((src.text)||'')+'", date="'+(src.date||'')+'", reminderTime="'+(src.reminderTime||'')+'". The user said: "'+transcript+'". Figure out what the user wants to change and output the new values. For any field the user did NOT mention, output an empty string "" meaning keep the current value. Never invent changes the user did not ask for. Today is '+today+'. Output ONLY this JSON, nothing else: {"text":"","priority":"","desc":"","date":"","reminderTime":""}. Rules: text=new name if renamed; priority=high|mid|low if changed; desc=new description if added; date=YYYY-MM-DD if date changed; reminderTime=HH:MM 24h if a time is set ("9 утра"->"09:00","9 вечера"->"21:00"), or null to remove a reminder. Examples: "напомни в 9 утра"->{"text":"","priority":"","desc":"","date":"","reminderTime":"09:00"}; "убери напоминание"->{"text":"","priority":"","desc":"","date":"","reminderTime":null}; "переименуй в купить хлеб"->{"text":"купить хлеб","priority":"","desc":"","date":"","reminderTime":""}; "высокий приоритет"->{"text":"","priority":"high","desc":"","date":"","reminderTime":""}.';
@@ -3153,10 +3176,27 @@ function aiApply(transcript){
 }
 
 function applyEdit(data,isEdit,m,note){
+  // Форму могли закрыть, пока летел ответ ИИ. Без этой проверки ветка isEdit
+  // создала бы state.edit из пустоты и подвесила бы призрачную правку.
+  if(isEdit && !state.gEdit && !state.edit){ state.aiProc=false; render(); return; }
   var validPri=['high','mid','low'];
   var newRem=data.reminderTime===null?'':(data.reminderTime||null);
   var dataText=data.text?clampLen(data.text,LEN_TITLE):data.text;
   var dataDesc=data.desc?clampLen(data.desc,LEN_DESC):data.desc;
+  if(state.gEdit){
+    var ge=state.gEdit;
+    state.gEdit=Object.assign({},ge,{
+      text:dataText||ge.text,
+      desc:dataDesc?dataDesc:ge.desc,
+      priority:(validPri.indexOf(data.priority)>=0?data.priority:null)||ge.priority,
+      date:data.date?data.date:ge.date,
+      reminderTime:newRem!==null?newRem:ge.reminderTime,
+    });
+    // Групповая задача живёт на сервере, а не в localStorage: saveStorage()
+    // и rebalanceSections() ниже к ней неприменимы, запись уйдёт по «Сохранить».
+    state.aiProc=false; state.aiNote=note||'✓ AI'; anim.aiNote=true; render();
+    return;
+  }
   if(isEdit){
     var ed=state.edit||{};
     state.edit=Object.assign({},ed,{
@@ -3729,6 +3769,7 @@ function openGroupEdit(syncId){
     notify:(t.notifyUids||[]).slice()
   };
   state.gEditNewItem='';
+  state.aiRec=false; state.aiProc=false; state.aiNote=''; state.clRec=false; state.clProc=false; state.aiSplitting=false;
   // Без этого флага лист "выезжал дважды": анимация открытия у него была
   // безусловной на КАЖДЫЙ рендер, а не только на первый — как только
   // pullGroupMembers() ниже возвращался и вызывал render(), весь sheet
@@ -3739,7 +3780,7 @@ function openGroupEdit(syncId){
   render();
   if(!state.groupMembersLoaded) pullGroupMembers();
 }
-function closeGroupEdit(){ state.gEdit=null; render(); }
+function closeGroupEdit(){ state.gEdit=null; state.aiRec=false; state.aiProc=false; state.aiNote=''; state.clRec=false; state.clProc=false; state.aiSplitting=false; render(); }
 
 function groupEditSetReminderTime(val){
   if(!state.gEdit) return;
