@@ -677,7 +677,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.60';
+var APP_VERSION = '1.61';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2403,6 +2403,7 @@ function aiSplitChecklist(){
     'Text: "'+text+'"' + '\n'+
     'Keep each item as a natural phrase — do NOT split compound descriptive phrases apart (e.g. "рисовый уксус" stays ONE item, not two).' + '\n'+
     'Greetings, names and polite filler are never checklist items.' + '\n'+
+    'Each checklist item is ONLY the thing itself: strip the command verb ("купить", "купи", "добавь", "buy", "add"), and NEVER repeat one verb across every item — "Купить сыр, хлеб, мясо" gives ["сыр","хлеб","мясо"], not ["Купить сыр",...]. Meaningful qualifiers (quantity, kind, place) stay.' + '\n'+
     'Return ONLY JSON: {"name":"short generic task name","items":["item1","item2"]}';
   callAi(prompt,function(err,data){
     state.aiSplitting=false;
@@ -2619,7 +2620,10 @@ function voiceAddChecklistItems(transcript){
   var fallback=function(note){
     // listOnly: это микрофон ВНУТРИ чек-листа, всё сказанное — список.
     var items=localSplitChecklistItems(transcript,true);
-    if(!items.length){ if(note){ state.aiAnswer=note; anim.summary=true; } render(); return; }
+    // state.aiAnswer рисуется только в карточке-резюме на экране списка —
+    // внутри листа группы её нет, и сбой выглядел как «ничего не произошло».
+    // aiNote показывает renderAiBlock, который теперь есть и в группе.
+    if(!items.length){ if(note){ state.aiAnswer=note; state.aiNote='⚠️ '+note; anim.aiNote=true; anim.summary=true; } render(); return; }
     putChecklistItems(items);
   };
   if(!state.aiParseOn||!navigator.onLine){ fallback(''); return; }
@@ -2635,6 +2639,10 @@ function voiceAddChecklistItems(transcript){
     'Split this spoken text into separate checklist items, in the SAME language as the text.' + String.fromCharCode(10)+
     'Text: "'+transcript+'"' + String.fromCharCode(10)+
     'Keep each item as a natural phrase — do NOT split compound descriptive phrases apart (e.g. "рисовый уксус" stays ONE item, not two).' + String.fromCharCode(10)+
+    'Each item is ONLY the thing itself. Strip the command verb ("купить", "купи", "добавь", "buy", "add") and any greeting or politeness.' + String.fromCharCode(10)+
+    'If one verb is followed by a list, NEVER repeat that verb in every item.' + String.fromCharCode(10)+
+    'Example: "Купить сыр, хлеб, мясо" -> {"items":["сыр","хлеб","мясо"]} — NOT ["Купить сыр","Купить хлеб","Купить мясо"].' + String.fromCharCode(10)+
+    'But DO keep meaningful qualifiers: quantity, kind, place ("2 литра молока", "мясо в магазине Фора" each stay one item).' + String.fromCharCode(10)+
     'Return ONLY JSON: {"items":["item1","item2"]}';
   callAi(prompt,function(err,data){
     state.clProc=false;
@@ -2937,6 +2945,7 @@ function processTranscript(transcript){
     'If the message contains SEVERAL groups of things to buy or get, each tied to a different place or occasion, create a SEPARATE task per group: name the task after that place or occasion, and put only that group items in its "checklist". Do NOT merge the groups into one list, and do NOT create one task per item.' + '\n'+
     // Вступление («Виталя, купи пожалуйста...») — не позиция списка.
     'Greetings, names and polite filler are never checklist items.' + '\n'+
+    'Each checklist item is ONLY the thing itself: strip the command verb ("купить", "купи", "добавь", "buy", "add"), and NEVER repeat one verb across every item — "Купить сыр, хлеб, мясо" gives ["сыр","хлеб","мясо"], not ["Купить сыр",...]. Meaningful qualifiers (quantity, kind, place) stay.' + '\n'+
     // Без этой строки модель ВСЕГДА подставляет сегодняшнюю дату (её просят
     // форматом выше) — и надиктованное в разделе «Задачи» улетало в список
     // дел на сегодня. Страховка на клиенте всё равно стоит ниже: модель
