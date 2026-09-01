@@ -686,7 +686,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.64';
+var APP_VERSION = '1.65';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3757,17 +3757,44 @@ function groupRestoreTask(syncId){
     .catch(function(){ groupWriteEnd(); pullGroupTrash(); });
 }
 
+// «Не с первого раза добавляет людей» (жалоба Александра 2026-09-01). Сервер
+// добавлял участника С ПЕРВОГО раза — врал ЭКРАН. Сразу после успешной записи
+// мы шли читать /group/members, а он собирает список через KV list по префиксу
+// groupmember: — самое медленно согласующееся чтение во всём хранилище.
+// Возвращался список БЕЗ новичка, экран не менялся, и человек жал «Добавить»
+// второй раз — к тому моменту KV успевал согласоваться, и приглашение
+// «срабатывало». Те же грабли, что чинили в v1.36 для списка групп.
+// Лечим тремя вещами: показываем участника сразу сами (данные у нас есть —
+// это ровно то, что мы отправили), закрываемся groupWriteStart/End, чтобы
+// фоновый опрос не затёр его устаревшим ответом, и перечитываем с сервера
+// с задержкой, когда KV уже согласован.
 function groupInviteMember(){
   var g=state.groupOpen; if(!g||g.role!=='admin') return;
   var uidVal=(state.gInviteId||'').trim();
   if(!uidVal) return;
+  var gid=g.groupId, roleVal=state.gInviteRole;
   state.gInviteErr='';
-  fetch(WORKER_URL+'/group/invite',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:g.groupId,uid:uidVal,role:state.gInviteRole})})
+  groupWriteStart();
+  fetch(WORKER_URL+'/group/invite',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:gid,uid:uidVal,role:roleVal})})
     .then(function(r){ return !!(r&&r.ok); })
     .then(function(ok){
-      if(ok){ state.gInviteId=''; pullGroupMembers(); }
-      else { state.gInviteErr=L.groups_invite_bad_id; render(); }
-    }).catch(function(){ state.gInviteErr=L.groups_invite_bad_id; render(); });
+      groupWriteEnd();
+      if(!ok){ state.gInviteErr=L.groups_invite_bad_id; render(); return; }
+      state.gInviteId='';
+      // Группу могли закрыть или переключить, пока запрос летел.
+      if(state.groupOpen&&state.groupOpen.groupId===gid){
+        var already=(state.groupMembers||[]).some(function(m){ return m.uid===uidVal; });
+        if(already) state.groupMembers=state.groupMembers.map(function(m){ return m.uid===uidVal?Object.assign({},m,{role:roleVal}):m; });
+        else state.groupMembers=(state.groupMembers||[]).concat([{uid:uidVal,role:roleVal,joinedAt:Date.now()}]);
+        state.groupMembersLoaded=true;
+      }
+      render();
+      // Сверяемся с сервером, когда KV догонит: если приглашение по какой-то
+      // причине не закрепилось, показанный нами участник исчезнет сам.
+      setTimeout(function(){
+        if(state.groupOpen&&state.groupOpen.groupId===gid) pullGroupMembers();
+      },GROUP_WRITE_SETTLE_MS+1000);
+    }).catch(function(){ groupWriteEnd(); state.gInviteErr=L.groups_invite_bad_id; render(); });
 }
 
 /* ── Редактирование групповой задачи (дата/напоминание/описание/чек-лист) ──
@@ -3861,10 +3888,32 @@ function saveGroupEdit(){
     .then(function(r){ groupWriteEnd(); markGroupSeen(g.groupId); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
 }
 
+// Любая правка состава группы страдает одним и тем же: сервер отрабатывает
+// сразу, а /group/members собирается через KV list и какое-то время отдаёт
+// прежний состав. Поэтому список правим у себя, прикрываемся от фонового
+// опроса и сверяемся с сервером позже — он же и откатит, если не закрепилось.
+function groupMembersLocal(gid,fn){
+  if(!state.groupOpen||state.groupOpen.groupId!==gid) return;
+  state.groupMembers=fn(state.groupMembers||[]);
+  state.groupMembersLoaded=true;
+}
+function groupMembersRecheck(gid){
+  setTimeout(function(){
+    if(state.groupOpen&&state.groupOpen.groupId===gid) pullGroupMembers();
+  },GROUP_WRITE_SETTLE_MS+1000);
+}
+
 function groupChangeRole(uidVal,role){
   var g=state.groupOpen; if(!g||g.role!=='admin') return;
-  fetch(WORKER_URL+'/group/member/role',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:g.groupId,uid:uidVal,role:role})})
-    .then(function(r){ if(r&&r.ok) pullGroupMembers(); }).catch(function(){});
+  var gid=g.groupId;
+  groupWriteStart();
+  fetch(WORKER_URL+'/group/member/role',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:gid,uid:uidVal,role:role})})
+    .then(function(r){
+      groupWriteEnd();
+      if(!r||!r.ok){ pullGroupMembers(); return; }
+      groupMembersLocal(gid,function(list){ return list.map(function(m){ return m.uid===uidVal?Object.assign({},m,{role:role}):m; }); });
+      render(); groupMembersRecheck(gid);
+    }).catch(function(){ groupWriteEnd(); });
 }
 
 // Передача прав администратора. Модель одноадминная: цель становится admin,
@@ -3895,8 +3944,15 @@ function groupTransferAdmin(uidVal){
         g.isAdmin=false; g.role='editor';
         for(var i=0;i<state.groupsList.length;i++) if(state.groupsList[i].groupId===g.groupId){ state.groupsList[i].isAdmin=false; state.groupsList[i].role='editor'; }
         state.groupSub='tasks';
+        // Состав тоже правим сами: новый админ и мы-редактор появятся в
+        // списке сразу, а не через несколько секунд, когда согласуется KV.
+        groupMembersLocal(g.groupId,function(list){ return list.map(function(m){
+          if(m.uid===uidVal) return Object.assign({},m,{role:'admin'});
+          if(m.uid===getUserKey()) return Object.assign({},m,{role:'editor'});
+          return m;
+        }); });
         render();
-        pullGroupMembers();
+        groupMembersRecheck(g.groupId);
       }).catch(function(){});
   },L.groups_transfer_btn);
 }
@@ -3904,8 +3960,15 @@ function groupTransferAdmin(uidVal){
 function groupRemoveMember(uidVal){
   var g=state.groupOpen; if(!g||g.role!=='admin') return;
   askConfirm(L.groups_member_remove_confirm,true,function(){
-    fetch(WORKER_URL+'/group/member/remove',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:g.groupId,uid:uidVal})})
-      .then(function(r){ if(r&&r.ok) pullGroupMembers(); }).catch(function(){});
+    var gid=g.groupId;
+    groupWriteStart();
+    fetch(WORKER_URL+'/group/member/remove',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({groupId:gid,uid:uidVal})})
+      .then(function(r){
+        groupWriteEnd();
+        if(!r||!r.ok){ pullGroupMembers(); return; }
+        groupMembersLocal(gid,function(list){ return list.filter(function(m){ return m.uid!==uidVal; }); });
+        render(); groupMembersRecheck(gid);
+      }).catch(function(){ groupWriteEnd(); });
   });
 }
 

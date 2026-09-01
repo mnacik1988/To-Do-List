@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v164';
+var CACHE = 'vtodo-shell-v165';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 /* Фоновые картинки — приятно, но без них приложение полностью работоспособно
    (под ними лежит цвет --screen). Держим их ОТДЕЛЬНО от SHELL сознательно:
