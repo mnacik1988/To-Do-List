@@ -69,11 +69,20 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 @keyframes fadein { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:none} }
 @keyframes sheetup{ from{transform:translateY(100%)} to{transform:none} }
 
+/* Фоновые картинки от Александра (BG/White.png и BG/Dark.PNG, 2026-09-01).
+   Пережаты в WebP q92: 1 МБ → 12 КБ каждая, без видимых полос на градиентах —
+   плавные заливки сжимаются почти бесплатно, поэтому уменьшать разрешение не
+   пришлось. Цвет --screen остаётся ПОД картинкой: он виден в первую долю
+   секунды до её загрузки и служит запасным вариантом, если WebP не отдался.
+   Тема висит на самом #app (app.dataset.theme), отсюда селектор с атрибутом,
+   а не отдельное правило [data-theme="dark"] выше по дереву. */
 #app {
-  height:100%; background:var(--screen); display:flex; flex-direction:column;
-  transition:background .3s; max-width:480px; margin:0 auto;
+  height:100%; background:var(--screen) url('./bg-light.webp') center/cover no-repeat;
+  display:flex; flex-direction:column;
+  transition:background-color .3s; max-width:480px; margin:0 auto;
   position:relative; overflow:hidden;
 }
+#app[data-theme="dark"] { background-image:url('./bg-dark.webp'); }
 
 .screen-header { padding:14px 18px 12px; flex:none; display:flex; align-items:center; justify-content:space-between; }
 .screen-title   { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-.02em; }
@@ -146,7 +155,7 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 .overdue-sec { border-radius:14px; overflow:hidden; border:1.5px solid var(--pri-high); }
 .overdue-sec-hd { display:flex; align-items:center; gap:8px; padding:11px 14px; background:var(--pri-high); cursor:pointer; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
 .overdue-sec-title { font-size:11px; font-weight:800; letter-spacing:.07em; color:var(--pri-high-ink); flex:1; }
-.overdue-sec-body { background:var(--screen); }
+.overdue-sec-body { background:transparent; }  /* было --screen: сплошная заливка перекрывала фоновую картинку */
 .pri-bar[data-pri="high"]{ background:var(--pri-high); }
 .pri-bar[data-pri="mid"] { background:var(--pri-mid); }
 .pri-bar[data-pri="low"] { background:var(--pri-low); }
@@ -677,7 +686,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.61';
+var APP_VERSION = '1.62';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
