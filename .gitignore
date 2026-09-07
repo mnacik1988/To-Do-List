@@ -18,6 +18,11 @@
 # пользователям незачем.
 !bg-light.webp
 !bg-dark.webp
+# Шрифт Manrope (SIL OFL 1.1) — лежит у нас, чтобы IP пользователя
+# не уходил на серверы Google при каждом запуске.
+!manrope-cyrillic.woff2
+!manrope-latin-ext.woff2
+!manrope-latin.woff2
 !privacy.html
 !delete-data.html
 !.well-known/

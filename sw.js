@@ -1,12 +1,12 @@
 'use strict';
-var CACHE = 'vtodo-shell-v171';
+var CACHE = 'vtodo-shell-v172';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 /* Фоновые картинки — приятно, но без них приложение полностью работоспособно
    (под ними лежит цвет --screen). Держим их ОТДЕЛЬНО от SHELL сознательно:
    addAll работает по принципу «всё или ничего», и один неудачный файл сорвал
    бы установку целиком — то есть отвалился бы ОФЛАЙН у всех. Кешируем каждую
    по отдельности и молча прощаем неудачу. */
-var OPTIONAL = ['./bg-light.webp', './bg-dark.webp'];
+var OPTIONAL = ['./bg-light.webp', './bg-dark.webp', './manrope-cyrillic.woff2', './manrope-latin-ext.woff2', './manrope-latin.woff2'];
 
 /* ── Install: кешируем приложение ── */
 self.addEventListener('install', function(e){
