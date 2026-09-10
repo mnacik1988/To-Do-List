@@ -717,7 +717,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.76';
+var APP_VERSION = '1.77';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5076,6 +5076,24 @@ document.addEventListener('visibilitychange',function(){ if(document.visibilityS
   if(isGoogleSignedIn()) fetchMyGroups();
   groupPollTick();
 } });
+
+// Интернет вернулся, а приложение всё это время было открыто. Раньше в этом
+// случае синк ждал либо сворачивания-разворачивания (visibilitychange), либо
+// перезапуска: doSyncTasksToServer и pullTasksFromServer при !navigator.onLine
+// молча выходят, а периодического таймера синка задач у нас нет. Человек видел
+// "на телефоне одно, на другом другое" и не понимал, почему (нашли 2026-09-10,
+// когда на Android пропадала сеть). Задержка — сеть отдаёт событие раньше,
+// чем реально начинает пропускать трафик.
+window.addEventListener('online',function(){
+  setTimeout(function(){
+    if(!navigator.onLine) return;
+    doSyncTasksToServer();
+    pullTasksFromServer();
+    syncRemindersToServer();
+    if(isGoogleSignedIn()){ fetchMyGroups(); groupPollTick(); }
+    refreshAiLimit();
+  },1500);
+});
 
 /* Передаём напоминания в SW для фонового режима */
 function scheduleReminders(){
