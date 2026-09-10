@@ -90,15 +90,30 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
    плавные заливки сжимаются почти бесплатно, поэтому уменьшать разрешение не
    пришлось. Цвет --screen остаётся ПОД картинкой: он виден в первую долю
    секунды до её загрузки и служит запасным вариантом, если WebP не отдался.
-   Тема висит на самом #app (app.dataset.theme), отсюда селектор с атрибутом,
+   Тема ставится и на #app, и на <html> (см. render), отсюда селектор с атрибутом,
    а не отдельное правило [data-theme="dark"] выше по дереву. */
+/* Фон красит ВСЮ страницу, а не колонку приложения: #app ограничен 480px и
+   центрирован, поэтому на широком экране (поворот, планшет, десктоп) по бокам
+   от него оставалась голая белая полоса. Тема ставится и на <html> (см.
+   render), иначе body не увидел бы тёмных значений — они объявлены на
+   [data-theme="dark"], а этот атрибут раньше висел только на #app. */
+body { background:var(--screen) url('./bg-light.webp') center/cover no-repeat; transition:background-color .3s; }
+[data-theme="dark"] body { background-image:url('./bg-dark.webp'); }
+
 #app {
-  height:100%; background:var(--screen) url('./bg-light.webp') center/cover no-repeat;
+  height:100%; background:transparent;
   display:flex; flex-direction:column;
-  transition:background-color .3s; max-width:480px; margin:0 auto;
+  max-width:480px; margin:0 auto;
   position:relative; overflow:hidden;
+  /* Безопасные зоны. В <meta viewport> стоит viewport-fit=cover — приложение
+     занимает весь экран, ВКЛЮЧАЯ область под вырезом камеры и под полосой
+     жеста. Без этих отступов шапка залезала бы под вырез, а нижняя панель под
+     полосу. На телефонах без выреза значения равны нулю и ничего не меняется. */
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
 }
-#app[data-theme="dark"] { background-image:url('./bg-dark.webp'); }
 
 .screen-header { padding:14px 18px 12px; flex:none; display:flex; align-items:center; justify-content:space-between; }
 .screen-title   { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-.02em; }
@@ -702,7 +717,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.75';
+var APP_VERSION = '1.76';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2233,6 +2248,10 @@ function render(){
 
   var app=document.getElementById('app');
   app.dataset.theme=state.theme;
+  // И на <html> тоже: фон страницы за пределами колонки приложения объявлен
+  // на body, а тот увидит тёмные переменные только если атрибут стоит выше
+  // него по дереву (10.09).
+  document.documentElement.dataset.theme=state.theme;
   var themeColorMeta=document.getElementById('theme-color-meta');
   if(themeColorMeta) themeColorMeta.content=state.theme==='dark'?'#1a1922':'#f5f2ec';
 
