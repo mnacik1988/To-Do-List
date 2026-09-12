@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v179';
+var CACHE = 'vtodo-shell-v180';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 /* Фоновые картинки — приятно, но без них приложение полностью работоспособно
    (под ними лежит цвет --screen). Держим их ОТДЕЛЬНО от SHELL сознательно:
@@ -103,7 +103,19 @@ self.addEventListener('message', function(e){
 });
 
 /* ── Push: показываем уведомление когда приходит push от Cloudflare ── */
+// Кружок на иконке приложения (Badging API). Ставим ПУСТОЙ бейдж, без числа:
+// просьба была «как в других приложениях», а не счётчик, и пустой вариант
+// одинаково выглядит везде, где API вообще есть.
+// Где работает: iPhone/iPad с приложением на домашнем экране (iOS 16.4+, нужно
+// разрешение на уведомления) и установленные PWA на десктопе. На Android
+// Chrome этого API НЕТ — но там точка и не нужна: TWA показывает уведомления
+// сам (DelegationService), и лаунчер ставит точку штатными средствами Android.
+// Оборачиваем в try: в SW это WorkerNavigator, и на части платформ метод
+// объявлен, но кидает.
+function badgeSet(){ try{ if(self.navigator && self.navigator.setAppBadge) self.navigator.setAppBadge(); }catch(e){} }
+
 self.addEventListener('push', function(e){
+  badgeSet();
   var data = {};
   try { data = e.data.json(); } catch(err) {}
   var n = data.notification || data;

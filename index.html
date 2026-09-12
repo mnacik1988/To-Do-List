@@ -720,7 +720,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.79';
+var APP_VERSION = '1.80';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3654,6 +3654,23 @@ function markGroupSeen(gid){
   if(!gid) return;
   var m=getGroupSeen(); m[gid]=Date.now();
   try{ localStorage.setItem(GROUP_SEEN_KEY,JSON.stringify(m)); }catch(e){}
+  updateAppBadge();
+}
+// Кружок на иконке самого приложения — то же событие, что и точка на вкладке,
+// но видно с домашнего экрана, не заходя внутрь (просьба Александра
+// 2026-09-12). Бейдж ПУСТОЙ, без числа: просили «как в других приложениях».
+// Ставит его ещё и service worker при получении push — там приложение закрыто
+// и этот код не выполняется.
+// Где работает: iPhone/iPad с приложением на домашнем экране (iOS 16.4+, нужно
+// разрешение на уведомления) и установленные PWA на десктопе. В Android Chrome
+// API нет — и не нужно: TWA показывает уведомления сам (DelegationService), а
+// точку на иконке рисует лаунчер штатными средствами Android.
+function updateAppBadge(){
+  try{
+    if(!navigator.setAppBadge) return;
+    if(hasGroupUpdates()) navigator.setAppBadge();
+    else if(navigator.clearAppBadge) navigator.clearAppBadge();
+  }catch(e){}
 }
 // Есть ли хоть одна группа с чужими изменениями с прошлого захода.
 function hasGroupUpdates(){
@@ -3678,6 +3695,7 @@ function fetchMyGroups(cb){
     .then(function(data){
       state.groupsList=(data&&data.groups)?data.groups:[];
       state.groupsLoaded=true; render();
+      updateAppBadge();
       if(cb) cb();
     }).catch(function(){ state.groupsLoaded=true; render(); if(cb) cb(); });
 }
