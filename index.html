@@ -624,6 +624,9 @@ function onGoogleCredential(resp){
     // входа (первого или после протухания токена) досылаем то, что не
     // смогли отправить, пока юзер не был авторизован.
     subscribePush(); syncRemindersToServer(); pullTasksFromServer();
+    // Список групп тоже — иначе после входа вкладка «Группы» стоит без точки,
+    // пока в неё не ткнёшь (см. комментарий у вызова в блоке Init).
+    fetchMyGroups();
     if(pendingAiRetry){ var fn=pendingAiRetry; pendingAiRetry=null; fn(); }
     if(state.settings) render();
   }
@@ -717,7 +720,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.78';
+var APP_VERSION = '1.79';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5140,6 +5143,14 @@ pullTasksFromServer();
 // приложение. Теперь выдержка к этому моменту давно истекла и надгробие уходит
 // сразу (2026-08-18). Сам doSyncTasksToServer() проверяет сеть и вход.
 doSyncTasksToServer();
+// Список групп на холодном старте. Без этого groupsList пуст, hasGroupUpdates()
+// всегда возвращает false, и красная точка на вкладке «Группы» появлялась
+// ТОЛЬКО после того, как в раздел зайдёшь руками — то есть ровно тогда, когда
+// она уже не нужна (жалоба 2026-09-12). fetchMyGroups сам проверяет вход.
+// Периодически дёргать /groups НЕЛЬЗЯ: он делает list() на КАЖДУЮ группу
+// пользователя, а суточную квоту list в этом проекте уже дважды выжигали —
+// поэтому обновляемся на старте и на возврате в приложение, и всё.
+fetchMyGroups();
 </script>
 </body>
 </html>
