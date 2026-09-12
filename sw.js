@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'vtodo-shell-v180';
+var CACHE = 'vtodo-shell-v181';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 /* Фоновые картинки — приятно, но без них приложение полностью работоспособно
    (под ними лежит цвет --screen). Держим их ОТДЕЛЬНО от SHELL сознательно:
@@ -103,19 +103,41 @@ self.addEventListener('message', function(e){
 });
 
 /* ── Push: показываем уведомление когда приходит push от Cloudflare ── */
-// Кружок на иконке приложения (Badging API). Ставим ПУСТОЙ бейдж, без числа:
-// просьба была «как в других приложениях», а не счётчик, и пустой вариант
-// одинаково выглядит везде, где API вообще есть.
+// Кружок с ЧИСЛОМ на иконке приложения (Badging API) — как в Telegram.
+// Пустой бейдж без числа (v1.80) на iOS выглядит невнятно, Александр показал
+// скриншотом, что ждёт именно цифру.
+//
+// Число = сколько НАШИХ уведомлений сейчас висит в шторке. Считаем по
+// getNotifications(), а не своим счётчиком: счётчик пришлось бы хранить в
+// IndexedDB (localStorage в service worker нет) и он разъезжался бы с
+// реальностью, когда уведомления смахивают руками. Шторка — сама по себе
+// достоверный источник, и ведёт себя ровно как в мессенджерах.
+//
 // Где работает: iPhone/iPad с приложением на домашнем экране (iOS 16.4+, нужно
-// разрешение на уведомления) и установленные PWA на десктопе. На Android
-// Chrome этого API НЕТ — но там точка и не нужна: TWA показывает уведомления
-// сам (DelegationService), и лаунчер ставит точку штатными средствами Android.
-// Оборачиваем в try: в SW это WorkerNavigator, и на части платформ метод
-// объявлен, но кидает.
-function badgeSet(){ try{ if(self.navigator && self.navigator.setAppBadge) self.navigator.setAppBadge(); }catch(e){} }
+// разрешение на уведомления и включённые «Наклейки» в настройках iOS) и
+// установленные PWA на десктопе. На Android Chrome этого API НЕТ — но там он и
+// не нужен: TWA показывает уведомления сам (DelegationService), и точку на
+// иконке рисует лаунчер штатными средствами Android.
+//
+// Оборачиваем и в try, и в .catch: в SW это WorkerNavigator, и на части
+// платформ метод объявлен, но кидает — синхронно либо отказом промиса.
+function badgeApply(n){
+  try{
+    if(!self.navigator || !self.navigator.setAppBadge) return Promise.resolve();
+    if(n > 0) return Promise.resolve(self.navigator.setAppBadge(n)).catch(function(){});
+    if(self.navigator.clearAppBadge) return Promise.resolve(self.navigator.clearAppBadge()).catch(function(){});
+  }catch(e){}
+  return Promise.resolve();
+}
+function badgeSync(){
+  try{
+    return self.registration.getNotifications()
+      .then(function(list){ return badgeApply(list.length); })
+      .catch(function(){});
+  }catch(e){ return Promise.resolve(); }
+}
 
 self.addEventListener('push', function(e){
-  badgeSet();
   var data = {};
   try { data = e.data.json(); } catch(err) {}
   var n = data.notification || data;
@@ -145,14 +167,17 @@ self.addEventListener('push', function(e){
       badge: 'icon-badge.png',
       tag: tag,
       renotify: true
-    })
+    // Бейдж считаем ПОСЛЕ показа и внутри waitUntil: раньше setAppBadge стоял
+    // первой строкой обработчика, вне waitUntil, и система была вправе усыпить
+    // service worker до того, как вызов доедет.
+    }).then(badgeSync, badgeSync)
   );
 });
 
 self.addEventListener('notificationclick', function(e){
   e.notification.close();
   e.waitUntil(
-    clients.matchAll({type:'window'}).then(function(list){
+    badgeSync().then(function(){ return clients.matchAll({type:'window'}); }).then(function(list){
       for(var i=0;i<list.length;i++) if('focus' in list[i]) return list[i].focus();
       if(clients.openWindow) return clients.openWindow('./');
     })

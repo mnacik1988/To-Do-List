@@ -720,7 +720,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.80';
+var APP_VERSION = '1.81';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3656,32 +3656,42 @@ function markGroupSeen(gid){
   try{ localStorage.setItem(GROUP_SEEN_KEY,JSON.stringify(m)); }catch(e){}
   updateAppBadge();
 }
-// Кружок на иконке самого приложения — то же событие, что и точка на вкладке,
-// но видно с домашнего экрана, не заходя внутрь (просьба Александра
-// 2026-09-12). Бейдж ПУСТОЙ, без числа: просили «как в других приложениях».
-// Ставит его ещё и service worker при получении push — там приложение закрыто
-// и этот код не выполняется.
+// Кружок с числом на иконке самого приложения — то же событие, что и точка на
+// вкладке, но видно с домашнего экрана, не заходя внутрь (просьба Александра
+// 2026-09-12, уточнение про цифру — 2026-09-13).
+//
+// Здесь число — это количество групп с непросмотренными правками. В service
+// worker оно считается иначе, по числу уведомлений в шторке (там про группы
+// ничего не известно), и это НЕ рассинхрон: пока приложение закрыто, счёт
+// ведёт шторка, а как только человек открыл приложение — счёт ведут группы.
+// Оба источника сходятся в нуле, когда всё просмотрено.
+//
 // Где работает: iPhone/iPad с приложением на домашнем экране (iOS 16.4+, нужно
-// разрешение на уведомления) и установленные PWA на десктопе. В Android Chrome
-// API нет — и не нужно: TWA показывает уведомления сам (DelegationService), а
-// точку на иконке рисует лаунчер штатными средствами Android.
+// разрешение на уведомления и включённые «Наклейки» в настройках iOS) и
+// установленные PWA на десктопе. В Android Chrome API нет — и не нужно: TWA
+// показывает уведомления сам (DelegationService), а точку на иконке рисует
+// лаунчер штатными средствами Android.
 function updateAppBadge(){
   try{
     if(!navigator.setAppBadge) return;
-    if(hasGroupUpdates()) navigator.setAppBadge();
-    else if(navigator.clearAppBadge) navigator.clearAppBadge();
+    var n=groupUpdateCount();
+    // Промис может быть отклонён (напр. PWA не установлено) — гасим, иначе
+    // получим unhandled rejection, которого try не поймает.
+    if(n>0) Promise.resolve(navigator.setAppBadge(n)).catch(function(){});
+    else if(navigator.clearAppBadge) Promise.resolve(navigator.clearAppBadge()).catch(function(){});
   }catch(e){}
 }
-// Есть ли хоть одна группа с чужими изменениями с прошлого захода.
-function hasGroupUpdates(){
-  var seen=getGroupSeen();
+// Сколько групп с чужими изменениями с прошлого захода.
+function groupUpdateCount(){
+  var seen=getGroupSeen(), n=0;
   for(var i=0;i<state.groupsList.length;i++){
     var g=state.groupsList[i];
     if(!g.lastChange) continue;
-    if(g.lastChange>(seen[g.groupId]||0)) return true;
+    if(g.lastChange>(seen[g.groupId]||0)) n++;
   }
-  return false;
+  return n;
 }
+function hasGroupUpdates(){ return groupUpdateCount()>0; }
 
 function groupAuthHeaders(){ return {'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()}; }
 function groupRoleLabel(role){
