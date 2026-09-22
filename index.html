@@ -727,7 +727,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.84';
+var APP_VERSION = '1.85';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5144,7 +5144,14 @@ function checkReminders(){
   /* Системное уведомление — только как ЗАПАСНОЙ вариант, если push неактивен
      или мы офлайн (иначе сервер уже пришлёт push → было бы два уведомления).
      wasPushOk() закрывает гонку холодного старта — см. комментарий выше. */
-  if(Notification.permission==='granted' && !((pushActive||wasPushOk()) && navigator.onLine)){
+  // typeof, а не прямое обращение: в окружении без Notification (WebView,
+  // Safari до 16.4 вне PWA) это ReferenceError — а бросало оно ПОСЛЕ
+  // markFired(), то есть напоминание уже помечено сработавшим, баннер ниже не
+  // дорисовывается, и второго шанса не будет. На холодном старте тем же
+  // исключением обрывался и остаток инициализации: синк, лимит ИИ, группы
+  // (аудит 2026-09-22).
+  var canNotify=(typeof Notification!=='undefined') && Notification.permission==='granted';
+  if(canNotify && !((pushActive||wasPushOk()) && navigator.onLine)){
     due.forEach(function(task){
       // Текст уведомления берём из переводов, а не хардкодом по-русски: всё
       // остальное в приложении переведено на 5 языков, и только уведомление

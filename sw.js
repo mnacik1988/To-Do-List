@@ -1,5 +1,6 @@
 'use strict';
-var CACHE = 'vtodo-shell-v184';
+var CACHE_PREFIX = 'vtodo-shell-';
+var CACHE = CACHE_PREFIX + 'v185';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 /* Фоновые картинки — приятно, но без них приложение полностью работоспособно
    (под ними лежит цвет --screen). Держим их ОТДЕЛЬНО от SHELL сознательно:
@@ -25,8 +26,16 @@ self.addEventListener('install', function(e){
 self.addEventListener('activate', function(e){
   e.waitUntil(
     caches.keys().then(function(keys){
+      // Чистим ТОЛЬКО свои старые кеши. Cache Storage общий на весь origin, а
+      // на mnacik1988.github.io живут и другие приложения (NeedBuy, InveStory
+      // и прочие) — раньше отсюда сносились и они, то есть обновление Mynado
+      // отбирало офлайн у соседей (аудит 2026-09-22; подтверждено: у NeedBuy
+      // свой кеш needbuy-*, у InveStory kapital-*).
+      // ⚠️ У NeedBuy в sw.js стоит ровно такая же неразборчивая чистка — она
+      // сносит НАШ кеш. Чинить там отдельно, здесь это недостижимо.
       return Promise.all(
-        keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); })
+        keys.filter(function(k){ return k !== CACHE && k.indexOf(CACHE_PREFIX) === 0; })
+            .map(function(k){ return caches.delete(k); })
       );
     }).then(function(){ return self.clients.claim(); })
   );
