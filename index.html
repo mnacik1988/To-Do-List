@@ -727,7 +727,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.86';
+var APP_VERSION = '1.87';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -789,9 +789,19 @@ function escA(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
 function fmtT(s){ return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60); }
 function pad(n){ return n<10?'0'+n:String(n); }
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-function addDays(base,n){ var d=new Date(base); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+// new Date('2026-09-22') — это UTC-полночь, а getDate()/setDate() работают по
+// МЕСТНОМУ времени. Западнее UTC местная дата у такого объекта уже вчерашняя,
+// поэтому «завтра» превращалось в «сегодня» (аудит 2026-09-22, F09). Везде,
+// где календарную дату дальше читают или сдвигают местными методами, строим
+// её покомпонентно — как это уже делает dateLabel().
+function dateFromStr(str){ var p=String(str||'').split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function addDays(base,n){ var d=dateFromStr(base); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function todayLabel(){ var d=new Date(); return DOW_FULL[d.getDay()]+', '+d.getDate()+' '+MON_RU_G[d.getMonth()]; }
 function dateLabel(str){ if(!str) return ''; var p=str.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); return DOW_FULL[d.getDay()]+', '+d.getDate()+' '+MON_RU_G[d.getMonth()]; }
+// Здесь UTC-разбор ОСТАВЛЕН СОЗНАТЕЛЬНО и это не тот же баг, что в F09: обе
+// даты читаются одинаково, разница между ними точна, и она не ломается на
+// переводе часов. С местной полуночью сутки перехода дают 23 или 25 часов, и
+// Math.floor дал бы 0 вместо 1 — то есть «завтра» попало бы в «Сегодня».
 function dateToSection(str){ if(!str) return 'undated'; var today=new Date(todayStr()); var d=new Date(str); var diff=Math.floor((d-today)/86400000); if(diff<=0) return 'day'; if(diff<=6) return 'week'; return 'month'; }
 function rebalanceSections(){
   var newSec={day:[],week:[],month:[],undated:[]};
@@ -1194,7 +1204,7 @@ function localParseCfg(){ return LOCAL_PARSE[state.lang]||LOCAL_PARSE.ru; }
 function localNumToInt(s,cfg){ var n=parseInt(s); return isNaN(n)?(cfg.numWords[s]||1):n; }
 function localParseDate(text, fallback){
   var cfg=localParseCfg();
-  var t=text.toLowerCase(); var d=new Date(todayStr());
+  var t=text.toLowerCase(); var d=dateFromStr(todayStr());
   if(t.indexOf(cfg.dayAfterTomorrow)>=0){ d.setDate(d.getDate()+2); return fmtDate(d); }
   if(t.indexOf(cfg.tomorrow)>=0){ d.setDate(d.getDate()+1); return fmtDate(d); }
   if(t.indexOf(cfg.today)>=0){ return todayStr(); }
@@ -2420,6 +2430,11 @@ function toggleChecklistItem(section,taskId,itemId){
     var allDone=checklist.every(function(i){return i.done;});
     return Object.assign({},t,{checklist:checklist,done:allDone});
   });
+  // Отметка последнего пункта делает задачу выполненной — ровно как нажатие
+  // на саму галочку задачи. Но toggleDone рядом при этом перепланирует
+  // напоминания, а здесь этого не было: задача уже выполнена, а напоминание
+  // всё равно приходило (аудит 2026-09-22, F02).
+  scheduleReminders(); syncRemindersToServer();
   render();
 }
 function checklistDelItem(itemId){
@@ -2454,9 +2469,24 @@ function checklistAddItem(){
 // Работает в ДВУХ местах: карточка редактирования и форма «Новая задача».
 // Разница только в том, откуда читать текст и куда класть результат —
 // сам разбор, промпт, лимиты и локальный запасной путь общие.
+// Какая именно форма открыта СЕЙЧАС. Ответ ИИ приходит через секунды, и за это
+// время человек успевает закрыть карточку и открыть другую — раньше пункты от
+// задачи A молча уезжали в задачу B, а при закрытии вообще ловилось исключение
+// на state.edit.checklist (аудит 2026-09-22, F10). Сверяем ключ до и после.
+var qaGen=0;
+function aiFormKey(){
+  if(state.gEdit) return 'g:'+(state.gEdit.syncId||'');
+  if(state.quickAdd) return 'qa:'+qaGen;
+  if(state.edit && state.modal) return 'e:'+state.modal.section+':'+state.modal.id;
+  return '';
+}
 function aiSplitChecklist(){
   var inG=!!state.gEdit, inQa=!inG&&!!state.quickAdd;
   if(!inG && !inQa && !state.edit) return;
+  var formKey=aiFormKey();
+  // Применяем только если форма та же самая. Если человек ушёл — ответ просто
+  // выбрасываем: подставлять его куда-то ещё хуже, чем потерять.
+  var sameForm=function(){ return aiFormKey()===formKey; };
   if(!inG && !inQa) syncEdit();   // в формах создания и группы поля пишут в state сами, по input
   var src=inG?state.gEdit:(inQa?null:state.edit);
   var curTitle=(inG?src.text:(inQa?state.qaText:src.text))||'';
@@ -2467,13 +2497,14 @@ function aiSplitChecklist(){
   // Имя от модели принимаем, только если разбирали САМО название. Иначе
   // затёрли бы то, что человек уже написал руками.
   var applyName=function(name){
-    if(!name) return;
+    if(!name || !sameForm()) return;
     if(fromDesc && curTitle.trim()) return;
     if(inG) state.gEdit.text=clampLen(name,LEN_TITLE);
     else if(inQa) state.qaText=clampLen(name,LEN_TITLE);
     else state.edit.text=clampLen(name,LEN_TITLE);
   };
   var setItems=function(list){
+    if(!sameForm()) return;
     var made=list.map(function(t){ return checklistItem(t); }).filter(function(it){ return !!it.text; });
     if(inG) state.gEdit.checklist=made;
     else if(inQa) state.qaChecklist=made;
@@ -4709,7 +4740,7 @@ appEl.addEventListener('click',function(e){
     case 'fab-toggle':          state.fabOpen=!state.fabOpen; render(); break;
     case 'fab-scrim':           state.fabOpen=false; render(); break;
     case 'fab-dial-mic':        state.fabOpen=false; onFabMic(); break;
-    case 'fab-dial-text':       state.fabOpen=false; state.quickAdd=true; state.qaText=''; state.qaDesc=''; state.qaChecklist=[]; state.qaDate=state.view==='undated'?'':todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
+    case 'fab-dial-text':       state.fabOpen=false; qaGen++; state.quickAdd=true; state.qaText=''; state.qaDesc=''; state.qaChecklist=[]; state.qaDate=state.view==='undated'?'':todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
     case 'qa-cancel':           closeSheetAnimated('qa', function(){ state.quickAdd=false; state.qaChecklist=[]; render(); }); break;
     case 'qa-set-pri':          state.qaPri=el.dataset.pri; render(); break;
     case 'qa-checklist-del':
@@ -5172,7 +5203,15 @@ function ensureNotifPermission(){
 }
 
 function getFired(){ try{ return JSON.parse(localStorage.getItem(FIRED_KEY)||'{}'); }catch(e){ return {}; } }
-function markFired(taskId, rt){ var f=getFired(); f[taskId+':'+rt]=Date.now(); try{ localStorage.setItem(FIRED_KEY,JSON.stringify(f)); }catch(e){} }
+// Ключ ОБЯЗАН содержать дату. Без неё перенос незавершённой задачи на другой
+// день с тем же временем попадал в отметку вчерашнего срабатывания, и
+// напоминание молча не приходило — отметки живут неделю (аудит 2026-09-22, F06).
+function firedKey(taskId, date, rt){ return taskId+':'+date+':'+rt; }
+// Старый ключ без даты — только для ЧТЕНИЯ, чтобы обновление приложения не
+// повторило уже показанные сегодня напоминания. Пишем всегда новый, старые
+// сами исчезнут недельной чисткой ниже.
+function firedKeyLegacy(taskId, rt){ return taskId+':'+rt; }
+function markFired(taskId, date, rt){ var f=getFired(); f[firedKey(taskId,date,rt)]=Date.now(); try{ localStorage.setItem(FIRED_KEY,JSON.stringify(f)); }catch(e){} }
 
 /* Проверка напоминаний — окно 24 часа, баннер всегда, системное если разрешено */
 function checkReminders(){
@@ -5187,10 +5226,10 @@ function checkReminders(){
   if(pruned){ try{ localStorage.setItem(FIRED_KEY,JSON.stringify(fired)); }catch(e){} }
   allTasks().forEach(function(task){
     if(!task.reminderTime||!task.date||task.done) return;
-    var key=task.id+':'+task.reminderTime;
-    if(fired[key]) return;
+    if(fired[firedKey(task.id,task.date,task.reminderTime)]) return;
+    if(fired[firedKeyLegacy(task.id,task.reminderTime)]) return;
     var ts=new Date(task.date+'T'+task.reminderTime).getTime();
-    if(ts<=now && ts>now-86400000){ due.push(task); markFired(task.id,task.reminderTime); }
+    if(ts<=now && ts>now-86400000){ due.push(task); markFired(task.id,task.date,task.reminderTime); }
   });
   if(!due.length) return;
   /* Системное уведомление — только как ЗАПАСНОЙ вариант, если push неактивен
@@ -5253,7 +5292,7 @@ function scheduleReminders(){
       .filter(function(t){ return t.reminderTime&&t.date&&!t.done; })
       .map(function(t){
         var dt=new Date(t.date+'T'+t.reminderTime);
-        var d=new Date(t.date); var ds=d.getDate()+' '+L.months_short[d.getMonth()];
+        var d=dateFromStr(t.date); var ds=d.getDate()+' '+L.months_short[d.getMonth()];
         return {id:t.id,text:t.text,sub:L.notif_reminder+' • '+ds,ts:dt.getTime()};
       })
       .filter(function(r){ return r.ts>Date.now(); });
