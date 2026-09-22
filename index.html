@@ -450,6 +450,13 @@ var IC = {
 /* ── Constants ── */
 var PRI_ORDER = ['high','mid','low'];
 var PRI_LABEL = {high:'Высокий',mid:'Средний',low:'Низкий'};
+// Приоритет приходит С СЕРВЕРА и подставляется в HTML-атрибут data-pri="…".
+// В групповых задачах его пишет ДРУГОЙ человек, поэтому произвольная строка
+// оттуда — это исполнение чужого кода в чужом приложении (аудит 2026-09-22).
+// Сервер с той же даты принимает только три значения, но в хранилище могли
+// остаться старые записи, да и защита в одном слое — не защита. Заодно
+// чинится показ: у мусорного значения PRI_LABEL[…] давал «undefined».
+function priSafe(p){ return (p==='high'||p==='mid'||p==='low')?p:'mid'; }
 var TAB_META  = [{key:'day',title:'Сегодня'},{key:'week',title:'Эта неделя'},{key:'month',title:'Этот месяц'}];
 var DOW_RU    = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 var MON_RU    = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -720,7 +727,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.83';
+var APP_VERSION = '1.84';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1278,10 +1285,10 @@ function renderOverdueSection(){
     var rows=ot.map(function(t){
       if(state.overdueSelecting){
         var isSel=!!state.overdueSelected[t.id];
-        return '<div class="task-row'+(isSel?' sel-active':'')+'" data-role="overdue-sel-task" data-id="'+t.id+'" style="cursor:pointer">'+
+        return '<div class="task-row'+(isSel?' sel-active':'')+'" data-role="overdue-sel-task" data-id="'+escA(t.id)+'" style="cursor:pointer">'+
           '<div style="display:flex;align-items:center;padding:0 0 0 14px;flex:none"><div class="sel-circle">'+(isSel?IC.check:'')+'</div></div>'+
           '<div class="task-body"><span class="task-text'+(t.done?' done':'')+'">'+esc(t.text)+'</span>'+
-          '<span class="pri-chip" data-pri="'+t.priority+'">'+PRI_LABEL[t.priority]+'</span></div></div>';
+          '<span class="pri-chip" data-pri="'+priSafe(t.priority)+'">'+PRI_LABEL[priSafe(t.priority)]+'</span></div></div>';
       }
       return renderTaskRow(t,'day');
     }).join('');
@@ -1316,31 +1323,31 @@ function renderTaskRow(task,secKey){
   var isSel=!!state.selected[task.id];
 
   if(state.selectMode){
-    return '<div class="task-row'+(isSel?' sel-active':'')+'"'+as+' data-role="select-task" data-id="'+task.id+'" data-sec="'+secKey+'" style="cursor:pointer">'+
+    return '<div class="task-row'+(isSel?' sel-active':'')+'"'+as+' data-role="select-task" data-id="'+escA(task.id)+'" data-sec="'+secKey+'" style="cursor:pointer">'+
       '<div style="display:flex;align-items:center;padding:0 0 0 14px;flex:none">'+
         '<div class="sel-circle">'+(isSel?IC.check:'')+'</div>'+
       '</div>'+
       '<div class="task-body">'+
         '<span class="task-text'+(task.done?' done':'')+'">'+esc(task.text)+'</span>'+
-        '<span class="pri-chip" data-pri="'+task.priority+'">'+PRI_LABEL[task.priority]+'</span>'+
+        '<span class="pri-chip" data-pri="'+priSafe(task.priority)+'">'+PRI_LABEL[priSafe(task.priority)]+'</span>'+
       '</div></div>';
   }
 
   var dragging=drag&&drag.section===secKey&&drag.id===task.id;
   return '<div class="task-row-wrap"'+as+'>'+
-    '<button class="swipe-del" data-role="swipe-delete" data-id="'+task.id+'" data-sec="'+secKey+'">'+IC.trash+'<span>'+L.btn_delete+'</span></button>'+
-    '<div class="task-row'+(dragging?' dragging':'')+'" draggable="true" data-role="task-row" data-id="'+task.id+'" data-sec="'+secKey+'">'+
-      '<button class="pri-bar" data-pri="'+task.priority+'" data-role="cycle-pri" data-id="'+task.id+'" data-sec="'+secKey+'" title="Сменить приоритет"></button>'+
+    '<button class="swipe-del" data-role="swipe-delete" data-id="'+escA(task.id)+'" data-sec="'+secKey+'">'+IC.trash+'<span>'+L.btn_delete+'</span></button>'+
+    '<div class="task-row'+(dragging?' dragging':'')+'" draggable="true" data-role="task-row" data-id="'+escA(task.id)+'" data-sec="'+secKey+'">'+
+      '<button class="pri-bar" data-pri="'+priSafe(task.priority)+'" data-role="cycle-pri" data-id="'+escA(task.id)+'" data-sec="'+secKey+'" title="Сменить приоритет"></button>'+
       '<div class="task-body">'+
-        '<button class="chk'+(task.done?' done':'')+'" data-role="toggle-done" data-id="'+task.id+'" data-sec="'+secKey+'">'+(task.done?IC.check:'')+'</button>'+
-        '<div class="task-name-zone" data-role="open-modal" data-id="'+task.id+'" data-sec="'+secKey+'">'+
+        '<button class="chk'+(task.done?' done':'')+'" data-role="toggle-done" data-id="'+escA(task.id)+'" data-sec="'+secKey+'">'+(task.done?IC.check:'')+'</button>'+
+        '<div class="task-name-zone" data-role="open-modal" data-id="'+escA(task.id)+'" data-sec="'+secKey+'">'+
           '<span class="task-text'+(task.done?' done':'')+'">'+esc(task.text)+'</span>'+
           ((task.checklist&&task.checklist.length)?'<span class="checklist-progress">'+task.checklist.filter(function(i){return i.done;}).length+'/'+task.checklist.length+'</span>':'')+
           IC.chev+
         '</div>'+
-        '<span class="pri-chip" data-pri="'+task.priority+'">'+PRI_LABEL[task.priority]+'</span>'+
+        '<span class="pri-chip" data-pri="'+priSafe(task.priority)+'">'+PRI_LABEL[priSafe(task.priority)]+'</span>'+
       '</div>'+
-      '<button class="drag-handle" data-role="drag-handle" data-id="'+task.id+'" data-sec="'+secKey+'">'+IC.handle+'</button>'+
+      '<button class="drag-handle" data-role="drag-handle" data-id="'+escA(task.id)+'" data-sec="'+secKey+'">'+IC.handle+'</button>'+
     '</div>'+
   '</div>';
 }
@@ -1407,7 +1414,7 @@ function renderModal(){
   var viewBody=
     '<div class="modal-hd">'+
       '<span class="sec-pill" data-sec="'+section+'">'+secTitle+'</span>'+
-      '<span class="modal-chip pri-chip" data-pri="'+task.priority+'">'+PRI_LABEL[task.priority]+'</span>'+
+      '<span class="modal-chip pri-chip" data-pri="'+priSafe(task.priority)+'">'+PRI_LABEL[priSafe(task.priority)]+'</span>'+
       '<button class="close-btn" data-role="modal-close">'+IC.close+'</button>'+
     '</div>'+
     '<div class="modal-task-title">'+esc(task.text)+'</div>'+
@@ -1421,7 +1428,7 @@ function renderModal(){
       '</div>'+
       ((task.checklist&&task.checklist.length)?
         task.checklist.map(function(item){
-          return '<div class="checklist-row" data-role="toggle-checklist-item" data-id="'+task.id+'" data-sec="'+section+'" data-item="'+item.id+'">'+
+          return '<div class="checklist-row" data-role="toggle-checklist-item" data-id="'+escA(task.id)+'" data-sec="'+section+'" data-item="'+escA(item.id)+'">'+
             '<button class="chk-sm'+(item.done?' done':'')+'">'+(item.done?IC.check:'')+'</button>'+
             '<span class="checklist-text'+(item.done?' done':'')+'">'+esc(item.text)+'</span>'+
           '</div>';
@@ -1450,7 +1457,7 @@ function renderModal(){
       editChecklist.map(function(item){
         return '<div class="checklist-edit-row">'+
           '<span class="checklist-text" style="flex:1">'+esc(item.text)+'</span>'+
-          '<button class="checklist-item-del" data-role="checklist-del-item" data-item="'+item.id+'">'+IC.trash+'</button>'+
+          '<button class="checklist-item-del" data-role="checklist-del-item" data-item="'+escA(item.id)+'">'+IC.trash+'</button>'+
         '</div>';
       }).join('')+
       '<div class="checklist-edit-row">'+
@@ -1598,8 +1605,8 @@ function renderDaySheet(){
   if(tasks.length){
     for(var i=0;i<tasks.length;i++){
       var t=tasks[i]; var sec=findTaskSection(t);
-      taskRows+='<div class="day-task-item" data-role="open-modal-from-day" data-id="'+t.id+'" data-sec="'+sec+'">'+
-        '<span class="day-task-dot"'+(t.done?' style="opacity:.4"':'')+' data-pri="'+t.priority+'"></span>'+
+      taskRows+='<div class="day-task-item" data-role="open-modal-from-day" data-id="'+escA(t.id)+'" data-sec="'+sec+'">'+
+        '<span class="day-task-dot"'+(t.done?' style="opacity:.4"':'')+' data-pri="'+priSafe(t.priority)+'"></span>'+
         '<span class="day-task-text'+(t.done?' done':'')+'">'+esc(t.text)+'</span>'+IC.chevR+
       '</div>';
     }
@@ -1796,7 +1803,7 @@ function renderCalendar(){
     var dayTasks=tasksForDate(dateStr);
     var cls='cal-cell'+(otherMonth?' other-month':'')+(isToday?' today':'')+(isSel?' selected':'');
     var dots=''; var shown=dayTasks.slice(0,3);
-    for(var dd=0;dd<shown.length;dd++) dots+='<span class="cal-dot'+(shown[dd].done?' done':'')+'" data-pri="'+shown[dd].priority+'"></span>';
+    for(var dd=0;dd<shown.length;dd++) dots+='<span class="cal-dot'+(shown[dd].done?' done':'')+'" data-pri="'+priSafe(shown[dd].priority)+'"></span>';
     cells+='<div class="'+cls+'" data-role="cal-day" data-date="'+dateStr+'">'+
       '<span class="cal-num">'+day+'</span>'+
       (dots?'<div class="cal-dots">'+dots+'</div>':'<div style="height:6px"></div>')+
@@ -1877,7 +1884,7 @@ function renderQuickAdd(){
           (state.qaChecklist||[]).map(function(item){
             return '<div class="checklist-edit-row">'+
               '<span class="checklist-text" style="flex:1">'+esc(item.text)+'</span>'+
-              '<button class="checklist-item-del" data-role="qa-checklist-del" data-item="'+item.id+'">'+IC.trash+'</button>'+
+              '<button class="checklist-item-del" data-role="qa-checklist-del" data-item="'+escA(item.id)+'">'+IC.trash+'</button>'+
             '</div>';
           }).join('')+
         '</div>'+
@@ -1916,7 +1923,7 @@ function renderDueBanner(){
     '</div>'+
     items.map(function(t){
       var sec=findTaskSection(t);
-      return '<div class="due-banner-item" data-role="open-modal" data-id="'+t.id+'" data-sec="'+sec+'">'+
+      return '<div class="due-banner-item" data-role="open-modal" data-id="'+escA(t.id)+'" data-sec="'+sec+'">'+
         esc(t.text)+
         '<div class="due-banner-item-time">'+dateLabel(t.date)+(t.reminderTime?' · '+esc(t.reminderTime):'')+'</div>'+
       '</div>';
@@ -1957,14 +1964,14 @@ function renderGroupTaskRowCustom(t,canEditFields,canDelete,canCheck){
   var meta=[];
   if(hasChecklist) meta.push(t.checklist.filter(function(i){return i.done;}).length+'/'+t.checklist.length);
   return '<div class="task-row" style="margin-bottom:8px">'+
-    '<button class="pri-bar" data-pri="'+t.priority+'"></button>'+
+    '<button class="pri-bar" data-pri="'+priSafe(t.priority)+'"></button>'+
     '<div class="task-body">'+
       '<button class="chk'+(t.done?' done':'')+'"'+(canCheck?' data-role="group-toggle-done" data-sync="'+escA(t.syncId)+'"':' style="pointer-events:none;opacity:.5"')+'>'+(t.done?IC.check:'')+'</button>'+
       '<div class="task-name-zone"'+(canEditFields?' data-role="group-open-edit" data-sync="'+escA(t.syncId)+'" style="cursor:pointer"':' style="cursor:default"')+'>'+
         '<span class="task-text'+(t.done?' done':'')+'">'+esc(t.text)+'</span>'+
         (meta.length?'<span class="checklist-progress">'+esc(meta.join(' · '))+'</span>':'')+
       '</div>'+
-      '<span class="pri-chip" data-pri="'+t.priority+'">'+PRI_LABEL[t.priority]+'</span>'+
+      '<span class="pri-chip" data-pri="'+priSafe(t.priority)+'">'+PRI_LABEL[priSafe(t.priority)]+'</span>'+
     '</div>'+
     (canDelete?'<button class="drag-handle" data-role="group-delete-task" data-sync="'+escA(t.syncId)+'" title="'+escA(L.btn_delete)+'">'+IC.trash+'</button>':'')+
   '</div>';
