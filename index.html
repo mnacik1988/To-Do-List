@@ -766,7 +766,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.92';
+var APP_VERSION = '1.93';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2568,14 +2568,21 @@ function syncDsInput(){ var el=document.getElementById('ds-input'); if(el) state
 
 function toggleTheme(){ state.theme=state.theme==='light'?'dark':'light'; render(); }
 function setTab(tab){ state.tab=tab; render(); }
-function toggleDone(section,id){ state.sections[section]=state.sections[section].map(function(t){return t.id===id?Object.assign({},t,{done:!t.done}):t;}); scheduleReminders(); syncRemindersToServer(); render(); }
+// ЛЮБАЯ локальная правка задачи сразу проставляет updatedAt. Иначе pull,
+// прилетевший до следующей синхронизации (например при быстром свёртывании-
+// развёртывании приложения — visibilitychange зовёт и pull, и sync), видит
+// серверную запись с бо́льшим updatedAt новее и ЗАТИРАЕТ свежую правку. Раньше
+// время ставилось только в doSyncTasksToServer — слишком поздно, правка уже
+// могла быть потеряна. Касалось всех путей: ручного, ИИ, галочки, чек-листа,
+// переноса просроченных (аудит F05, 10.10.2026). Класс тот же, что в v1.40–1.42.
+function toggleDone(section,id){ state.sections[section]=state.sections[section].map(function(t){return t.id===id?Object.assign({},t,{done:!t.done,updatedAt:Date.now()}):t;}); scheduleReminders(); syncRemindersToServer(); render(); }
 /* Отметка пункта чек-листа — если после этого отмечены ВСЕ пункты, задача целиком автоматически становится выполненной (и наоборот, снимается, если снять галочку с любого пункта). */
 function toggleChecklistItem(section,taskId,itemId){
   state.sections[section]=state.sections[section].map(function(t){
     if(t.id!==taskId||!t.checklist||!t.checklist.length) return t;
     var checklist=t.checklist.map(function(i){return i.id===itemId?Object.assign({},i,{done:!i.done}):i;});
     var allDone=checklist.every(function(i){return i.done;});
-    return Object.assign({},t,{checklist:checklist,done:allDone});
+    return Object.assign({},t,{checklist:checklist,done:allDone,updatedAt:Date.now()});
   });
   // Отметка последнего пункта делает задачу выполненной — ровно как нажатие
   // на саму галочку задачи. Но toggleDone рядом при этом перепланирует
@@ -3027,6 +3034,7 @@ function saveEdit(){
     // если чек-лист БЫЛ: у задачи, где его отродясь не было, done ставится
     // руками галочкой и трогать его тут нельзя.
     else if(prevChecklist.length) patch.done=false;
+    patch.updatedAt=Date.now(); // см. toggleDone — правка должна быть свежее серверной (F05)
     if(newSec!==m.section){
       var updated=null;
       state.sections[m.section]=state.sections[m.section].filter(function(t){if(t.id===m.id){updated=Object.assign({},t,patch);return false;}return true;});
@@ -3136,7 +3144,7 @@ function overdueReschedule(){
   var ids=state.overdueSelected;
   for(var sec in state.sections){
     state.sections[sec]=state.sections[sec].map(function(t){
-      if(ids[t.id]) return Object.assign({},t,{date:today});
+      if(ids[t.id]) return Object.assign({},t,{date:today,updatedAt:Date.now()});
       return t;
     });
   }
@@ -3442,6 +3450,7 @@ function applyAiEdit(find, changes){
   // чтобы сказанное не пропало впустую.
   var touched=false; for(var pk in patch){ touched=true; break; }
   if(!touched) return 'nochange';
+  patch.updatedAt=Date.now(); // см. toggleDone — иначе pull затрёт правку ИИ (F05)
   var newSec=patch.date?dateToSection(patch.date):foundSec;
   if(newSec!==foundSec){
     var updated=null;
