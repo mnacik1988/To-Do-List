@@ -769,6 +769,46 @@ function maybeRefreshAuth(){
   }
 }
 var googleSignInReady=false;
+// Настоящая кнопка Google лежит невидимо поверх нашей видимой. Её слой иногда оказывается
+// нерабочим, если собран сразу при открытии/возвращении в приложение (Android только что
+// «разморозил» страницу), а пересоздание через секунду-две его оживляет. Так и было видно
+// у тестировщика: вход получался только после смены языка — смена языка перерисовывает
+// экран и собирает слой заново (11.10.2026). Поэтому после каждой сборки слоя собираем его
+// ещё дважды — через 1.2 и 3.5 с. Если после сборки на экране было ХОТЬ ОДНО касание (человек
+// уже жмёт кнопку, Google ведёт вход — повторная сборка оборвала бы его запрос) или страница
+// не на переднем плане — перемонтаж пропускаем.
+var _gMountTimer=null, _gMountTimer2=null, _gLastDown=0, _gMountedAt=0;
+document.addEventListener('pointerdown', function(){ _gLastDown=Date.now(); }, true);
+function mountGoogleButton(isHeal){
+  var gSlot=document.getElementById('google-signin-slot');
+  if(!gSlot) return;
+  // В WebView-обёртке настоящая кнопка Google не рендерится вообще (см.
+  // window.AndroidAuth выше) — обычный WebView всё равно не смог бы её
+  // показать (Google блокирует GSI внутри WebView). НО сам пустой слот
+  // остаётся в разметке (position:absolute;inset:0, поверх видимой кнопки)
+  // и перехватывает настоящие тапы пальцем, хотя внутри него ничего нет —
+  // клик по нему не находит data-role у СЕБЯ и не всплывает до диспетчера,
+  // т.к. слот не потомок кнопки, а сосед (найдено вживую 2026-08-06:
+  // синтетический клик через отладчик работал, а тап пальцем — нет).
+  // pointer-events:none пропускает тап насквозь, к видимой кнопке под ним.
+  if(window.AndroidAuth){ gSlot.style.pointerEvents='none'; return; }
+  if(!(window.google && google.accounts && google.accounts.id)) return;
+  if(isHeal && (_gLastDown>=_gMountedAt || document.visibilityState!=='visible')) return;   // человек уже трогал экран / страница в фоне — не трогаем
+  gSlot.innerHTML='';
+  // Настоящая кнопка Google рендерится невидимо (opacity:0 у слота-обёртки),
+  // поверх неё наша визуальная кнопка. Растягиваем на всю ширину контейнера,
+  // чтобы клик по нашей кнопке гарантированно попадал по кликабельной области.
+  var gWidth=Math.max(200,Math.min(400,gSlot.parentElement?gSlot.parentElement.clientWidth:360));
+  google.accounts.id.renderButton(gSlot,{type:'standard',theme:'outline',size:'large',text:'signin_with',width:gWidth});
+  var gInner=gSlot.firstElementChild;
+  if(gInner) gInner.style.width='100%';
+  if(!isHeal){
+    _gMountedAt=Date.now();
+    clearTimeout(_gMountTimer); clearTimeout(_gMountTimer2);
+    _gMountTimer=setTimeout(function(){ mountGoogleButton(true); },1200);
+    _gMountTimer2=setTimeout(function(){ mountGoogleButton(true); },3500);
+  }
+}
 // Высота настоящей кнопки Google size:'large' — наши видимые кнопки входа должны быть такой же высоты (см. ниже).
 var GOOGLE_BTN_H=40;
 function initGoogleSignIn(){
@@ -801,7 +841,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.98';
+var APP_VERSION = '1.99';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2601,27 +2641,7 @@ function render(){
 
   if(savedScroll>0) requestAnimationFrame(function(){ var el=document.querySelector('.sheet-body'); if(el) el.scrollTop=savedScroll; });
 
-  var gSlot=document.getElementById('google-signin-slot');
-  // В WebView-обёртке настоящая кнопка Google не рендерится вообще (см.
-  // window.AndroidAuth выше) — обычный WebView всё равно не смог бы её
-  // показать (Google блокирует GSI внутри WebView). НО сам пустой слот
-  // остаётся в разметке (position:absolute;inset:0, поверх видимой кнопки)
-  // и перехватывает настоящие тапы пальцем, хотя внутри него ничего нет —
-  // клик по нему не находит data-role у СЕБЯ и не всплывает до диспетчера,
-  // т.к. слот не потомок кнопки, а сосед (найдено вживую 2026-08-06:
-  // синтетический клик через отладчик работал, а тап пальцем — нет).
-  // pointer-events:none пропускает тап насквозь, к видимой кнопке под ним.
-  if(gSlot && window.AndroidAuth){ gSlot.style.pointerEvents='none'; }
-  if(gSlot && !window.AndroidAuth && window.google && google.accounts && google.accounts.id){
-    gSlot.innerHTML='';
-    // Настоящая кнопка Google рендерится невидимо (opacity:0 у слота-обёртки),
-    // поверх неё наша визуальная кнопка. Растягиваем на всю ширину контейнера,
-    // чтобы клик по нашей кнопке гарантированно попадал по кликабельной области.
-    var gWidth=Math.max(200,Math.min(400,gSlot.parentElement?gSlot.parentElement.clientWidth:360));
-    google.accounts.id.renderButton(gSlot,{type:'standard',theme:'outline',size:'large',text:'signin_with',width:gWidth});
-    var gInner=gSlot.firstElementChild;
-    if(gInner) gInner.style.width='100%';
-  }
+  mountGoogleButton(false);
 
   saveStorage();
   clearAnim();
