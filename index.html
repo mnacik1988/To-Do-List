@@ -204,7 +204,10 @@ body { background:var(--screen) url('./bg-light.webp') center/cover no-repeat; t
 }
 .chk.done { background:var(--accent); border-color:var(--accent); }
 .task-name-zone { flex:1; display:flex; align-items:center; gap:7px; cursor:pointer; min-width:0; }
-.task-text { flex:1; font-size:14.5px; font-weight:600; color:var(--text); line-height:1.3; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.task-text { font-size:14.5px; font-weight:600; color:var(--text); line-height:1.3; min-width:0; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow-wrap:anywhere; }
+.task-name-col { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.task-sub { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.task-sub-time { font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap; }
 .task-text.done { text-decoration:line-through; color:var(--muted); opacity:.7; }
 .chev { color:var(--muted); opacity:.5; flex:none; }
 .pri-chip { flex:none; font-size:10px; font-weight:800; padding:4px 8px; border-radius:7px; }
@@ -331,7 +334,7 @@ body { background:var(--screen) url('./bg-light.webp') center/cover no-repeat; t
 .field-label { font-size:10.5px; font-weight:800; letter-spacing:.07em; color:var(--muted); margin-bottom:6px; text-transform:uppercase; }
 .modal-desc    { font-size:14px; line-height:1.55; color:var(--text); }
 .modal-no-desc { font-size:14px; line-height:1.5; color:var(--muted); font-style:italic; }
-.checklist-progress { font-size:11px; font-weight:700; color:var(--muted); margin-left:6px; }
+.checklist-progress { font-size:11px; font-weight:700; color:var(--muted); }
 .checklist-row { display:flex; align-items:center; gap:9px; padding:7px 0; }
 .chk-sm {
   flex:none; width:20px; height:20px; border-radius:6px; border:2px solid var(--border);
@@ -795,7 +798,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.95';
+var APP_VERSION = '1.96';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1435,11 +1438,17 @@ function renderTaskRow(task,secKey){
       '<div class="task-body">'+
         '<button class="chk'+(task.done?' done':'')+'" data-role="toggle-done" data-id="'+escA(task.id)+'" data-sec="'+secKey+'">'+(task.done?IC.check:'')+'</button>'+
         '<div class="task-name-zone" data-role="open-modal" data-id="'+escA(task.id)+'" data-sec="'+secKey+'">'+
-          '<span class="task-text'+(task.done?' done':'')+'">'+esc(task.text)+'</span>'+
-          ((task.checklist&&task.checklist.length)?'<span class="checklist-progress">'+task.checklist.filter(function(i){return i.done;}).length+'/'+task.checklist.length+'</span>':'')+
+          '<div class="task-name-col">'+
+            '<span class="task-text'+(task.done?' done':'')+'">'+esc(task.text)+'</span>'+
+            ((task.reminderTime||(task.checklist&&task.checklist.length))
+              ?'<div class="task-sub">'+
+                 (task.reminderTime?'<span class="task-sub-time">🔔 '+esc(task.reminderTime)+'</span>':'')+
+                 ((task.checklist&&task.checklist.length)?'<span class="checklist-progress">'+task.checklist.filter(function(i){return i.done;}).length+'/'+task.checklist.length+'</span>':'')+
+               '</div>'
+              :'')+
+          '</div>'+
           IC.chev+
         '</div>'+
-        '<span class="pri-chip" data-pri="'+priSafe(task.priority)+'">'+PRI_LABEL[priSafe(task.priority)]+'</span>'+
       '</div>'+
       '<button class="drag-handle" data-role="drag-handle" data-id="'+escA(task.id)+'" data-sec="'+secKey+'">'+IC.handle+'</button>'+
     '</div>'+
