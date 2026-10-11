@@ -769,6 +769,8 @@ function maybeRefreshAuth(){
   }
 }
 var googleSignInReady=false;
+// Высота настоящей кнопки Google size:'large' — наши видимые кнопки входа должны быть такой же высоты (см. ниже).
+var GOOGLE_BTN_H=40;
 function initGoogleSignIn(){
   if(googleSignInReady) return;
   if(!window.google || !google.accounts || !google.accounts.id){
@@ -799,7 +801,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.97';
+var APP_VERSION = '1.98';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1804,7 +1806,7 @@ function renderSettings(){
           ? '<div class="info-box ok">'+L.google_signed_in+esc(getGoogleEmail())+'</div>'
           : '<div class="info-box err">'+(state.tokenStale?L.google_session_expired:L.google_not_signed_in)+'</div>'+
             '<div style="position:relative;margin-bottom:10px">'+
-              '<button class="btn-outline" style="width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:12px" data-role="google-signin-visual">'+GOOGLE_G_SVG+'<span>'+L.google_btn+'</span></button>'+
+              '<button class="btn-outline" style="width:100%;height:40px;display:flex;align-items:center;justify-content:center;gap:9px;padding:0 14px" data-role="google-signin-visual">'+GOOGLE_G_SVG+'<span>'+L.google_btn+'</span></button>'+
               '<div id="google-signin-slot" style="position:absolute;inset:0;opacity:0;overflow:hidden"></div>'+
             '</div>'
         )+
@@ -2449,7 +2451,7 @@ function renderAuthGate(){
       '<div class="auth-gate-tagline">'+esc(L.auth_gate_tagline)+'</div>'+
       '<div class="auth-gate-desc">'+esc(L.auth_gate_desc)+'</div>'+
       '<div style="position:relative;width:100%;max-width:320px">'+
-        '<button class="btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:14px" data-role="google-signin-visual">'+GOOGLE_G_SVG+'<span>'+L.google_btn+'</span></button>'+
+        '<button class="btn-primary" style="width:100%;height:40px;display:flex;align-items:center;justify-content:center;gap:9px;padding:0 14px" data-role="google-signin-visual">'+GOOGLE_G_SVG+'<span>'+L.google_btn+'</span></button>'+
         '<div id="google-signin-slot" style="position:absolute;inset:0;opacity:0;overflow:hidden"></div>'+
       '</div>'+
       (state.gateSignIn&&!isStoreApp()?'<button class="gate-link" data-role="gate-back">'+esc(L.gate_back)+'</button>':'')+
