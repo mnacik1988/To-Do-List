@@ -27,3 +27,7 @@
 !delete-data.html
 !.well-known/
 !.well-known/assetlinks.json
+
+# Подтверждение владения сайтом для Google Search Console (нужно для проверки бренда
+# входа через Google). НЕ удалять — иначе подтверждение слетит.
+!google90827acd890824c4.html
