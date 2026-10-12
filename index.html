@@ -857,7 +857,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.105';
+var APP_VERSION = '1.106';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1023,7 +1023,10 @@ function micGate(retryFn, inCard){
     else showToast(L.mic_off_toast, 6000);
     return true;
   }
-  if(micPerm==='prompt'&&!micPrimed()){
+  // На iPhone системный запрос микрофона обычно повторяется при каждом запуске — случайный отказ там
+  // не навсегда, и наше пояснение только создавало «два окна подряд» (замечание Александра,
+  // 12.10.2026). Поэтому пояснение — только там, где отказ запоминается (Android и компьютер).
+  if(micPerm==='prompt'&&!micPrimed()&&!isIOSDevice()){
     askConfirm(L.mic_prime, false, function(){
       try{ localStorage.setItem('vtodo-mic-primed','1'); }catch(e){}
       retryFn();
