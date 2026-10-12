@@ -857,7 +857,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.101';
+var APP_VERSION = '1.102';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3229,7 +3229,11 @@ document.addEventListener('visibilitychange',function(){ if(document.visibilityS
 /* ── Плашка внизу экрана: «Задача удалена · Отменить», «PRO активен» и т. п. ── */
 var _toastTimer=null, _toastNew=false;
 function showToast(text, ms, undo){
-  commitUndo(); // если висело удаление с «Отменить» — закрепить его до нового тоста
+  // Обычная плашка (приоритет, «PRO активен» и т.п.) закрепляет висевшее удаление: «Отменить»
+  // исчезает вместе с прежней плашкой. А плашка САМОГО удаления (undo=true) закреплять нельзя —
+  // removeTasksUndoable уже положил в _undo именно это удаление. В v1.94 здесь стояло безусловное
+  // commitUndo(), и «Отменить» не возвращало ничего (жалоба тестировщика 12.10.2026).
+  if(!undo) commitUndo();
   if(_toastTimer) clearTimeout(_toastTimer);
   state.toast={text:text, undo:!!undo}; _toastNew=true;
   _toastTimer=setTimeout(function(){ _toastTimer=null; if(state.toast&&state.toast.undo) commitUndo(); state.toast=null; render(); }, ms||4000);
