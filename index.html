@@ -97,8 +97,16 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
    от него оставалась голая белая полоса. Тема ставится и на <html> (см.
    render), иначе body не увидел бы тёмных значений — они объявлены на
    [data-theme="dark"], а этот атрибут раньше висел только на #app. */
-body { background:var(--screen) url('./bg-light.webp') center/cover no-repeat; transition:background-color .3s; }
-[data-theme="dark"] body { background-image:url('./bg-dark.webp'); }
+/* v1.108 (13.10.2026): картинка фона вынесена в отдельный слой #bg-layer. С v1.76 она висела
+   прямо на body, а у html и body стоит position:fixed (защита от rubber-band на iOS) —
+   iPhone-Safari такую картинку не рисовал совсем (виден был только цвет --screen), хотя в
+   Chrome на компьютере всё выглядело правильно. Фиксированный слой с z-index:-1 внутри
+   body (тот создаёт свой контекст наложения) — обычный надёжный приём для iOS: он ложится
+   выше цвета body и ниже всего содержимого. */
+body { background:var(--screen); transition:background-color .3s; }
+#bg-layer { position:fixed; top:0; right:0; bottom:0; left:0; z-index:-1; pointer-events:none;
+  background:url('./bg-light.webp') center/cover no-repeat; }
+[data-theme="dark"] #bg-layer { background-image:url('./bg-dark.webp'); }
 
 #app {
   height:100%; background:transparent;
@@ -454,6 +462,7 @@ input[type="date"].day-add-input, input[type="time"].day-add-input { -webkit-app
 </style>
 </head>
 <body>
+<div id="bg-layer" aria-hidden="true"></div>
 <div id="app"></div>
 <script>
 'use strict';
@@ -857,7 +866,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.107';
+var APP_VERSION = '1.108';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
