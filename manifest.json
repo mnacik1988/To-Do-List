@@ -2,7 +2,7 @@
   "name": "Mynado",
   "short_name": "Mynado",
   "description": "Mynado — голосовой to-do список с ИИ-помощником, напоминаниями и календарём",
-  "id": "/To-Do-List/",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
