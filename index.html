@@ -16,6 +16,9 @@
      прежней (найдено 2026-07-27). Теперь JS сам держит content в ногу с
      state.theme — см. render(). -->
 <meta name="theme-color" content="#f5f2ec" id="theme-color-meta">
+<!-- Главный адрес: у приложения две копии (mynado.app и github.io), без этой строки Search Console
+     считает их дублями (письмо 15.10.2026). / и /index.html — одна и та же страница. -->
+<link rel="canonical" href="https://mynado.app/">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <!-- Шрифт лежит У НАС, а не на серверах Google. Раньше при каждом запуске
@@ -866,7 +869,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.108';
+var APP_VERSION = '1.109';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
