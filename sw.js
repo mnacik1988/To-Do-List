@@ -1,6 +1,7 @@
 'use strict';
 var CACHE_PREFIX = 'vtodo-shell-';
-var CACHE = CACHE_PREFIX + 'v1110';
+var NAV_TIMEOUT_MS = 4000;
+var CACHE = CACHE_PREFIX + 'v1111';
 var SHELL = ['./index.html', './manifest.json', './icon.png', './icon-maskable.png', './apple-touch-icon.png', './icon-badge.png', './sw.js'];
 /* Фоновые картинки — приятно, но без них приложение полностью работоспособно
    (под ними лежит цвет --screen). Держим их ОТДЕЛЬНО от SHELL сознательно:
@@ -53,15 +54,27 @@ self.addEventListener('fetch', function(e){
   /* HTML-документ — СЕТЬ В ПРИОРИТЕТЕ (чтобы обновления всегда применялись),
      кеш только когда нет интернета */
   if(e.request.mode === 'navigate' || url.pathname.indexOf('index.html') >= 0){
-    e.respondWith(
+    // Сеть в приоритете, но НЕ дольше NAV_TIMEOUT_MS: на слабой связи страница раньше висела пустой,
+    // пока сеть не ответит или не оборвётся (жалоба тестировщика с Pixel — пустой тёмный экран).
+    // По таймауту отдаём копию из кеша (если она есть), а сеть дозагружается и обновляет кеш.
+    e.respondWith(new Promise(function(resolve){
+      var settled = false;
+      function cachedPage(){ return caches.match(e.request).then(function(c){ return c || caches.match('./index.html'); }); }
+      var timer = setTimeout(function(){
+        cachedPage().then(function(c){ if(c && !settled){ settled = true; resolve(c); } });
+      }, NAV_TIMEOUT_MS);
       fetch(e.request).then(function(response){
-        var clone = response.clone();
-        caches.open(CACHE).then(function(c){ c.put(e.request, clone); });
-        return response;
+        clearTimeout(timer);
+        if(response && response.ok){
+          var clone = response.clone();
+          caches.open(CACHE).then(function(c){ c.put(e.request, clone); });
+        }
+        if(!settled){ settled = true; resolve(response); }
       }).catch(function(){
-        return caches.match(e.request).then(function(c){ return c || caches.match('./index.html'); });
-      })
-    );
+        clearTimeout(timer);
+        if(!settled){ cachedPage().then(function(c){ settled = true; resolve(c || Response.error()); }); }
+      });
+    }));
     return;
   }
 
