@@ -15,6 +15,10 @@
      когда юзер переключил тему в приложении, а тема телефона осталась
      прежней (найдено 2026-07-27). Теперь JS сам держит content в ногу с
      state.theme — см. render(). -->
+<!-- Страница сама отвечает за светлую и тёмную тему (переключатель ☀️/🌙 внутри приложения). Без этого объявления
+     Samsung Internet (и другие браузеры с «тёмным режимом сайтов») принудительно перекрашивал светлую тему в
+     свои цвета: бежевый становился серо-коричневым, золотая кнопка PRO — оранжево-бурой (жалоба с Samsung, 16.10.2026). -->
+<meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f5f2ec" id="theme-color-meta">
 <!-- Главный адрес: у приложения две копии (mynado.app и github.io), без этой строки Search Console
      считает их дублями (письмо 15.10.2026). / и /index.html — одна и та же страница. -->
@@ -59,7 +63,7 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
   --screen:#f5f2ec; --surface:#fff; --surface2:#ece7dd;
   --text:#2c2a26; --muted:#8c867b; --border:rgba(44,42,38,.09); --border-strong:rgba(44,42,38,.35);
   --accent:#22375c; --accent-soft:#e6eaf2; --accent-ink:#8a6a1c;
@@ -70,6 +74,9 @@ input, textarea, [contenteditable="true"], [contenteditable=""] {
   --pri-mid:#ebd4a0;  --pri-mid-ink:#85652c;
   --pri-low:#bcd9c4;  --pri-low-ink:#3f6850;
 }
+/* Подсказка браузерам, которые решают «красить ли сайт принудительно» по наличию тёмных стилей через media-запрос: 
+   тёмная тема у нас своя ([data-theme="dark"]), красить поверх неё не нужно. */
+@media (prefers-color-scheme: dark) { :root { --pcs-dark: 1; } }
 [data-theme="dark"] {
   color-scheme: dark;
   --screen:#1a1922; --surface:#252332; --surface2:#2e2b3d;
@@ -964,7 +971,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.112';
+var APP_VERSION = '1.113';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2081,7 +2088,12 @@ function renderSettings(){
             (state.pushStatus==='error'?'<div class="info-box err" style="margin-bottom:10px">'+L.push_err+'</div>':'') :
             // permission==='denied' — браузер запрещает повторно спросить,
             // кнопка тут только обманула бы (клик молча ничего не даст).
-            '<div class="info-box err" style="margin-bottom:10px">'+L.notif_denied+'</div>'
+            // Но браузер может ошибаться: на Samsung Internet у человека приходили пуши, а тут горело
+            // «заблокированы» (16.10.2026). Если подписка на push на самом деле существует — это
+            // более весомое свидетельство, чем строка permission, и красную плашку не показываем.
+            (probePushReality(), state.pushReal ?
+              '<div class="info-box ok" style="margin-bottom:10px">'+L.push_ok+'</div>' :
+              '<div class="info-box err" style="margin-bottom:10px">'+L.notif_denied+'</div>')
         )+
         '<div style="margin-bottom:10px">'+
           '<div class="field-label">'+L.lang_label+'</div>'+
@@ -5507,6 +5519,18 @@ function urlB64toUint8(str){
 // доступен СИНХРОННО с первого же вызова) — если push хоть раз уже работал
 // на этом устройстве, считаем что сервер справится и в этот раз тоже.
 var pushActive=false;
+// Проверка «на самом деле»: есть ли живая push-подписка, хотя Notification.permission говорит 'denied'.
+// Вызывается из отрисовки настроек, поэтому один раз за запуск и без повторных рендеров, если подписки нет.
+function probePushReality(){
+  if(state.pushProbed) return;
+  state.pushProbed=true;
+  try{
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)) return;
+    navigator.serviceWorker.ready.then(function(reg){ return reg.pushManager.getSubscription(); })
+      .then(function(sub){ if(sub){ state.pushReal=true; render(); } })
+      .catch(function(){});
+  }catch(e){}
+}
 function wasPushOk(){ try{ return localStorage.getItem('vtodo-push-was-ok')==='1'; }catch(e){ return false; } }
 function subscribePush(){
   if(!VAPID_PUBLIC_KEY||!('PushManager' in window)||!('serviceWorker' in navigator)){
