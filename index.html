@@ -593,7 +593,7 @@ function detectDeviceLang(){
   return 'en';
 }
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
-var AI_DAILY_LIMIT = 20;
+var AI_DAILY_LIMIT = 5;
 
 /* ── Google Sign-In (привязывает ИИ-лимит к аккаунту, а не к устройству) ── */
 var GOOGLE_CLIENT_ID = '1053800558840-dftrtb0rhlbjtgjnah0jeinmsf4oqs1s.apps.googleusercontent.com';
@@ -964,7 +964,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.111';
+var APP_VERSION = '1.112';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
