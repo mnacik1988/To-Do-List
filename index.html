@@ -971,7 +971,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.113';
+var APP_VERSION = '1.114';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2121,6 +2121,24 @@ function renderSettings(){
         (hasEverSignedIn()&&!isVip()&&!isPro()
           ? '<button class="btn-outline" style="width:100%;margin-bottom:10px;background:linear-gradient(135deg,#f6d888,#cf9430);border-color:#cf9430;color:#2c2200" data-role="open-paywall">★ '+L.settings_pro_btn+'</button>'
           : '')+
+        // Ник, который человек задаёт СЕБЕ. До него имя приходилось вписывать
+        // каждому у себя (локальные подписи), и никто не видел чужих подписей.
+        (hasEverSignedIn()
+          ? '<div style="margin-bottom:10px">'+
+              '<div class="field-label">'+L.nick_label+'</div>'+
+              '<div style="display:flex;gap:8px">'+
+                '<input id="my-nick" class="day-add-input" style="flex:1;box-sizing:border-box" maxlength="24" placeholder="'+escA(L.nick_ph)+'" value="'+escA(state.myNick)+'">'+
+                '<button class="btn-outline" style="flex:none"'+(state.nickSaving?' disabled':'')+' data-role="save-nick">'+L.btn_save+'</button>'+
+              '</div>'+
+              '<div style="font-size:11px;color:var(--muted);margin-top:5px">'+esc(state.nickSaved?L.nick_saved:L.nick_hint)+'</div>'+
+            '</div>'
+          : '')+
+        // «Мой ID» = Google-ключ (по нему сервер считает лимит и выдаётся VIP).
+        (hasEverSignedIn()
+          ? '<button class="btn-outline" style="width:100%;margin-bottom:10px;font-size:11px;opacity:.8" data-role="copy-device-id">'+
+              (state.idCopied?L.my_id_copied:L.my_id+': '+getUserKey())+
+            '</button>'
+          : '')+
         '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-export">'+L.btn_export+'</button>'+
         (hasEverSignedIn()
           ? '<button class="btn-outline" style="width:100%;margin-bottom:10px" data-role="settings-sign-out">'+L.btn_sign_out+'</button>'
@@ -2141,24 +2159,6 @@ function renderSettings(){
               '</div>'+
             '</div>'
         )+
-        // Ник, который человек задаёт СЕБЕ. До него имя приходилось вписывать
-        // каждому у себя (локальные подписи), и никто не видел чужих подписей.
-        (hasEverSignedIn()
-          ? '<div style="margin-top:14px">'+
-              '<div class="field-label">'+L.nick_label+'</div>'+
-              '<div style="display:flex;gap:8px">'+
-                '<input id="my-nick" class="day-add-input" style="flex:1;box-sizing:border-box" maxlength="24" placeholder="'+escA(L.nick_ph)+'" value="'+escA(state.myNick)+'">'+
-                '<button class="btn-outline" style="flex:none"'+(state.nickSaving?' disabled':'')+' data-role="save-nick">'+L.btn_save+'</button>'+
-              '</div>'+
-              '<div style="font-size:11px;color:var(--muted);margin-top:5px">'+esc(state.nickSaved?L.nick_saved:L.nick_hint)+'</div>'+
-            '</div>'
-          : '')+
-        // «Мой ID» = Google-ключ (по нему сервер считает лимит и выдаётся VIP).
-        (hasEverSignedIn()
-          ? '<button class="btn-outline" style="width:100%;margin-top:10px;font-size:11px;opacity:.8" data-role="copy-device-id">'+
-              (state.idCopied?L.my_id_copied:L.my_id+': '+getUserKey())+
-            '</button>'
-          : '')+
         '<div style="text-align:center;margin-top:16px"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">'+esc(L.privacy_link)+'</a></div>'+
         '<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:8px;opacity:.75">Mynado v'+APP_VERSION+'</div>'+
       '</div>'+
