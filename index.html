@@ -971,7 +971,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.117';
+var APP_VERSION = '1.118';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5950,7 +5950,7 @@ function checkReminders(){
       // Текст уведомления берём из переводов, а не хардкодом по-русски: всё
       // остальное в приложении переведено на 5 языков, и только уведомление
       // приходило русским (аудит 2026-08-17, п.№6).
-      try{ new Notification(task.text,{body:L.notif_reminder+' · '+dateLabel(task.date)+' '+task.reminderTime,icon:'icon.png',tag:task.id}); }catch(e){}
+      try{ new Notification(task.text,{body:L.notif_reminder+' · '+dateLabel(task.date)+' '+task.reminderTime,icon:'apple-touch-icon.png',tag:task.id}); }catch(e){}
     });
   }
   /* Баннер внутри приложения — всегда */
