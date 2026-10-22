@@ -996,7 +996,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.123';
+var APP_VERSION = '1.124';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2644,10 +2644,12 @@ function renderGroupMembersScreen(){
     var picks=roleOpts.map(function(r){
       return '<button class="chip-btn'+(m.role===r?' active':'')+'" style="font-size:11px;padding:5px 8px" data-role="group-set-role" data-uid="'+escA(m.uid)+'" data-role-val="'+r+'">'+escA(groupRoleLabel(r))+'</button>';
     }).join('')+
-      '<button class="chip-btn" style="font-size:11px;padding:5px 8px" data-role="group-transfer" data-uid="'+escA(m.uid)+'">'+escA(L.groups_transfer_btn)+'</button>'+
-      '<button class="chip-btn" style="font-size:11px;padding:5px 8px;color:var(--danger,#c0392b)" data-role="group-member-remove" data-uid="'+escA(m.uid)+'">'+IC.trash+'</button>';
+      '<button class="chip-btn" style="font-size:11px;padding:5px 8px" data-role="group-transfer" data-uid="'+escA(m.uid)+'">'+escA(L.groups_transfer_btn)+'</button>';
+    // Корзина — маленькая круглая кнопка рядом с карандашом, а не полоса на всю ширину под ролями
+    // (22.10.2026; в ряд с ролями на ширине телефона не помещается).
+    var removeBtn='<button class="close-btn" data-role="group-member-remove" data-uid="'+escA(m.uid)+'" style="flex:none;margin-left:0;color:var(--danger,#c0392b)">'+IC.trash+'</button>';
     return '<div class="task-row" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px 14px">'+
-      '<div style="display:flex;align-items:center;gap:6px">'+nameHtml+'</div>'+
+      '<div style="display:flex;align-items:center;gap:6px">'+nameHtml+removeBtn+'</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap">'+picks+'</div>'+
     '</div>';
   }).join('');
