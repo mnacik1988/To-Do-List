@@ -271,7 +271,7 @@ body { background:var(--screen); transition:background-color .3s; }
 
 /* Select action bar */
 .select-bar {
-  position:absolute; bottom:56px; left:0; right:0; z-index:5;
+  position:absolute; bottom:calc(56px + env(safe-area-inset-bottom)); left:0; right:0; z-index:5;
   background:var(--surface); border-top:1px solid var(--border);
   padding:10px 18px; display:flex; align-items:center; gap:10px;
 }
@@ -285,7 +285,7 @@ body { background:var(--screen); transition:background-color .3s; }
 }
 
 /* FAB */
-.fab-wrap { position:absolute; right:18px; bottom:76px; width:60px; height:60px; z-index:7; }
+.fab-wrap { position:absolute; right:18px; bottom:calc(76px + env(safe-area-inset-bottom)); width:60px; height:60px; z-index:7; }
 .fab-pulse { position:absolute; inset:0; border-radius:50%; background:var(--accent); animation:pulse 1.8s ease-out infinite; pointer-events:none; }
 .fab-btn {
   position:relative; width:60px; height:60px; border-radius:50%;
@@ -306,7 +306,9 @@ body { background:var(--screen); transition:background-color .3s; }
 .fab-scrim { position:fixed; inset:0; z-index:8; background:rgba(0,0,0,.25); }
 
 .bottom-nav {
-  position:absolute; bottom:0; left:0; right:0; height:56px;
+  /* Высота + нижний отступ под полоску «домой» (iPhone, Android с жестами): раньше меню стояло вплотную к краю,
+     и подписи уходили под полоску (аудит 22.10.2026). На телефонах без неё env() = 0 — ничего не меняется. */
+  position:absolute; bottom:0; left:0; right:0; height:calc(56px + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom);
   background:var(--surface); border-top:1px solid var(--border);
   display:flex; z-index:6;
 }
@@ -465,7 +467,7 @@ input[type="date"].day-add-input, input[type="time"].day-add-input { -webkit-app
 .gate-langs { display:flex; gap:4px; }
 .gate-lang { background:none; border:1.5px solid transparent; border-radius:10px; font:inherit; font-size:12px; font-weight:800; letter-spacing:.04em; color:var(--muted); padding:8px 9px; min-width:44px; min-height:40px; cursor:pointer; }
 .gate-lang.active { color:var(--text); border-color:var(--border, rgba(127,127,127,.35)); }
-.toast { position:absolute; left:16px; right:92px; bottom:84px; z-index:48; display:flex; align-items:center; gap:10px; padding:12px 8px 12px 16px; border-radius:16px; background:#26242e; color:#fff; font-size:13.5px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,.22); }
+.toast { position:absolute; left:16px; right:92px; bottom:calc(84px + env(safe-area-inset-bottom)); z-index:48; display:flex; align-items:center; gap:10px; padding:12px 8px 12px 16px; border-radius:16px; background:#26242e; color:#fff; font-size:13.5px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,.22); }
 .toast span { flex:1; min-width:0; }
 .toast button { background:none; border:0; font:inherit; font-weight:800; color:#ffd27a; padding:8px 10px; min-height:40px; cursor:pointer; flex:none; }
 .toast-in { animation:toastin .22s ease both; }
@@ -984,7 +986,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.119';
+var APP_VERSION = '1.120';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1174,7 +1176,7 @@ var state={
   recording:false, processing:false, timer:0, micDenied:false,
   tokenStale:false,
   lang:'ru',
-  summary:'Добавьте первую задачу — нажмите на микрофон или откройте день в календаре.',
+  summary:'',
   summaryShown:false, // true, когда в карточке показан результат «Анализа», а не локальная сводка
   gCreateErr:'', gCreateBusy:false,
   sections:{ day:[], week:[], month:[], undated:[] },
@@ -1234,8 +1236,11 @@ function saveStorage(){
 }
 function loadStorage(){
   try{
-    var raw=localStorage.getItem(STORE_KEY); if(!raw) return;
-    var s=JSON.parse(raw);
+    // Раньше здесь стоял ранний выход при пустом хранилище — и ВСЁ ниже (язык, голос, разбор через ИИ)
+    // не читалось: выбрал язык на экране входа, перезагрузил — и приложение снова по-русски; то же после
+    // смены аккаунта (аудит 22.10.2026). Теперь задачи — только если они есть, настройки — всегда.
+    var raw=localStorage.getItem(STORE_KEY);
+    var s=raw?JSON.parse(raw):{};
     if(s.sections){
       state.sections=s.sections;
       // Хранилище могло прийти без какого-то раздела (старая версия, ручная
@@ -1265,9 +1270,13 @@ function loadStorage(){
 }
 
 /* ── AI usage limit ── */
+// Сутки для лимита ИИ — по UTC, как считает сервер (takeAiQuota: toISOString). Раньше клиент считал по
+// местной полуночи: в Киеве после 00:00 показывал «осталось 5 / 5», а сервер до 02:00–03:00 ещё отказывал;
+// западнее UTC — наоборот, не пускал, хотя сервер уже обнулил (аудит 22.10.2026).
+function aiDay(){ return new Date().toISOString().slice(0,10); }
 function getAiUsage(){
-  try{ var raw=localStorage.getItem('vtodo-ai-usage'); if(raw){ var u=JSON.parse(raw); if(u.date===todayStr()) return u; } }catch(e){}
-  return {date:todayStr(),count:0};
+  try{ var raw=localStorage.getItem('vtodo-ai-usage'); if(raw){ var u=JSON.parse(raw); if(u.date===aiDay()) return u; } }catch(e){}
+  return {date:aiDay(),count:0};
 }
 /* ── Право на PRO/VIP отдельно от дневного счётчика (2026-08-17, аудит п.№4) ──
    Раньше и то и другое гасилось одной проверкой `u.date===todayStr()`. Но это
@@ -1313,7 +1322,7 @@ function isVip(){ var u=getLimitInfo(); return !!(u&&u.vip); }
 function isPro(){ var u=getLimitInfo(); return !!(u&&u.pro); }
 function canUseAi(){ return isGoogleSignedIn() && getAiUsage().count<getEffectiveLimit(); }
 function incrementAiUsage(){ var u=getAiUsage(); u.count++; try{localStorage.setItem('vtodo-ai-usage',JSON.stringify(u));}catch(e){} }
-function maxOutAiUsage(){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:todayStr(),count:getEffectiveLimit()}));}catch(e){} }
+function maxOutAiUsage(){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:aiDay(),count:getEffectiveLimit()}));}catch(e){} }
 function aiUsageLeft(){ return Math.max(0,getEffectiveLimit()-getAiUsage().count); }
 // Остаток запросов к ИИ рядом с кнопкой «Голосом» (просьба Александра 17.10.2026 — при лимите 5 в сутки человеку
 // важно видеть, сколько осталось, ДО того как он скажет). Только когда разбор через ИИ включён и вход выполнен.
@@ -1335,7 +1344,7 @@ function refreshAiLimit(){
       }
       if(typeof data.limit==='number'){
         saveLimitInfo(data.limit,data.vip,data.pro);
-        if(typeof data.used==='number'){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:todayStr(),count:data.used}));}catch(e){} }
+        if(typeof data.used==='number'){ try{localStorage.setItem('vtodo-ai-usage',JSON.stringify({date:aiDay(),count:data.used}));}catch(e){} }
         if(state.settings) render();
       }
     }).catch(function(){});
