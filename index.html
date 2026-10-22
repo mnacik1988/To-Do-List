@@ -441,6 +441,8 @@ body { background:var(--screen); transition:background-color .3s; }
 .day-task-dot[data-pri="low"] { background:var(--pri-low-ink); }
 .day-task-text { flex:1; font-size:14px; font-weight:600; color:var(--text); line-height:1.3; }
 .day-task-text.done { text-decoration:line-through; color:var(--muted); opacity:.7; }
+.day-task-time { flex:none; font-size:12.5px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums; }
+.day-task-time.done { opacity:.6; }
 .day-add-input { flex:1; padding:12px 13px; border-radius:12px; border:1.5px solid var(--border); background:var(--screen); color:var(--text); font-family:inherit; font-size:14px; font-weight:600; outline:none; transition:border-color .15s; }
 .day-add-input:focus { border-color:var(--accent); }
 input[type="date"].day-add-input, input[type="time"].day-add-input { -webkit-appearance:none; appearance:none; min-height:46px; }
@@ -994,7 +996,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.121';
+var APP_VERSION = '1.122';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2001,7 +2003,14 @@ function renderAsk(){
 function renderDaySheet(){
   if(!state.daySheet) return '';
   var date=state.daySheet.date;
-  var tasks=tasksForDate(date);
+  // Невыполненные сверху, внутри — по времени напоминания; задачи без времени после задач со временем;
+  // выполненные внизу, тоже по времени (Д7, вариант А, 22.10.2026).
+  var tasks=tasksForDate(date).map(function(t,i){ return {t:t,i:i}; }).sort(function(a,b){
+    if(!!a.t.done!==!!b.t.done) return a.t.done?1:-1;
+    var ta=a.t.reminderTime||'', tb=b.t.reminderTime||'';
+    if(ta!==tb){ if(!ta) return 1; if(!tb) return -1; return ta<tb?-1:1; }
+    return a.i-b.i;
+  }).map(function(x){ return x.t; });
   var sa=anim.daySheet?' style="animation:fadein .2s ease both"':'';
   var sha=anim.daySheet?' style="animation:sheetup .3s cubic-bezier(.2,.8,.2,1) both"':'';
 
@@ -2011,7 +2020,8 @@ function renderDaySheet(){
       var t=tasks[i]; var sec=findTaskSection(t);
       taskRows+='<div class="day-task-item" data-role="open-modal-from-day" data-id="'+escA(t.id)+'" data-sec="'+sec+'">'+
         '<span class="day-task-dot"'+(t.done?' style="opacity:.4"':'')+' data-pri="'+priSafe(t.priority)+'"></span>'+
-        '<span class="day-task-text'+(t.done?' done':'')+'">'+esc(t.text)+'</span>'+IC.chevR+
+        '<span class="day-task-text'+(t.done?' done':'')+'">'+esc(t.text)+'</span>'+
+        (t.reminderTime?'<span class="day-task-time'+(t.done?' done':'')+'">'+esc(t.reminderTime)+'</span>':'')+IC.chevR+
       '</div>';
     }
   } else {
