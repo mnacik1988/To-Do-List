@@ -23,6 +23,19 @@
 <!-- Главный адрес: у приложения две копии (mynado.app и github.io), без этой строки Search Console
      считает их дублями (письмо 15.10.2026). / и /index.html — одна и та же страница. -->
 <link rel="canonical" href="https://mynado.app/">
+<!-- Переезд со старого адреса (22.10.2026): Search Console показал, что Google считает главной копию на
+     mnacik1988.github.io, а mynado.app не индексирует вовсе — одной пометки canonical мало. Посетителей и поисковик со
+     старого адреса сразу отправляем на mynado.app (тот же путь). НЕ трогаем приложение из Google Play: старые сборки
+     (1.0.18 и раньше) открывают именно github.io, и уход на другой адрес показал бы адресную строку и сломал оплату. -->
+<script>(function(){try{
+  if(location.hostname!=='mnacik1988.github.io') return;
+  var ref=String(document.referrer||'');
+  var store=ref.indexOf('android-app://')===0||('getDigitalGoodsService' in window)||!!window.AndroidAuth;
+  try{ if(localStorage.getItem('vtodo-store-app')==='1') store=true; }catch(e){}
+  if(store) return;
+  var path=location.pathname.replace(/^\/To-Do-List(\/|$)/,'/').replace(/\/index\.html$/,'/');
+  location.replace('https://mynado.app'+path+location.search+location.hash);
+}catch(e){}})();</script>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <!-- Шрифт лежит У НАС, а не на серверах Google. Раньше при каждом запуске
@@ -971,7 +984,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.118';
+var APP_VERSION = '1.119';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */

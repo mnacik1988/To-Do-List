@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Data Deletion — Mynado</title>
 <link rel="canonical" href="https://mynado.app/delete-data.html">
+<!-- Переезд со старого адреса (22.10.2026): Search Console показал, что Google считает главной копию на
+     mnacik1988.github.io, а mynado.app не индексирует вовсе — одной пометки canonical мало. Посетителей и поисковик со
+     старого адреса сразу отправляем на mynado.app (тот же путь). НЕ трогаем приложение из Google Play: старые сборки
+     (1.0.18 и раньше) открывают именно github.io, и уход на другой адрес показал бы адресную строку и сломал оплату. -->
+<script>(function(){try{
+  if(location.hostname!=='mnacik1988.github.io') return;
+  var ref=String(document.referrer||'');
+  var store=ref.indexOf('android-app://')===0||('getDigitalGoodsService' in window)||!!window.AndroidAuth;
+  try{ if(localStorage.getItem('vtodo-store-app')==='1') store=true; }catch(e){}
+  if(store) return;
+  var path=location.pathname.replace(/^\/To-Do-List(\/|$)/,'/').replace(/\/index\.html$/,'/');
+  location.replace('https://mynado.app'+path+location.search+location.hash);
+}catch(e){}})();</script>
 <style>
   :root{ --bg:#f5f2ec; --card:#fff; --text:#2c2a26; --muted:#6b665d; --accent:#22375c; --border:rgba(44,42,38,.12); }
   @media (prefers-color-scheme: dark){
