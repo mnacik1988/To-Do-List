@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Политика конфиденциальности — Mynado</title>
 <link rel="canonical" href="https://mynado.app/privacy.html">
 <!-- Переезд со старого адреса (22.10.2026): Search Console показал, что Google считает главной копию на
@@ -25,8 +25,10 @@
   }
   *{box-sizing:border-box;}
   body{ font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text);
-    line-height:1.6; margin:0; padding:24px 16px 60px; -webkit-font-smoothing:antialiased; }
+    line-height:1.6; margin:0; padding:calc(16px + env(safe-area-inset-top)) 16px calc(60px + env(safe-area-inset-bottom)); -webkit-font-smoothing:antialiased; }
   .wrap{ max-width:720px; margin:0 auto; }
+  .back{ display:inline-flex; align-items:center; gap:6px; background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:12px; padding:9px 14px; margin-bottom:18px; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
   h1{ font-size:24px; margin:0 0 4px; }
   .upd{ color:var(--muted); font-size:14px; margin-bottom:24px; }
   h2{ font-size:18px; margin:28px 0 8px; color:var(--accent); }
@@ -39,9 +41,14 @@
 </head>
 <body>
 <div class="wrap">
+<!-- Кнопка возврата (25.10.2026): в приложении с главного экрана iPhone эта страница открывается в том же окне без
+     адресной строки и кнопки «назад» — выйти было некуда. Порядок: назад по истории → закрыть вкладку, открытую
+     ссылкой → если ни то ни другое не вышло, просто открыть приложение. -->
+<button class="back" type="button" onclick="mynBack()">← Назад</button>
+<script>function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
 
 <h1>Политика конфиденциальности</h1>
-<div class="upd">Приложение Mynado · обновлено 22 октября 2026</div>
+<div class="upd">Приложение Mynado · обновлено 25 октября 2026</div>
 
 <p>Mynado (далее — «Приложение») — список задач с голосовым вводом, ИИ-помощником, напоминаниями, календарём и общими группами. Мы собираем минимум данных, необходимых для работы этих функций, и не зарабатываем на данных: рекламы, трекеров и продажи данных в Приложении нет.</p>
 
@@ -90,7 +97,7 @@
 <li><b>Google Sign-In</b> — вход в аккаунт. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Политика Google</a>.</li>
 <li><b>Anthropic (Claude)</b> — обработка текста задач для ИИ-функций. <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Политика Anthropic</a>.</li>
 <li><b>Cloudflare</b> — наш сервер и раздача самого Приложения с адреса mynado.app: хранение задач, доставка уведомлений, обращение к ИИ. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Политика Cloudflare</a>.</li>
-<li><b>GitHub Pages</b> — прежний адрес Приложения (mnacik1988.github.io); сейчас он только перенаправляет на mynado.app. <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Политика GitHub</a>.</li>
+<li><b>GitHub Pages</b> — прежний адрес Приложения; сейчас он только перенаправляет на mynado.app. <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Политика GitHub</a>.</li>
 <li><b>Google Play Billing</b> — оформление и продление подписки PRO в Android-версии. Платёжные данные обрабатывает Google, мы их не получаем и не храним: нам приходит только факт, что подписка активна. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Политика Google</a>.</li>
 <li><b>Apple / Google</b> — распознавание речи и доставка push-уведомлений на уровне устройства и браузера.</li>
 </ul>

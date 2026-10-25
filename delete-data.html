@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Data Deletion — Mynado</title>
 <link rel="canonical" href="https://mynado.app/delete-data.html">
 <!-- Переезд со старого адреса (22.10.2026): Search Console показал, что Google считает главной копию на
@@ -25,8 +25,10 @@
   }
   *{box-sizing:border-box;}
   body{ font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text);
-    line-height:1.6; margin:0; padding:24px 16px 60px; -webkit-font-smoothing:antialiased; }
+    line-height:1.6; margin:0; padding:calc(16px + env(safe-area-inset-top)) 16px calc(60px + env(safe-area-inset-bottom)); -webkit-font-smoothing:antialiased; }
   .wrap{ max-width:720px; margin:0 auto; }
+  .back{ display:inline-flex; align-items:center; gap:6px; background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:12px; padding:9px 14px; margin-bottom:18px; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
   h1{ font-size:24px; margin:0 0 4px; }
   .upd{ color:var(--muted); font-size:14px; margin-bottom:24px; }
   h2{ font-size:18px; margin:28px 0 8px; color:var(--accent); }
@@ -38,6 +40,11 @@
 </head>
 <body>
 <div class="wrap">
+<!-- Кнопка возврата (25.10.2026): в приложении с главного экрана iPhone эта страница открывается в том же окне без
+     адресной строки и кнопки «назад» — выйти было некуда. Порядок: назад по истории → закрыть вкладку, открытую
+     ссылкой → если ни то ни другое не вышло, просто открыть приложение. -->
+<button class="back" type="button" onclick="mynBack()">← Back</button>
+<script>function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
 
 <h1>Account &amp; Data Deletion — Mynado</h1>
 <div class="upd">App: Mynado · Developer: Aleksandr · support@mynado.app · updated 17 October 2026</div>
