@@ -165,6 +165,7 @@ body { background:var(--screen); transition:background-color .3s; }
   overflow-wrap:break-word;
 }
 .scroll-area::-webkit-scrollbar { display:none; }
+.list-top { flex:none; padding:0 18px 10px; display:flex; flex-direction:column; gap:14px; }
 
 .ai-card { background:var(--accent-soft); border-radius:16px; padding:15px 16px; }
 .ai-card-hd { display:flex; align-items:center; gap:7px; margin-bottom:8px; }
@@ -996,7 +997,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.124';
+var APP_VERSION = '1.125';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2874,18 +2875,22 @@ function render(){
       '</div>'
     :'';
 
+  // Сводка ИИ, вкладки и заголовок раздела стоят на месте, прокручивается только список задач
+  // (просьба Александра 26.10.2026).
   var listContent=
-    '<div class="scroll-area" style="padding-bottom:'+(state.selectMode?'140px':'120px')+'">'+
+    '<div class="list-top">'+
       (state.processing
         ?'<div class="ai-proc-card">'+IC.spin(18)+'<span>'+L.ai_proc_long+'</span></div>'
         :'<div class="ai-card"'+ss+'><div class="ai-card-hd">'+IC.spark('style="color:var(--accent-ink)"')+'<span class="ai-card-label">'+L.ai_label+'</span><span class="ai-card-count">'+totalTasks()+' '+tasksWord(totalTasks())+'</span>'+'<button data-role="ai-analyze" style="margin-left:auto;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:700;color:var(--accent-ink);padding:5px 12px;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,.12);opacity:'+(state.aiAnalyzing?'0.5':'1')+'">'+(state.aiAnalyzing?'…':'↻ '+L.analyze_btn)+'</button>'+'</div><p class="ai-card-text">'+esc(state.aiAnalyzing?state.summary:(state.summaryShown?state.summary:baseSummary()))+'</p></div>')+
-      answerCard+
-      renderDueBanner()+
       '<div class="tabs">'+TAB_META.map(function(m){
         var tabCnt=m.key==='day'?todayCount():activeCount(state.sections[m.key]);
         return '<button class="tab'+(state.tab===m.key?' active':'')+'" data-role="set-tab" data-tab="'+m.key+'"><span class="tab-label">'+m.title+'</span><span class="tab-count">'+tabCnt+'</span></button>';
       }).join('')+'</div>'+
       '<div class="sec-hd"><span class="sec-title">'+activeTitle+'</span><span class="sec-count">'+(state.tab==='day'?todayCount():activeCount(activeTasks))+'</span></div>'+
+    '</div>'+
+    '<div class="scroll-area" style="padding-top:2px;padding-bottom:'+(state.selectMode?'140px':'120px')+'">'+
+      answerCard+
+      renderDueBanner()+
       (state.tab==='day'?renderOverdueSection():'')+
       '<div class="task-list" id="task-list" data-sec="'+state.tab+'">'+taskListHtml+'</div>'+
     '</div>';
