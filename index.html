@@ -1076,7 +1076,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.132';
+var APP_VERSION = '1.133';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3979,7 +3979,9 @@ function processTranscript(transcript){
       // сообщением от жены, 2026-08-19). Кладём только в ПЕРВУЮ задачу и
       // только для длинных сообщений — короткая фраза и так вся в названии,
       // дублировать её незачем.
-      if(transcript.length>VOICE_LONG_CHARS && data.tasks[0] && !data.tasks[0].desc){
+      // 29.10.2026: только если вся диктовка стала ОДНОЙ задачей. Когда ИИ разбил её на несколько,
+      // полный текст в первой из них только путал («вставил весь текст в одну из задач»).
+      if(transcript.length>VOICE_LONG_CHARS && data.tasks.length===1 && data.tasks[0] && !data.tasks[0].desc){
         data.tasks[0].desc=transcript;
       }
       addTasksBatch(data.tasks, undated);
