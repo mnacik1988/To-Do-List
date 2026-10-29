@@ -20,6 +20,9 @@
      свои цвета: бежевый становился серо-коричневым, золотая кнопка PRO — оранжево-бурой (жалоба с Samsung, 16.10.2026). -->
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f5f2ec" id="theme-color-meta">
+<!-- Цвет полосы над приложением (часы, батарея) ставим ДО загрузки остального: iPhone берёт его при запуске,
+     и в тёмной теме сверху оставалась светлая полоса (29.10.2026). Тема — из сохранённых данных или системы. -->
+<script>(function(){try{var t=(JSON.parse(localStorage.getItem('vtodo-v2')||'{}').theme)||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark'){document.getElementById('theme-color-meta').content='#1a1922';document.documentElement.dataset.theme='dark';}}catch(e){}})();</script>
 <!-- Главный адрес: у приложения две копии (mynado.app и github.io), без этой строки Search Console
      считает их дублями (письмо 15.10.2026). / и /index.html — одна и та же страница. -->
 <link rel="canonical" href="https://mynado.app/">
@@ -165,6 +168,9 @@ body { background:var(--screen); transition:background-color .3s; }
   overflow-wrap:break-word;
 }
 .scroll-area::-webkit-scrollbar { display:none; }
+/* Дети прокручиваемой колонки не сжимаются: блок с overflow:hidden (просроченные) иначе ужимался до высоты
+   экрана и обрезался вместо прокрутки (29.10.2026). */
+.scroll-area > * { flex-shrink:0; }
 .od-chips { display:flex; gap:6px; flex-wrap:wrap; padding:9px 4px 6px 4px; }
 .od-chip { position:relative; overflow:hidden; border:none; font:inherit; font-size:12.5px; font-weight:700; padding:7px 11px; border-radius:10px; cursor:pointer; background:var(--surface2); color:var(--text); }
 .od-chip.gold { background:#e6c56e; color:#1b2a4a; }
@@ -225,7 +231,7 @@ body { background:var(--screen); transition:background-color .3s; }
 }
 
 .pri-bar { width:18px; flex:none; border:none; cursor:pointer; padding:0; }
-.overdue-sec { border-radius:14px; overflow:hidden; border:1.5px solid var(--pri-high); }
+.overdue-sec { flex-shrink:0; border-radius:14px; overflow:hidden; border:1.5px solid var(--pri-high); }
 .overdue-sec-hd { display:flex; align-items:center; gap:8px; padding:11px 14px; background:var(--pri-high); cursor:pointer; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
 .overdue-sec-title { font-size:11px; font-weight:800; letter-spacing:.07em; color:var(--pri-high-ink); flex:1; }
 .overdue-sec-body { background:transparent; }  /* было --screen: сплошная заливка перекрывала фоновую картинку */
@@ -1012,7 +1018,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.127';
+var APP_VERSION = '1.128';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
