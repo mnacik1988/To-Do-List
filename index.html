@@ -884,6 +884,40 @@ function promptGoogleSignIn(){
 window.onAndroidGoogleCredential = function(idToken){
   onGoogleCredential({credential: idToken});
 };
+// Приложение для iPhone (Capacitor, 29.10.2026). Внутри встроенного окна Google запрещает свой веб-вход
+// («Доступ заблокирован: ошибка 400»), поэтому вход идёт через нативный Google Sign-In (плагин SocialLogin).
+// Подключаемся тем же мостом, что и Android-обёртка (window.AndroidAuth): по нему приложение уже понимает,
+// что оно «из магазина», прячет невидимую веб-кнопку Google и вызывает startGoogleSignIn() по нажатию.
+// В браузере и в Android-версии window.Capacitor нет — блок не срабатывает.
+var GOOGLE_IOS_CLIENT_ID='1053800558840-asf4k53h1vgod4689g6nibugap99v50c.apps.googleusercontent.com';
+function isIosApp(){ var C=window.Capacitor; return !!(C && C.isNativePlatform && C.isNativePlatform() && C.getPlatform && C.getPlatform()==='ios'); }
+(function(){
+  if(!isIosApp()) return;
+  var C=window.Capacitor;
+  var SL=(C.Plugins&&C.Plugins.SocialLogin)||(C.registerPlugin&&C.registerPlugin('SocialLogin'));
+  if(!SL) return;
+  var ready=null;
+  function init(){
+    if(!ready) ready=SL.initialize({google:{iOSClientId:GOOGLE_IOS_CLIENT_ID, iOSServerClientId:GOOGLE_CLIENT_ID, mode:'online'}});
+    return ready;
+  }
+  window.AndroidAuth={
+    startGoogleSignIn:function(){
+      init().then(function(){ return SL.login({provider:'google', options:{scopes:['email','profile']}}); })
+        .then(function(r){
+          var t=r&&r.result&&r.result.idToken;
+          if(t) onGoogleCredential({credential:t});
+          else showToast('Google: '+L.no_connection, 5000);
+        })
+        .catch(function(e){
+          var m=String((e&&(e.message||e.code))||e||'');
+          if(/cancel/i.test(m)) return;           // человек сам закрыл окно входа
+          ready=null;                             // следующая попытка заново инициализирует
+          showToast('Google: '+m.slice(0,120), 6000);
+        });
+    }
+  };
+})();
 // Токен Google живёт ~1 час. Раньше (v0.36) фоновое тихое обновление было
 // намеренно отключено — оно конфликтовало с видимой кнопкой Google (сбрасывало
 // её тёмный вид). С тех пор кнопка стала полностью невидимой (см.
@@ -1018,7 +1052,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.129';
+var APP_VERSION = '1.130';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
