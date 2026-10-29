@@ -1018,7 +1018,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.128';
+var APP_VERSION = '1.129';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1061,7 +1061,7 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 // Голос/ИИ ставят текст в state программно, минуя maxlength у <input> —
 // обрезаем здесь же, чтобы длинные распознанные/сгенерированные фразы не
 // протекали мимо тех же лимитов, что и при ручном вводе.
-var LEN_TITLE=120, LEN_DESC=500, LEN_CHECKLIST_ITEM=40;
+var LEN_TITLE=120, LEN_DESC=500, LEN_CHECKLIST_ITEM=80; // как в воркере — менять вместе
 function clampLen(s,n){ return (s==null?'':String(s)).slice(0,n); }
 // Модель возвращает дату и время СТРОКАМИ, и мы им верили на слово. В аудите
 // 06.09 ответ с "date":"вчера" и "reminderTime":"25:99" уезжал в задачу как
@@ -1110,7 +1110,9 @@ function T(text,priority,done,desc,date,reminderTime,checklist,syncId,updatedAt)
 function cleanChecklistText(text){
   return String(text==null?'':text).replace(/^[\s\-–—•*·.,;:)\]]+/,'').trim();
 }
-function checklistItem(text){ return {id:uid(),text:clampLen(cleanChecklistText(text),LEN_CHECKLIST_ITEM),done:false}; }
+// Слишком длинный пункт режем по границе слова с «…», а не посреди слова (29.10.2026).
+function clampWords(s,n){ s=String(s==null?'':s); if(s.length<=n) return s; var cut=s.slice(0,n-1), sp=cut.lastIndexOf(' '); return (sp>n*0.5?cut.slice(0,sp):cut).replace(/[\s,.;:—-]+$/,'')+'…'; }
+function checklistItem(text){ return {id:uid(),text:clampWords(cleanChecklistText(text),LEN_CHECKLIST_ITEM),done:false}; }
 
 /* ── Speech ── */
 // Нативный мост распознавания речи для WebView-обёртки
@@ -1879,7 +1881,7 @@ function renderModal(){
         '</div>';
       }).join('')+
       '<div class="checklist-edit-row">'+
-        '<input id="checklist-new-item" class="form-input" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="40" style="flex:1">'+
+        '<input id="checklist-new-item" class="form-input" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="80" style="flex:1">'+
         '<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="checklist-add-item">'+L.checklist_add_btn+'</button>'+
       '</div>'+
     '</div>'+
@@ -2531,7 +2533,7 @@ function renderGroupEditSheet(){
           '<button class="btn-outline" style="width:100%;margin-bottom:8px;font-size:12.5px"'+(state.aiSplitting?' disabled':'')+' data-role="ai-split-checklist">'+(state.aiSplitting?L.checklist_ai_split_loading:L.checklist_ai_split_btn)+'</button>'+
           checklistHtml+
           '<div style="display:flex;gap:8px;margin-top:6px">'+
-            '<input id="g-edit-cl-new" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="40" value="'+escA(state.gEditNewItem)+'">'+
+            '<input id="g-edit-cl-new" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="80" value="'+escA(state.gEditNewItem)+'">'+
             '<button class="btn-outline" style="flex:none" data-role="g-add-cl-item">'+L.checklist_add_btn+'</button>'+
           '</div>'+
         '</div>'+
@@ -3120,8 +3122,12 @@ function aiSplitChecklist(){
     'Text: "'+text+'"' + '\n'+
     'Keep each item as a natural phrase — do NOT split compound descriptive phrases apart (e.g. "рисовый уксус" stays ONE item, not two).' + '\n'+
     'Greetings, names and polite filler are never checklist items.' + '\n'+
-    'Each checklist item is ONLY the thing itself: strip the command verb ("купить", "купи", "добавь", "buy", "add"), and NEVER repeat one verb across every item — "Купить сыр, хлеб, мясо" gives ["сыр","хлеб","мясо"], not ["Купить сыр",...]. Meaningful qualifiers (quantity, kind, place) stay.' + '\n'+
-    'Speech recognition often puts commas in the WRONG place. If a comma cuts a natural product name in half, fix it: prefer the reading where every item is something people actually buy. Example: "Сыр белый, хлеб" -> ["сыр","белый хлеб"] — "белый хлеб" is a real product, "сыр белый" is not. Judge every item as a REAL product on a shelf, not merely as grammatical Russian. Russian allows the adjective after the noun, so a list can legitimately hold "кукуруза консервированная" or "яйца десяток" — but that pattern must NEVER justify an item that does not exist: "хлеб гранатовый, сок" -> ["хлеб","гранатовый сок"], because "гранатовый сок" is a real product and "хлеб гранатовый" is not. Check each item on its own merit; neighbouring items are not evidence. Do not merge or move anything when the punctuation already gives sensible items.' + '\n'+
+    'First decide what the text is: a SHOPPING list (things to buy) or a list of THINGS TO DO (actions, fixes, errands, requests).' + '\n'+
+    'SHOPPING: each item is ONLY the thing itself — strip the buy verb ("купить", "купи", "buy") and never repeat one verb across items: "Купить сыр, хлеб, мясо" -> ["сыр","хлеб","мясо"]. Meaningful qualifiers (quantity, kind, place) stay.' + '\n'+
+    'THINGS TO DO: each item is a short ACTION and KEEPS its verb, so it still says what to do: "Диму на 27 секунде убери" -> "убрать Диму на 27 секунде", "цветы попросить Лену поливать" -> "попросить Лену поливать цветы", "такси заказать" -> "заказать такси". A complaint or wish becomes the fix to make: "текст быстро исчезает" -> "показывать текст дольше", "форма пишет отправлено, но письмо не приходит" -> "проверить, почему не приходят письма с формы". A "do not touch" remark is an item too: "фото пока не меняйте" -> "фото на главной пока не менять".' + '\n'+
+    'If the speaker corrects themselves, keep only the final version: "на 6 утра, хотя нет, на 5:30" -> "на 5:30".' + '\n'+
+    'Every item is SHORT: 2 to 7 words, at most 60 characters. Shorten by dropping filler, never by cutting words or sentences in half.' + '\n'+
+    'Speech recognition often puts commas in the WRONG place (shopping lists). If a comma cuts a natural product name in half, fix it: prefer the reading where every item is something people actually buy. Example: "Сыр белый, хлеб" -> ["сыр","белый хлеб"] — "белый хлеб" is a real product, "сыр белый" is not. Judge every item as a REAL product on a shelf, not merely as grammatical Russian. Russian allows the adjective after the noun, so a list can legitimately hold "кукуруза консервированная" or "яйца десяток" — but that pattern must NEVER justify an item that does not exist: "хлеб гранатовый, сок" -> ["хлеб","гранатовый сок"], because "гранатовый сок" is a real product and "хлеб гранатовый" is not. Check each item on its own merit; neighbouring items are not evidence. Do not merge or move anything when the punctuation already gives sensible items.' + '\n'+
     'Return ONLY JSON: {"name":"short generic task name","items":["item1","item2"]}';
   callAi(prompt,function(err,data){
     state.aiSplitting=false;
@@ -3767,8 +3773,12 @@ function processTranscript(transcript){
     'If the message contains SEVERAL groups of things to buy or get, each tied to a different place or occasion, create a SEPARATE task per group: name the task after that place or occasion, and put only that group items in its "checklist". Do NOT merge the groups into one list, and do NOT create one task per item.' + '\n'+
     // Вступление («Виталя, купи пожалуйста...») — не позиция списка.
     'Greetings, names and polite filler are never checklist items.' + '\n'+
-    'Each checklist item is ONLY the thing itself: strip the command verb ("купить", "купи", "добавь", "buy", "add"), and NEVER repeat one verb across every item — "Купить сыр, хлеб, мясо" gives ["сыр","хлеб","мясо"], not ["Купить сыр",...]. Meaningful qualifiers (quantity, kind, place) stay.' + '\n'+
-    'Speech recognition often puts commas in the WRONG place. If a comma cuts a natural product name in half, fix it: prefer the reading where every item is something people actually buy. Example: "Сыр белый, хлеб" -> ["сыр","белый хлеб"] — "белый хлеб" is a real product, "сыр белый" is not. Judge every item as a REAL product on a shelf, not merely as grammatical Russian. Russian allows the adjective after the noun, so a list can legitimately hold "кукуруза консервированная" or "яйца десяток" — but that pattern must NEVER justify an item that does not exist: "хлеб гранатовый, сок" -> ["хлеб","гранатовый сок"], because "гранатовый сок" is a real product and "хлеб гранатовый" is not. Check each item on its own merit; neighbouring items are not evidence. Do not merge or move anything when the punctuation already gives sensible items.' + '\n'+
+    'First decide what the text is: a SHOPPING list (things to buy) or a list of THINGS TO DO (actions, fixes, errands, requests).' + '\n'+
+    'SHOPPING: each item is ONLY the thing itself — strip the buy verb ("купить", "купи", "buy") and never repeat one verb across items: "Купить сыр, хлеб, мясо" -> ["сыр","хлеб","мясо"]. Meaningful qualifiers (quantity, kind, place) stay.' + '\n'+
+    'THINGS TO DO: each item is a short ACTION and KEEPS its verb, so it still says what to do: "Диму на 27 секунде убери" -> "убрать Диму на 27 секунде", "цветы попросить Лену поливать" -> "попросить Лену поливать цветы", "такси заказать" -> "заказать такси". A complaint or wish becomes the fix to make: "текст быстро исчезает" -> "показывать текст дольше", "форма пишет отправлено, но письмо не приходит" -> "проверить, почему не приходят письма с формы". A "do not touch" remark is an item too: "фото пока не меняйте" -> "фото на главной пока не менять".' + '\n'+
+    'If the speaker corrects themselves, keep only the final version: "на 6 утра, хотя нет, на 5:30" -> "на 5:30".' + '\n'+
+    'Every item is SHORT: 2 to 7 words, at most 60 characters. Shorten by dropping filler, never by cutting words or sentences in half.' + '\n'+
+    'Speech recognition often puts commas in the WRONG place (shopping lists). If a comma cuts a natural product name in half, fix it: prefer the reading where every item is something people actually buy. Example: "Сыр белый, хлеб" -> ["сыр","белый хлеб"] — "белый хлеб" is a real product, "сыр белый" is not. Judge every item as a REAL product on a shelf, not merely as grammatical Russian. Russian allows the adjective after the noun, so a list can legitimately hold "кукуруза консервированная" or "яйца десяток" — but that pattern must NEVER justify an item that does not exist: "хлеб гранатовый, сок" -> ["хлеб","гранатовый сок"], because "гранатовый сок" is a real product and "хлеб гранатовый" is not. Check each item on its own merit; neighbouring items are not evidence. Do not merge or move anything when the punctuation already gives sensible items.' + '\n'+
     // Без этой строки модель ВСЕГДА подставляет сегодняшнюю дату (её просят
     // форматом выше) — и надиктованное в разделе «Задачи» улетало в список
     // дел на сегодня. Страховка на клиенте всё равно стоит ниже: модель
