@@ -228,7 +228,11 @@ body { background:var(--screen); transition:background-color .3s; }
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
   font-family:inherit; font-size:11px; font-weight:800; cursor:pointer;
   -webkit-user-select:none; user-select:none;
+  visibility:hidden;
 }
+/* Красная кнопка лежит ПОД задачей и просвечивала краем на закруглённых углах (29.10.2026) —
+   показываем её только пока строку смахивают или она открыта. */
+.task-row-wrap.swipe-on .swipe-del { visibility:visible; }
 
 .pri-bar { width:18px; flex:none; border:none; cursor:pointer; padding:0; }
 .overdue-sec { flex-shrink:0; border-radius:14px; overflow:hidden; border:1.5px solid var(--pri-high); }
@@ -1052,7 +1056,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.130';
+var APP_VERSION = '1.131';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5418,7 +5422,7 @@ function closeSwipe(){
   var r=openSwipeEl.querySelector&&openSwipeEl.querySelector('[data-role="task-row"]');
   if(r){
     r.style.transition='transform .2s'; r.style.transform='translateX(0)';
-    setTimeout(function(){ r.classList.remove('swiping'); },200);
+    var w=openSwipeEl; setTimeout(function(){ r.classList.remove('swiping'); w.classList.remove('swipe-on'); },200);
   }
   openSwipeEl=null;
 }
@@ -5453,6 +5457,7 @@ document.addEventListener('touchmove',function(e){
       if(pressTimer) clearTimeout(pressTimer);
       swipe.row.style.transition='none';
       swipe.row.classList.add('swiping');
+      if(swipe.wrap) swipe.wrap.classList.add('swipe-on');
     } else if(Math.abs(dy)>10){
       if(pressTimer) clearTimeout(pressTimer);
       swipe=null; return;
@@ -5478,7 +5483,7 @@ document.addEventListener('touchend',function(){
   } else {
     s.row.style.transform='translateX(0)';
     if(openSwipeEl===s.wrap) openSwipeEl=null;
-    setTimeout(function(){ s.row.classList.remove('swiping'); },200);
+    setTimeout(function(){ s.row.classList.remove('swiping'); if(s.wrap) s.wrap.classList.remove('swipe-on'); },200);
   }
 },{passive:true});
 
