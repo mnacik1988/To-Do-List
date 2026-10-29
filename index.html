@@ -1076,7 +1076,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.133';
+var APP_VERSION = '1.134';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5316,6 +5316,15 @@ function unsubscribePushForSignOut(){
     var done=false;
     var finish=function(){ if(done) return; done=true; resolve(); };
     setTimeout(finish,4000);
+    if(isIosApp()){
+      // iPhone-приложение: снимаем подписку устройства на сервере и отключаем токен в iOS.
+      var PN=iosPushPlugin();
+      (isGoogleSignedIn()
+        ? fetch(WORKER_URL+'/unsubscribe',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},body:JSON.stringify({deviceId:getDeviceId()})}).catch(function(){})
+        : Promise.resolve()
+      ).then(function(){ return PN&&PN.unregister?PN.unregister().catch(function(){}):null; }).then(finish,finish);
+      return;
+    }
     if(!('serviceWorker' in navigator)){ finish(); return; }
     navigator.serviceWorker.ready.then(function(reg){
       return reg.pushManager.getSubscription();
@@ -5863,7 +5872,33 @@ function probePushReality(){
   }catch(e){}
 }
 function wasPushOk(){ try{ return localStorage.getItem('vtodo-push-was-ok')==='1'; }catch(e){ return false; } }
+// Уведомления в приложении для iPhone (29.10.2026): iOS выдаёт токен устройства через плагин
+// PushNotifications, его и отправляем на сервер вместо веб-подписки. Разрешение спрашиваем после входа.
+var iosPushHooked=false;
+function iosPushPlugin(){ var C=window.Capacitor; return C&&((C.Plugins&&C.Plugins.PushNotifications)||(C.registerPlugin&&C.registerPlugin('PushNotifications'))); }
+function iosSubscribePush(){
+  var PN=iosPushPlugin(); if(!PN){ state.pushStatus='unsupported'; render(); return; }
+  if(!isGoogleSignedIn()){ state.pushStatus='needAuth'; render(); return; }
+  if(!iosPushHooked){
+    iosPushHooked=true;
+    PN.addListener('registration',function(tok){
+      var v=tok&&tok.value; if(!v) return;
+      fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
+        body:JSON.stringify({apnsToken:v,deviceId:getDeviceId(),lang:state.lang})
+      }).then(function(r){ state.pushStatus=(r&&r.ok)?'ok':'error'; if(r&&r.ok){ pushActive=true; try{ localStorage.setItem('vtodo-push-was-ok','1'); }catch(e){} } render(); })
+        .catch(function(){ state.pushStatus='error'; render(); });
+    });
+    PN.addListener('registrationError',function(){ state.pushStatus='error'; render(); });
+  }
+  PN.checkPermissions().then(function(st){
+    return (st&&st.receive==='granted')?st:PN.requestPermissions();
+  }).then(function(st){
+    if(st&&st.receive==='granted') return PN.register();
+    state.pushStatus='denied'; render();
+  }).catch(function(){ state.pushStatus='error'; render(); });
+}
 function subscribePush(){
+  if(isIosApp()){ iosSubscribePush(); return; }
   if(!VAPID_PUBLIC_KEY||!('PushManager' in window)||!('serviceWorker' in navigator)){
     state.pushStatus='unsupported'; render(); return;
   }
