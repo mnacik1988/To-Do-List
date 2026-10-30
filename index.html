@@ -1083,7 +1083,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.137';
+var APP_VERSION = '1.138';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2061,7 +2061,7 @@ function renderPaywall(){
         // Play: сказать, что отменить можно, и не сказать где (аудит 06.09).
         '<div class="paywall-note" style="margin-top:6px"><a href="'+manageSubsUrl()+'" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline">'+esc(L.paywall_manage)+'</a></div>'+
         // Ссылки на условия и политику у кнопки оплаты — требование App Store (3.1.2) и честность для Android.
-        '<div class="paywall-note" style="margin-top:6px"><a href="terms.html" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:underline">'+esc(L.terms_link)+'</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:underline">'+esc(L.privacy_link)+'</a></div>'+
+        '<div class="paywall-note" style="margin-top:6px"><a href="terms.html?lang='+state.lang+'" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:underline">'+esc(L.terms_link)+'</a> · <a href="privacy.html?lang='+state.lang+'" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:underline">'+esc(L.privacy_link)+'</a></div>'+
       '</div>'+
     '</div></div>';
 }
@@ -2356,7 +2356,7 @@ function renderSettings(){
               '</div>'+
             '</div>'
         )+
-        '<div style="text-align:center;margin-top:16px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">'+esc(L.privacy_link)+'</a><a href="terms.html" target="_blank" rel="noopener" style="color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">'+esc(L.terms_link)+'</a></div>'+
+        '<div style="text-align:center;margin-top:16px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap"><a href="privacy.html?lang='+state.lang+'" target="_blank" rel="noopener" style="color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">'+esc(L.privacy_link)+'</a><a href="terms.html?lang='+state.lang+'" target="_blank" rel="noopener" style="color:var(--muted);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">'+esc(L.terms_link)+'</a></div>'+
         '<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:8px;opacity:.75">Mynado v'+APP_VERSION+'</div>'+
       '</div>'+
     '</div></div>';
@@ -2928,8 +2928,8 @@ function renderGateFooter(){
       '<div class="gate-langs">'+GATE_LANGS.map(function(p){
         return '<button class="gate-lang'+(state.lang===p[0]?' active':'')+'" data-role="set-lang" data-lang="'+p[0]+'">'+p[1]+'</button>';
       }).join('')+'</div>'+
-      '<a class="gate-link" href="privacy.html" target="_blank" rel="noopener">'+esc(L.privacy_link)+'</a>'+
-      '<a class="gate-link" href="terms.html" target="_blank" rel="noopener">'+esc(L.terms_link)+'</a>'+
+      '<a class="gate-link" href="privacy.html?lang='+state.lang+'" target="_blank" rel="noopener">'+esc(L.privacy_link)+'</a>'+
+      '<a class="gate-link" href="terms.html?lang='+state.lang+'" target="_blank" rel="noopener">'+esc(L.terms_link)+'</a>'+
     '</div>';
 }
 var APPLE_SVG='<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.35 1.92-3.48 2.01-3.54-1.1-1.6-2.8-1.82-3.4-1.84-1.45-.15-2.83.85-3.56.85-.74 0-1.87-.83-3.07-.81-1.58.02-3.04.92-3.85 2.33-1.64 2.85-.42 7.07 1.18 9.38.78 1.13 1.71 2.4 2.93 2.36 1.18-.05 1.62-.76 3.04-.76s1.82.76 3.06.74c1.27-.02 2.07-1.15 2.84-2.29.9-1.31 1.27-2.58 1.29-2.65-.03-.01-2.47-.95-2.48-3.77zM14.03 5.68c.65-.79 1.09-1.88.97-2.97-.94.04-2.07.62-2.74 1.41-.6.7-1.13 1.81-.99 2.88 1.05.08 2.11-.53 2.76-1.32z"/></svg>';
