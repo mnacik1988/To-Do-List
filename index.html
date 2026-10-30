@@ -1088,7 +1088,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.140';
+var APP_VERSION = '1.141';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1347,7 +1347,7 @@ var state={
   // другом (просьба Александра 2026-08-18).
   voiceLang:'',
   fabOpen:false,
-  quickAdd:false, qaText:'', qaDesc:'', qaDate:'', qaTime:'', qaPri:'mid', qaChecklist:[],
+  quickAdd:false, qaText:'', qaDesc:'', qaDate:'', qaTime:'', qaPri:'mid', qaChecklist:[], qaClNew:'',
   overdueOpen:true, overdueSelected:{}, overdueSelecting:false, overdueAllOpen:false,
   clearConfirm:false,
   paywall:false,
@@ -2494,6 +2494,12 @@ function renderQuickAdd(){
               '<button class="checklist-item-del" data-role="qa-checklist-del" data-item="'+escA(item.id)+'">'+IC.trash+'</button>'+
             '</div>';
           }).join('')+
+          // Ручной пункт прямо при создании (30.10.2026, Александр: «при создании нету чек-листа, он появляется
+          // только после настройки самой задачи») — то же поле, что в редактировании.
+          '<div class="checklist-edit-row">'+
+            '<input id="qa-cl-new" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="80" value="'+escA(state.qaClNew||'')+'">'+
+            '<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="qa-checklist-add">'+L.checklist_add_btn+'</button>'+
+          '</div>'+
         '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<div style="flex:1">'+
@@ -3088,7 +3094,10 @@ function render(){
   if(dsi) dsi.addEventListener('input',function(e){state.dsAddText=e.target.value;});
   wireIC(document.getElementById('ds-time'),function(e){state.dsAddTime=e.target.value;});
   var qat=document.getElementById('qa-text'),qad=document.getElementById('qa-date'),qati=document.getElementById('qa-time');
-  if(qat){ qat.addEventListener('input',function(e){state.qaText=e.target.value;}); setTimeout(function(){if(qat)qat.focus();},80); }
+  // Фокус на название — только при открытии: после добавления пункта чек-листа фокус уже в поле пункта.
+  if(qat){ qat.addEventListener('input',function(e){state.qaText=e.target.value;}); setTimeout(function(){ var a=document.activeElement; if(qat&&(!a||a===document.body)) qat.focus(); },80); }
+  var qcn=document.getElementById('qa-cl-new');
+  if(qcn){ qcn.addEventListener('input',function(e){state.qaClNew=e.target.value;}); qcn.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); qaChecklistAdd(); } }); }
   var qade=document.getElementById('qa-desc');
   if(qade) qade.addEventListener('input',function(e){state.qaDesc=e.target.value;});
   wireIC(qad,function(e){state.qaDate=e.target.value;});
@@ -3161,6 +3170,13 @@ function checklistDelItem(itemId){
   var list=state.edit.checklist!=null?state.edit.checklist:(task?(task.checklist||[]):[]);
   state.edit.checklist=list.filter(function(i){return i.id!==itemId;});
   render();
+}
+function qaChecklistAdd(){
+  var text=(state.qaClNew||'').trim(); if(!text) return;
+  state.qaChecklist=(state.qaChecklist||[]).concat([checklistItem(text)]);
+  state.qaClNew='';
+  render();
+  var ni=document.getElementById('qa-cl-new'); if(ni) ni.focus();
 }
 function checklistAddItem(){
   if(!state.edit) return;
@@ -5784,9 +5800,10 @@ appEl.addEventListener('click',function(e){
     case 'fab-toggle':          state.fabOpen=!state.fabOpen; render(); break;
     case 'fab-scrim':           state.fabOpen=false; render(); break;
     case 'fab-dial-mic':        state.fabOpen=false; onFabMic(); break;
-    case 'fab-dial-text':       state.fabOpen=false; qaGen++; state.quickAdd=true; state.qaText=''; state.qaDesc=''; state.qaChecklist=[]; state.qaDate=state.view==='undated'?'':todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
+    case 'fab-dial-text':       state.fabOpen=false; qaGen++; state.quickAdd=true; state.qaText=''; state.qaDesc=''; state.qaChecklist=[]; state.qaClNew=''; state.qaDate=state.view==='undated'?'':todayStr(); state.qaTime=''; state.qaPri='mid'; render(); break;
     case 'qa-cancel':           closeSheetAnimated('qa', function(){ state.quickAdd=false; state.qaChecklist=[]; render(); }); break;
     case 'qa-set-pri':          state.qaPri=el.dataset.pri; render(); break;
+    case 'qa-checklist-add':    qaChecklistAdd(); break;
     case 'qa-checklist-del':
       state.qaChecklist=(state.qaChecklist||[]).filter(function(it){ return it.id!==el.dataset.item; });
       render(); break;
@@ -5794,8 +5811,9 @@ appEl.addEventListener('click',function(e){
       var qText=(state.qaText||'').trim();
       if(!qText) break;
       state.quickAdd=false;
+      if((state.qaClNew||'').trim()) state.qaChecklist=(state.qaChecklist||[]).concat([checklistItem(state.qaClNew.trim())]);
       addTasksBatch([{text:qText,desc:(state.qaDesc||'').trim(),priority:state.qaPri,date:state.qaDate,reminderTime:state.qaTime||'',checklist:state.qaChecklist||[]}], state.view==='undated');
-      state.qaChecklist=[];
+      state.qaChecklist=[]; state.qaClNew='';
       break;
     case 'fab-mic':             onFabMic(); break;
     case 'ai-mic':              onAiMic(); break;
