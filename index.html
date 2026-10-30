@@ -742,7 +742,13 @@ function getGoogleSub(){ try{ return localStorage.getItem('vtodo-google-sub')||'
 function getUserKey(){ var s=getGoogleSub(); return s?(s.indexOf(':')>=0?s:'google:'+s):''; }
 function isAppleJwt(pl){ return !!pl && pl.iss==='https://appleid.apple.com'; }
 function credSubOf(pl){ return pl&&pl.sub ? (isAppleJwt(pl)?'apple:'+pl.sub:pl.sub) : ''; }
-function sessionBodyFor(cred){ return isAppleJwt(decodeJwtPayload(cred)) ? {appleIdToken:cred} : {idToken:cred}; }
+// Одноразовый код входа через Apple: сервер меняет его на refresh_token, чтобы при удалении аккаунта отозвать вход.
+var pendingAppleCode='';
+function sessionBodyFor(cred){
+  if(!isAppleJwt(decodeJwtPayload(cred))) return {idToken:cred};
+  var b={appleIdToken:cred}; if(pendingAppleCode){ b.appleCode=pendingAppleCode; pendingAppleCode=''; }
+  return b;
+}
 // Стабильный идентификатор ИМЕННО ЭТОГО устройства (2026-07-23). Нужен, чтобы
 // у одного Google-аккаунта на разных устройствах (напр. iPhone + Android) были
 // РАЗНЫЕ слоты push-подписки и напоминаний на сервере — иначе устройства
@@ -914,6 +920,7 @@ function isIosApp(){ var C=window.Capacitor; return !!(C && C.isNativePlatform &
     init().then(function(){ return SL.login({provider:provider, options:{scopes:scopes}}); })
       .then(function(r){
         var t=r&&r.result&&r.result.idToken;
+        if(provider==='apple') pendingAppleCode=(r.result.accessToken&&r.result.accessToken.token)||'';
         if(t) onGoogleCredential({credential:t});
         else showToast(L.no_connection, 5000);
       })
@@ -1076,7 +1083,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.134';
+var APP_VERSION = '1.135';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
