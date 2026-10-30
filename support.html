@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mynado Support</title>
+<link rel="canonical" href="https://mynado.app/support.html">
+<!-- Переезд со старого адреса (22.10.2026): Search Console показал, что Google считает главной копию на
+     mnacik1988.github.io, а mynado.app не индексирует вовсе — одной пометки canonical мало. Посетителей и поисковик со
+     старого адреса сразу отправляем на mynado.app (тот же путь). НЕ трогаем приложение из Google Play: старые сборки
+     (1.0.18 и раньше) открывают именно github.io, и уход на другой адрес показал бы адресную строку и сломал оплату. -->
+<script>(function(){try{
+  if(location.hostname!=='mnacik1988.github.io') return;
+  var ref=String(document.referrer||'');
+  var store=ref.indexOf('android-app://')===0||('getDigitalGoodsService' in window)||!!window.AndroidAuth;
+  try{ if(localStorage.getItem('vtodo-store-app')==='1') store=true; }catch(e){}
+  if(store) return;
+  var path=location.pathname.replace(/^\/To-Do-List(\/|$)/,'/').replace(/\/index\.html$/,'/');
+  location.replace('https://mynado.app'+path+location.search+location.hash);
+}catch(e){}})();</script>
+<style>
+  :root{ --bg:#f5f2ec; --card:#fff; --text:#2c2a26; --muted:#6b665d; --accent:#2f5e4a; --border:rgba(44,42,38,.12); }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1a1922; --card:#252332; --text:#ecebf2; --muted:#9b97ad; --accent:#a9dcc6; --border:rgba(255,255,255,.12); }
+  }
+  *{box-sizing:border-box;}
+  body{ font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text);
+    line-height:1.6; margin:0; padding:calc(16px + env(safe-area-inset-top)) 16px calc(60px + env(safe-area-inset-bottom)); -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:720px; margin:0 auto; }
+  .back{ display:inline-flex; align-items:center; gap:6px; background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:12px; padding:9px 14px; margin-bottom:18px; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+  h1{ font-size:24px; margin:0 0 4px; }
+  .upd{ color:var(--muted); font-size:14px; margin-bottom:24px; }
+  h2{ font-size:18px; margin:28px 0 8px; color:var(--accent); }
+  p, li{ font-size:15px; }
+  ul{ padding-left:20px; }
+  a{ color:var(--accent); }
+  .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 20px; margin-top:8px; }
+  code{ background:rgba(127,127,127,.15); padding:1px 5px; border-radius:5px; font-size:13px; }
+  .top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+  .top .back{ margin-bottom:0; }
+  .langs{ display:inline-flex; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:3px; }
+  .langs button{ background:none; border:0; color:var(--muted); font:inherit; font-size:13px; font-weight:700; padding:6px 9px; border-radius:9px; cursor:pointer; }
+  .langs button.on{ background:var(--accent); color:var(--bg); }
+  [data-lang]{ display:none; }
+  html[data-show="ru"] div[data-lang="ru"]{ display:block; }
+  html[data-show="ru"] span[data-lang="ru"]{ display:inline; }
+  html[data-show="uk"] div[data-lang="uk"]{ display:block; }
+  html[data-show="uk"] span[data-lang="uk"]{ display:inline; }
+  html[data-show="en"] div[data-lang="en"]{ display:block; }
+  html[data-show="en"] span[data-lang="en"]{ display:inline; }
+  html[data-show="de"] div[data-lang="de"]{ display:block; }
+  html[data-show="de"] span[data-lang="de"]{ display:inline; }
+  html[data-show="fr"] div[data-lang="fr"]{ display:block; }
+  html[data-show="fr"] span[data-lang="fr"]{ display:inline; }
+  h3{ font-size:16px; margin:20px 0 6px; }
+</style>
+</head>
+<body data-title-ru="Поддержка Mynado" data-title-uk="Підтримка Mynado" data-title-en="Mynado Support" data-title-de="Mynado-Support" data-title-fr="Support Mynado">
+<script>(function(){
+  var ok={ru:1,uk:1,en:1,de:1,fr:1};
+  var q=(location.search.match(/[?&]lang=([a-z]{2})/)||[])[1]||'';
+  var n=String(navigator.language||'').slice(0,2).toLowerCase();
+  var l=ok[q]?q:(ok[n]?n:'en');
+  document.documentElement.setAttribute('data-show',l); document.documentElement.lang=l;
+})();
+function mynLang(l){ document.documentElement.setAttribute('data-show',l); document.documentElement.lang=l;
+  var b=document.querySelectorAll('.langs button'); for(var i=0;i<b.length;i++) b[i].className=(b[i].getAttribute('data-l')===l?'on':'');
+  var t=document.body.getAttribute('data-title-'+l); if(t) document.title=t; }
+document.addEventListener('DOMContentLoaded',function(){ mynLang(document.documentElement.getAttribute('data-show')); });
+function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
+<div class="wrap">
+<div class="top">
+<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="uk">← Назад</span><span data-lang="en">← Back</span><span data-lang="de">← Zurück</span><span data-lang="fr">← Retour</span></button>
+<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="uk" onclick="mynLang('uk')">UA</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button><button type="button" data-l="de" onclick="mynLang('de')">DE</button><button type="button" data-l="fr" onclick="mynLang('fr')">FR</button></div>
+</div>
+
+<div data-lang="ru">
+<h1>Поддержка Mynado</h1>
+<div class="upd">Голосовой список задач · разработчик: Александр Мнацаканов</div>
+
+<div class="card">
+<p><b>Напишите нам:</b> <a href="mailto:support@mynado.app">support@mynado.app</a><br>Отвечаем обычно в течение 1–2 дней. Чтобы мы быстрее разобрались, укажите <b>«Мой ID»</b> из настроек приложения, модель телефона и версию Mynado (внизу настроек).</p>
+</div>
+
+<h2>Частые вопросы</h2>
+
+<h3>Голосовой ввод не работает</h3>
+<p>Разрешите доступ к микрофону и распознаванию речи. iPhone: Настройки → Mynado → включите «Микрофон» и «Распознавание речи». Android: Настройки → Приложения → Mynado → Разрешения → Микрофон.</p>
+
+<h3>Не приходят напоминания</h3>
+<p>Проверьте, что у задачи указано время, а уведомления для Mynado разрешены (iPhone: Настройки → Уведомления → Mynado). На Android отключите для Mynado экономию батареи: Настройки → Приложения → Mynado → Батарея → «Без ограничений».</p>
+
+<h3>Пропали задачи после входа</h3>
+<p>Вход через Google и вход через Apple — <b>разные аккаунты</b>. Выйдите и войдите тем же способом, что и раньше: задачи хранятся в том аккаунте, где были созданы.</p>
+
+<h3>Как работает подписка PRO</h3>
+<p>Бесплатно доступно 5 запросов к ИИ в день, с PRO — 50. Оформить: Настройки → «Перейти на PRO». Если подписка уже оплачена, но PRO не появился, нажмите в окне PRO «Восстановить». Отменить: iPhone — Настройки → [ваше имя] → Подписки; Android — Google Play → Подписки. Подробно — в <a href="./terms.html?lang=ru">Условиях использования</a>.</p>
+
+<h3>Как удалить аккаунт</h3>
+<p>Настройки → «Удалить аккаунт и все данные». Что удаляется и что сохраняется — на странице <a href="./delete-data.html?lang=ru">удаления данных</a>.</p>
+
+<h2>Документы</h2>
+<ul>
+<li><a href="./terms.html?lang=ru">Условия использования</a></li>
+<li><a href="./privacy.html?lang=ru">Политика конфиденциальности</a></li>
+<li><a href="./delete-data.html?lang=ru">Удаление аккаунта и данных</a></li>
+</ul>
+</div>
+
+<div data-lang="uk">
+<h1>Підтримка Mynado</h1>
+<div class="upd">Голосовий список завдань · розробник: Олександр Мнацаканов</div>
+
+<div class="card">
+<p><b>Напишіть нам:</b> <a href="mailto:support@mynado.app">support@mynado.app</a><br>Зазвичай відповідаємо протягом 1–2 днів. Щоб ми швидше розібралися, вкажіть <b>«Мій ID»</b> з налаштувань застосунку, модель телефона й версію Mynado (внизу налаштувань).</p>
+</div>
+
+<h2>Часті запитання</h2>
+
+<h3>Голосове введення не працює</h3>
+<p>Дозвольте доступ до мікрофона й розпізнавання мовлення. iPhone: Параметри → Mynado → увімкніть «Мікрофон» і «Розпізнавання мовлення». Android: Налаштування → Застосунки → Mynado → Дозволи → Мікрофон.</p>
+
+<h3>Не надходять нагадування</h3>
+<p>Перевірте, що в завданні вказано час, а сповіщення для Mynado дозволені (iPhone: Параметри → Сповіщення → Mynado). На Android вимкніть для Mynado енергозбереження: Налаштування → Застосунки → Mynado → Батарея → «Без обмежень».</p>
+
+<h3>Зникли завдання після входу</h3>
+<p>Вхід через Google і вхід через Apple — <b>різні акаунти</b>. Вийдіть і увійдіть тим самим способом, що й раніше: завдання зберігаються в тому акаунті, де були створені.</p>
+
+<h3>Як працює підписка PRO</h3>
+<p>Безкоштовно доступно 5 запитів до ШІ на день, з PRO — 50. Оформити: Налаштування → «Перейти на PRO». Якщо підписку вже оплачено, а PRO не з’явився, натисніть у вікні PRO «Відновити». Скасувати: iPhone — Параметри → [ваше ім’я] → Підписки; Android — Google Play → Підписки. Докладно — в <a href="./terms.html?lang=uk">Умовах використання</a>.</p>
+
+<h3>Як видалити акаунт</h3>
+<p>Налаштування → «Видалити акаунт і всі дані». Що видаляється й що зберігається — на сторінці <a href="./delete-data.html?lang=uk">видалення даних</a>.</p>
+
+<h2>Документи</h2>
+<ul>
+<li><a href="./terms.html?lang=uk">Умови використання</a></li>
+<li><a href="./privacy.html?lang=uk">Політика конфіденційності</a></li>
+<li><a href="./delete-data.html?lang=uk">Видалення акаунта й даних</a></li>
+</ul>
+</div>
+
+<div data-lang="en">
+<h1>Mynado Support</h1>
+<div class="upd">Voice to-do list · developer: Aleksandr Mnatsakanov</div>
+
+<div class="card">
+<p><b>Contact us:</b> <a href="mailto:support@mynado.app">support@mynado.app</a><br>We usually reply within 1–2 days. To help us sort it out faster, include <b>“My ID”</b> from the app settings, your phone model and the Mynado version (at the bottom of settings).</p>
+</div>
+
+<h2>Frequently asked questions</h2>
+
+<h3>Voice input doesn’t work</h3>
+<p>Allow access to the microphone and speech recognition. iPhone: Settings → Mynado → turn on “Microphone” and “Speech Recognition”. Android: Settings → Apps → Mynado → Permissions → Microphone.</p>
+
+<h3>Reminders don’t arrive</h3>
+<p>Make sure the task has a time and notifications are allowed for Mynado (iPhone: Settings → Notifications → Mynado). On Android, turn off battery optimization for Mynado: Settings → Apps → Mynado → Battery → “Unrestricted”.</p>
+
+<h3>My tasks disappeared after signing in</h3>
+<p>Signing in with Google and signing in with Apple are <b>different accounts</b>. Sign out and sign in the same way as before: tasks are stored in the account where they were created.</p>
+
+<h3>How the PRO subscription works</h3>
+<p>The free version includes 5 AI requests a day; PRO gives 50. To subscribe: Settings → “Upgrade to PRO”. If you have already paid but PRO hasn’t appeared, tap “Restore purchase” in the PRO window. To cancel: iPhone — Settings → [your name] → Subscriptions; Android — Google Play → Subscriptions. Details are in the <a href="./terms.html?lang=en">Terms of Use</a>.</p>
+
+<h3>How to delete my account</h3>
+<p>Settings → “Delete account and all data”. What is deleted and what is kept is explained on the <a href="./delete-data.html?lang=en">data deletion</a> page.</p>
+
+<h2>Documents</h2>
+<ul>
+<li><a href="./terms.html?lang=en">Terms of Use</a></li>
+<li><a href="./privacy.html?lang=en">Privacy Policy</a></li>
+<li><a href="./delete-data.html?lang=en">Account &amp; Data Deletion</a></li>
+</ul>
+</div>
+
+<div data-lang="de">
+<h1>Mynado-Support</h1>
+<div class="upd">Sprachgesteuerte Aufgabenliste · Entwickler: Aleksandr Mnatsakanov</div>
+
+<div class="card">
+<p><b>Schreiben Sie uns:</b> <a href="mailto:support@mynado.app">support@mynado.app</a><br>Wir antworten meist innerhalb von 1–2 Tagen. Damit wir schneller helfen können, geben Sie bitte <b>„Meine ID“</b> aus den App-Einstellungen, Ihr Telefonmodell und die Mynado-Version (unten in den Einstellungen) an.</p>
+</div>
+
+<h2>Häufige Fragen</h2>
+
+<h3>Die Spracheingabe funktioniert nicht</h3>
+<p>Erlauben Sie den Zugriff auf Mikrofon und Spracherkennung. iPhone: Einstellungen → Mynado → „Mikrofon“ und „Spracherkennung“ aktivieren. Android: Einstellungen → Apps → Mynado → Berechtigungen → Mikrofon.</p>
+
+<h3>Erinnerungen kommen nicht an</h3>
+<p>Prüfen Sie, ob die Aufgabe eine Uhrzeit hat und Mitteilungen für Mynado erlaubt sind (iPhone: Einstellungen → Mitteilungen → Mynado). Unter Android deaktivieren Sie die Akku-Optimierung für Mynado: Einstellungen → Apps → Mynado → Akku → „Nicht eingeschränkt“.</p>
+
+<h3>Meine Aufgaben sind nach der Anmeldung verschwunden</h3>
+<p>Die Anmeldung mit Google und die Anmeldung mit Apple sind <b>verschiedene Konten</b>. Melden Sie sich ab und so an wie zuvor: Aufgaben liegen in dem Konto, in dem sie erstellt wurden.</p>
+
+<h3>So funktioniert das PRO-Abo</h3>
+<p>Kostenlos sind 5 KI-Anfragen pro Tag enthalten, mit PRO 50. Abschließen: Einstellungen → „Auf PRO upgraden“. Wenn Sie bereits bezahlt haben, PRO aber nicht erscheint, tippen Sie im PRO-Fenster auf „Kauf wiederherstellen“. Kündigen: iPhone — Einstellungen → [Ihr Name] → Abonnements; Android — Google Play → Abos. Einzelheiten in den <a href="./terms.html?lang=de">Nutzungsbedingungen</a>.</p>
+
+<h3>Konto löschen</h3>
+<p>Einstellungen → „Konto und alle Daten löschen“. Was gelöscht und was aufbewahrt wird, steht auf der Seite <a href="./delete-data.html?lang=de">Datenlöschung</a>.</p>
+
+<h2>Dokumente</h2>
+<ul>
+<li><a href="./terms.html?lang=de">Nutzungsbedingungen</a></li>
+<li><a href="./privacy.html?lang=de">Datenschutzerklärung</a></li>
+<li><a href="./delete-data.html?lang=de">Konto- und Datenlöschung</a></li>
+</ul>
+</div>
+
+<div data-lang="fr">
+<h1>Support Mynado</h1>
+<div class="upd">Liste de tâches vocale · développeur : Aleksandr Mnatsakanov</div>
+
+<div class="card">
+<p><b>Écrivez-nous :</b> <a href="mailto:support@mynado.app">support@mynado.app</a><br>Nous répondons généralement sous 1 à 2 jours. Pour nous aider à aller plus vite, indiquez <b>« Mon ID »</b> depuis les réglages de l’application, le modèle de votre téléphone et la version de Mynado (en bas des réglages).</p>
+</div>
+
+<h2>Questions fréquentes</h2>
+
+<h3>La saisie vocale ne fonctionne pas</h3>
+<p>Autorisez l’accès au micro et à la reconnaissance vocale. iPhone : Réglages → Mynado → activez « Micro » et « Reconnaissance vocale ». Android : Paramètres → Applications → Mynado → Autorisations → Micro.</p>
+
+<h3>Les rappels n’arrivent pas</h3>
+<p>Vérifiez que la tâche a une heure et que les notifications sont autorisées pour Mynado (iPhone : Réglages → Notifications → Mynado). Sur Android, désactivez l’optimisation de la batterie pour Mynado : Paramètres → Applications → Mynado → Batterie → « Non restreinte ».</p>
+
+<h3>Mes tâches ont disparu après la connexion</h3>
+<p>La connexion avec Google et la connexion avec Apple sont <b>des comptes différents</b>. Déconnectez-vous et reconnectez-vous de la même manière qu’auparavant : les tâches restent dans le compte où elles ont été créées.</p>
+
+<h3>Fonctionnement de l’abonnement PRO</h3>
+<p>La version gratuite comprend 5 requêtes IA par jour ; PRO en offre 50. Pour s’abonner : Réglages → « Passer à PRO ». Si vous avez déjà payé mais que PRO n’apparaît pas, touchez « Restaurer » dans la fenêtre PRO. Pour résilier : iPhone — Réglages → [votre nom] → Abonnements ; Android — Google Play → Abonnements. Détails dans les <a href="./terms.html?lang=fr">Conditions d’utilisation</a>.</p>
+
+<h3>Supprimer mon compte</h3>
+<p>Réglages → « Supprimer le compte et toutes les données ». Ce qui est supprimé et conservé est expliqué sur la page <a href="./delete-data.html?lang=fr">suppression des données</a>.</p>
+
+<h2>Documents</h2>
+<ul>
+<li><a href="./terms.html?lang=fr">Conditions d’utilisation</a></li>
+<li><a href="./privacy.html?lang=fr">Politique de confidentialité</a></li>
+<li><a href="./delete-data.html?lang=fr">Suppression du compte et des données</a></li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>
