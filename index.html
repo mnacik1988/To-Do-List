@@ -946,6 +946,11 @@ function isIosApp(){ var C=window.Capacitor; return !!(C && C.isNativePlatform &
           ready=null;                             // следующая попытка заново инициализирует
           showToast('Google: '+m.slice(0,120), 6000);
         });
+    },
+    // Выход (30.10.2026): Google SDK на iPhone помнит прошлый вход и при следующем «Войти через Google»
+    // молча подставлял тот же аккаунт — сменить его было нельзя. Сбрасываем вход в SDK.
+    signOutNative:function(){
+      return init().then(function(){ return SL.logout({provider:'google'}); }).catch(function(){});
     }
   };
 })();
@@ -1083,7 +1088,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.139';
+var APP_VERSION = '1.140';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5442,7 +5447,8 @@ function unsubscribePushForSignOut(){
 // на новый телефон.
 function signOutDevice(){
   try{ if(window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); }catch(e){}
-  unsubscribePushForSignOut().then(function(){
+  var nativeOut=(window.AndroidAuth&&window.AndroidAuth.signOutNative)?window.AndroidAuth.signOutNative():Promise.resolve();
+  Promise.all([unsubscribePushForSignOut(),nativeOut]).then(function(){
     try{
       // Раньше чистился только этот список — и остальные vtodo-ключи
       // переживали выход. Самое неприятное: vtodo-ai-limit-info с чужим PRO
