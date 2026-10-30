@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Data Deletion — Mynado</title>
+<title>Account & Data Deletion — Mynado</title>
 <link rel="canonical" href="https://mynado.app/delete-data.html">
 <!-- Переезд со старого адреса (22.10.2026): Search Console показал, что Google считает главной копию на
      mnacik1988.github.io, а mynado.app не индексирует вовсе — одной пометки canonical мало. Посетителей и поисковик со
@@ -36,16 +36,128 @@
   ol, ul{ padding-left:22px; }
   a{ color:var(--accent); }
   .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 20px; margin-top:8px; }
+  .top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+  .top .back{ margin-bottom:0; }
+  .langs{ display:inline-flex; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:3px; }
+  .langs button{ background:none; border:0; color:var(--muted); font:inherit; font-size:13px; font-weight:700; padding:6px 9px; border-radius:9px; cursor:pointer; }
+  .langs button.on{ background:var(--accent); color:var(--bg); }
+  [data-lang]{ display:none; }
+  html[data-show="ru"] div[data-lang="ru"]{ display:block; }
+  html[data-show="ru"] span[data-lang="ru"]{ display:inline; }
+  html[data-show="uk"] div[data-lang="uk"]{ display:block; }
+  html[data-show="uk"] span[data-lang="uk"]{ display:inline; }
+  html[data-show="en"] div[data-lang="en"]{ display:block; }
+  html[data-show="en"] span[data-lang="en"]{ display:inline; }
+  html[data-show="de"] div[data-lang="de"]{ display:block; }
+  html[data-show="de"] span[data-lang="de"]{ display:inline; }
+  html[data-show="fr"] div[data-lang="fr"]{ display:block; }
+  html[data-show="fr"] span[data-lang="fr"]{ display:inline; }
 </style>
 </head>
-<body>
+<body data-title-ru="Удаление аккаунта и данных — Mynado" data-title-uk="Видалення акаунта й даних — Mynado" data-title-en="Account & Data Deletion — Mynado" data-title-de="Konto- und Datenlöschung — Mynado" data-title-fr="Suppression du compte et des données — Mynado">
+<script>(function(){
+  var ok={ru:1,uk:1,en:1,de:1,fr:1};
+  var q=(location.search.match(/[?&]lang=([a-z]{2})/)||[])[1]||'';
+  var n=String(navigator.language||'').slice(0,2).toLowerCase();
+  var l=ok[q]?q:(ok[n]?n:'en');
+  document.documentElement.setAttribute('data-show',l); document.documentElement.lang=l;
+})();
+function mynLang(l){ document.documentElement.setAttribute('data-show',l); document.documentElement.lang=l;
+  var b=document.querySelectorAll('.langs button'); for(var i=0;i<b.length;i++) b[i].className=(b[i].getAttribute('data-l')===l?'on':'');
+  var t=document.body.getAttribute('data-title-'+l); if(t) document.title=t; }
+document.addEventListener('DOMContentLoaded',function(){ mynLang(document.documentElement.getAttribute('data-show')); });
+function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
 <div class="wrap">
-<!-- Кнопка возврата (25.10.2026): в приложении с главного экрана iPhone эта страница открывается в том же окне без
-     адресной строки и кнопки «назад» — выйти было некуда. Порядок: назад по истории → закрыть вкладку, открытую
-     ссылкой → если ни то ни другое не вышло, просто открыть приложение. -->
-<button class="back" type="button" onclick="mynBack()">← Back</button>
-<script>function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
+<div class="top">
+<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="uk">← Назад</span><span data-lang="en">← Back</span><span data-lang="de">← Zurück</span><span data-lang="fr">← Retour</span></button>
+<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="uk" onclick="mynLang('uk')">UA</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button><button type="button" data-l="de" onclick="mynLang('de')">DE</button><button type="button" data-l="fr" onclick="mynLang('fr')">FR</button></div>
+</div>
 
+<div data-lang="ru">
+<h1>Удаление аккаунта и данных — Mynado</h1>
+<div class="upd">Приложение Mynado · разработчик: Александр · support@mynado.app · обновлено 30 октября 2026</div>
+
+<p>У Mynado нет собственной регистрации — вход выполняется через ваш аккаунт Google или Apple. Здесь описано, как удалить данные и что с ними происходит.</p>
+
+<h2>Как удалить</h2>
+<ul>
+<li>Откройте приложение → значок <b>шестерёнки</b> вверху справа.</li>
+<li>Нажмите <b>«Удалить аккаунт и все данные»</b> и подтвердите.</li>
+<li>Вход через Google: чтобы полностью отозвать доступ — Google-аккаунт → Безопасность → Доступ сторонних приложений → удалить Mynado.</li>
+<li>Вход через Apple: Приложение отзывает доступ само при удалении аккаунта. Проверить можно в Настройках iPhone → [ваше имя] → Вход с Apple.</li>
+</ul>
+<p>Также можно написать на <a href="mailto:support@mynado.app">support@mynado.app</a> — обработаем в течение 30 дней.</p>
+
+<h2>Что удаляется</h2>
+<ul>
+<li><b>Задачи</b> — сразу с устройства и, если вы входили, с нашего сервера.</li>
+<li><b>Напоминания</b> — с сервера.</li>
+<li><b>Подписки на уведомления</b> — для всех ваших устройств.</li>
+<li><b>Ваше имя (ник)</b> — с сервера; участники групп перестают его видеть.</li>
+<li><b>Язык интерфейса</b> и настройки уведомлений по каждой группе.</li>
+<li><b>Участие в группах</b> — вы выходите из всех. Группа, где вы были <b>единственным</b> участником, удаляется вместе со своими задачами.</li>
+</ul>
+
+<h2>Что сохраняется и на какой срок</h2>
+<div class="card">
+<ul>
+<li><b>Удалённые задачи хранятся отметкой «удалено» до 90 дней.</b> Текста задачи там нет — только идентификатор и сам факт удаления. Это нужно, чтобы удаление дошло до ваших других устройств, даже если они были выключены. Через 90 дней запись стирается.</li>
+<li><b>Общие задачи, созданные вами в группе, остаются группе</b> — они принадлежат всем её участникам. Если хотите удалить и их, удалите внутри группы до удаления аккаунта.</li>
+<li><b>Подписка PRO при удалении данных не отменяется</b> — она привязана к аккаунту Google Play или App Store. Отменить: <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Подписки</a> или на iPhone: Настройки → [ваше имя] → Подписки, иначе списания продолжатся.</li>
+</ul>
+<p>Больше ничего не сохраняется. Мы нигде не храним email, имя, фото, пароль и платёжные данные, не ведём аналитику и рекламные профили.</p>
+</div>
+
+<h2>Если вы владелец группы</h2>
+<p>Если вы единственный администратор группы, в которой есть другие участники, приложение сначала попросит передать права другому человеку. Иначе группа осталась бы без администратора, а удаление группы стёрло бы задачи остальных.</p>
+
+<h2>См. также</h2>
+<p>Подробности — в <a href="./privacy.html?lang=ru">политике конфиденциальности</a>.</p>
+</div>
+
+<div data-lang="uk">
+<h1>Видалення акаунта й даних — Mynado</h1>
+<div class="upd">Застосунок Mynado · розробник: Олександр · support@mynado.app · оновлено 30 жовтня 2026</div>
+
+<p>У Mynado немає власної реєстрації — вхід виконується через ваш акаунт Google або Apple. Тут описано, як видалити дані та що з ними відбувається.</p>
+
+<h2>Як видалити</h2>
+<ul>
+<li>Відкрийте застосунок → значок <b>шестерні</b> вгорі праворуч.</li>
+<li>Натисніть <b>«Видалити акаунт і всі дані»</b> і підтвердьте.</li>
+<li>Вхід через Google: щоб повністю відкликати доступ — Google-акаунт → Безпека → Доступ сторонніх застосунків → видалити Mynado.</li>
+<li>Вхід через Apple: Застосунок відкликає доступ сам під час видалення акаунта. Перевірити можна в Параметрах iPhone → [ваше ім’я] → Вхід з Apple.</li>
+</ul>
+<p>Також можна написати на <a href="mailto:support@mynado.app">support@mynado.app</a> — опрацюємо протягом 30 днів.</p>
+
+<h2>Що видаляється</h2>
+<ul>
+<li><b>Завдання</b> — одразу з пристрою і, якщо ви входили, з нашого сервера.</li>
+<li><b>Нагадування</b> — із сервера.</li>
+<li><b>Підписки на сповіщення</b> — для всіх ваших пристроїв.</li>
+<li><b>Ваше ім’я (нік)</b> — із сервера; учасники груп перестають його бачити.</li>
+<li><b>Мова інтерфейсу</b> й налаштування сповіщень для кожної групи.</li>
+<li><b>Участь у групах</b> — ви виходите з усіх. Група, де ви були <b>єдиним</b> учасником, видаляється разом зі своїми завданнями.</li>
+</ul>
+
+<h2>Що зберігається й на який строк</h2>
+<div class="card">
+<ul>
+<li><b>Видалені завдання зберігаються позначкою «видалено» до 90 днів.</b> Тексту завдання там немає — лише ідентифікатор і сам факт видалення. Це потрібно, щоб видалення дійшло до ваших інших пристроїв, навіть якщо вони були вимкнені. Через 90 днів запис стирається.</li>
+<li><b>Спільні завдання, створені вами в групі, лишаються в групі</b> — вони належать усім її учасникам. Якщо хочете видалити й їх, видаліть усередині групи до видалення акаунта.</li>
+<li><b>Підписка PRO під час видалення даних не скасовується</b> — вона прив’язана до акаунта Google Play або App Store. Скасувати: <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Підписки</a> або на iPhone: Параметри → [ваше ім’я] → Підписки, інакше списання триватимуть.</li>
+</ul>
+<p>Більше нічого не зберігається. Ми ніде не зберігаємо email, ім’я, фото, пароль і платіжні дані, не ведемо аналітики й рекламних профілів.</p>
+</div>
+
+<h2>Якщо ви власник групи</h2>
+<p>Якщо ви єдиний адміністратор групи, у якій є інші учасники, застосунок спершу попросить передати права іншій людині. Інакше група лишилася б без адміністратора, а видалення групи стерло б завдання інших.</p>
+
+<h2>Див. також</h2>
+<p>Подробиці — в <a href="./privacy.html?lang=uk">політиці конфіденційності</a>.</p>
+</div>
+
+<div data-lang="en">
 <h1>Account &amp; Data Deletion — Mynado</h1>
 <div class="upd">App: Mynado · Developer: Aleksandr · support@mynado.app · updated 30 October 2026</div>
 
@@ -84,45 +196,92 @@
 <p>If you are the only administrator of a group that still has other members, the app will ask you to hand ownership to someone else before deleting your account. Otherwise the group would be left without an administrator, and deleting it outright would destroy the other members’ tasks.</p>
 
 <h2>Related</h2>
-<p>See our full <a href="./privacy.html">Privacy Policy</a> for details on how data is handled.</p>
-
-<hr style="margin:32px 0;border:none;border-top:1px solid var(--border)">
-
-<h2>Удаление аккаунта и данных</h2>
-<p>У Mynado нет собственной регистрации — вход выполняется через ваш аккаунт Google или Apple.</p>
-
-<h3 style="font-size:16px;margin:20px 0 6px">Как удалить</h3>
-<ul>
-<li>Откройте приложение → значок <b>шестерёнки</b> вверху справа.</li>
-<li>Нажмите <b>«Удалить аккаунт и все данные»</b> и подтвердите.</li>
-<li>Вход через Google: чтобы полностью отозвать доступ — Google-аккаунт → Безопасность → Доступ сторонних приложений → удалить Mynado.</li>
-<li>Вход через Apple: Приложение отзывает доступ само при удалении аккаунта. Проверить можно в Настройках iPhone → [ваше имя] → Вход с Apple.</li>
-</ul>
-<p>Также можно написать на <a href="mailto:support@mynado.app">support@mynado.app</a> — обработаем в течение 30 дней.</p>
-
-<h3 style="font-size:16px;margin:20px 0 6px">Что удаляется</h3>
-<ul>
-<li><b>Задачи</b> — сразу с устройства и, если вы входили, с нашего сервера.</li>
-<li><b>Напоминания</b> и <b>подписки на уведомления</b> — со всех ваших устройств.</li>
-<li><b>Ваше имя (ник)</b> — участники групп перестают его видеть.</li>
-<li><b>Язык интерфейса</b> и настройки уведомлений по каждой группе.</li>
-<li><b>Участие в группах</b> — вы выходите из всех. Группа, где вы были единственным участником, удаляется вместе со своими задачами.</li>
-</ul>
-
-<h3 style="font-size:16px;margin:20px 0 6px">Что сохраняется и на какой срок</h3>
-<div class="card">
-<ul>
-<li><b>Удалённые задачи хранятся отметкой «удалено» до 90 дней.</b> Текста задачи там нет — только идентификатор и сам факт удаления. Это нужно, чтобы удаление дошло до ваших других устройств, даже если они были выключены. Через 90 дней запись стирается.</li>
-<li><b>Общие задачи, созданные вами в группе, остаются группе</b> — они принадлежат всем её участникам. Если хотите удалить и их, удалите внутри группы до удаления аккаунта.</li>
-<li><b>Подписка PRO при удалении данных не отменяется</b> — она привязана к аккаунту Google Play или App Store. Отменить: <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Подписки</a> или на iPhone: Настройки → [ваше имя] → Подписки, иначе списания продолжатся.</li>
-</ul>
-<p>Больше ничего не сохраняется. Мы нигде не храним email, имя, фото, пароль и платёжные данные, не ведём аналитику и рекламные профили.</p>
+<p>See our full <a href="./privacy.html?lang=en">Privacy Policy</a> for details on how data is handled.</p>
 </div>
 
-<h3 style="font-size:16px;margin:20px 0 6px">Если вы владелец группы</h3>
-<p>Если вы единственный администратор группы, в которой есть другие участники, приложение сначала попросит передать права другому человеку. Иначе группа осталась бы без администратора, а удаление группы стёрло бы задачи остальных.</p>
+<div data-lang="de">
+<h1>Konto- und Datenlöschung — Mynado</h1>
+<div class="upd">App Mynado · Entwickler: Aleksandr · support@mynado.app · aktualisiert am 30. Oktober 2026</div>
 
-<p style="margin-top:20px">Подробности — в <a href="./privacy.html">политике конфиденциальности</a>.</p>
+<p>Mynado hat kein eigenes Kontosystem — Sie melden sich mit Ihrem Google- oder Apple-Konto an. Diese Seite erklärt, wie Sie Ihre Daten löschen und was mit ihnen geschieht.</p>
+
+<h2>So löschen Sie Ihre Daten</h2>
+<ul>
+<li>Öffnen Sie Mynado und tippen Sie oben rechts auf das <b>Zahnrad</b>.</li>
+<li>Tippen Sie auf <b>„Konto und alle Daten löschen“</b> und bestätigen Sie.</li>
+<li>Anmeldung mit Google: Um auch den Zugriff zu widerrufen, öffnen Sie Google-Konto → Sicherheit → Drittanbieterzugriff → Mynado entfernen.</li>
+<li>Anmeldung mit Apple: Die App widerruft den Zugriff beim Löschen des Kontos automatisch. Prüfen können Sie das unter iPhone-Einstellungen → [Ihr Name] → Mit Apple anmelden.</li>
+</ul>
+<p>Sie können die Löschung auch per E-Mail an <a href="mailto:support@mynado.app">support@mynado.app</a> beantragen — wir bearbeiten Anfragen innerhalb von 30 Tagen.</p>
+
+<h2>Was gelöscht wird</h2>
+<ul>
+<li><b>Aufgaben</b> — sofort vom Gerät und, falls Sie angemeldet waren, von unserem Server.</li>
+<li><b>Erinnerungen</b> — vom Server.</li>
+<li><b>Push-Abonnements</b> — für alle Ihre Geräte.</li>
+<li><b>Ihr Name (Spitzname)</b> — vom Server; andere sehen ihn nicht mehr.</li>
+<li><b>Sprache der Oberfläche</b> und Benachrichtigungseinstellungen je Gruppe.</li>
+<li><b>Gruppenmitgliedschaften</b> — Sie verlassen alle Gruppen. Eine Gruppe, in der Sie das <b>einzige</b> Mitglied waren, wird mit ihren Aufgaben gelöscht.</li>
+</ul>
+
+<h2>Was aufbewahrt wird und wie lange</h2>
+<div class="card">
+<ul>
+<li><b>Gelöschte Aufgaben werden bis zu 90 Tage als „gelöscht“ markiert aufbewahrt.</b> Sie enthalten keinen Aufgabentext — nur die Kennung und die Tatsache der Löschung. So erreicht die Löschung auch Ihre anderen Geräte, selbst wenn sie ausgeschaltet waren. Nach 90 Tagen wird der Eintrag entfernt.</li>
+<li><b>Gemeinsame Aufgaben, die Sie in einer Gruppe erstellt haben, bleiben in der Gruppe</b> — sie gehören allen Mitgliedern. Löschen Sie sie vorher in der Gruppe, wenn sie verschwinden sollen.</li>
+<li><b>Ihr PRO-Abo wird</b> durch das Löschen <b>nicht gekündigt</b> — es gehört zu Ihrem Google-Play- oder App-Store-Konto. Kündigen Sie es unter <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Abos</a> oder auf dem iPhone unter Einstellungen → [Ihr Name] → Abonnements, sonst wird weiter abgerechnet.</li>
+</ul>
+<p>Sonst wird nichts aufbewahrt. Wir speichern zu keinem Zeitpunkt E-Mail, Namen, Foto, Passwort oder Zahlungsdaten und führen keine Analyse- oder Werbeprofile.</p>
+</div>
+
+<h2>Wenn Sie eine Gruppe verwalten</h2>
+<p>Wenn Sie der einzige Administrator einer Gruppe mit weiteren Mitgliedern sind, bittet die App Sie vor dem Löschen, die Verwaltung an jemand anderen zu übergeben. Sonst bliebe die Gruppe ohne Administrator, und ihr Löschen würde die Aufgaben der anderen Mitglieder vernichten.</p>
+
+<h2>Siehe auch</h2>
+<p>Einzelheiten in der <a href="./privacy.html?lang=de">Datenschutzerklärung</a>.</p>
+</div>
+
+<div data-lang="fr">
+<h1>Suppression du compte et des données — Mynado</h1>
+<div class="upd">Application Mynado · développeur : Aleksandr · support@mynado.app · mise à jour le 30 octobre 2026</div>
+
+<p>Mynado n’a pas de système de comptes propre — vous vous connectez avec votre compte Google ou Apple. Cette page explique comment supprimer vos données et ce qu’il en advient.</p>
+
+<h2>Comment supprimer vos données</h2>
+<ul>
+<li>Ouvrez Mynado et touchez la <b>roue dentée</b> en haut à droite.</li>
+<li>Touchez <b>« Supprimer le compte et toutes les données »</b> et confirmez.</li>
+<li>Connexion avec Google : pour révoquer aussi l’accès, allez dans Compte Google → Sécurité → Accès tiers → retirer Mynado.</li>
+<li>Connexion avec Apple : l’Application révoque l’accès automatiquement lors de la suppression du compte. Vous pouvez le vérifier dans Réglages iPhone → [votre nom] → Se connecter avec Apple.</li>
+</ul>
+<p>Vous pouvez aussi demander la suppression par e-mail à <a href="mailto:support@mynado.app">support@mynado.app</a> — nous traitons les demandes sous 30 jours.</p>
+
+<h2>Ce qui est supprimé</h2>
+<ul>
+<li><b>Tâches</b> — immédiatement de l’appareil et, si vous étiez connecté, de notre serveur.</li>
+<li><b>Rappels</b> — du serveur.</li>
+<li><b>Abonnements push</b> — pour tous vos appareils.</li>
+<li><b>Votre nom (pseudo)</b> — du serveur ; les autres ne le voient plus.</li>
+<li><b>Langue de l’interface</b> et réglages de notification par groupe.</li>
+<li><b>Appartenance aux groupes</b> — vous quittez tous les groupes. Un groupe dont vous étiez le <b>seul</b> membre est supprimé avec ses tâches.</li>
+</ul>
+
+<h2>Ce qui est conservé et combien de temps</h2>
+<div class="card">
+<ul>
+<li><b>Les tâches supprimées sont conservées sous forme de marqueurs « supprimé » jusqu’à 90 jours.</b> Elles ne contiennent aucun texte — seulement l’identifiant et le fait de la suppression. Cela permet à la suppression d’atteindre vos autres appareils même s’ils étaient éteints. Après 90 jours, l’enregistrement est effacé.</li>
+<li><b>Les tâches partagées que vous avez créées dans un groupe restent au groupe</b> — elles appartiennent à tous ses membres. Supprimez-les d’abord dans le groupe si vous voulez qu’elles disparaissent.</li>
+<li><b>Votre abonnement PRO n’est pas résilié</b> par la suppression — il appartient à votre compte Google Play ou App Store. Résiliez-le dans <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Abonnements</a> ou sur iPhone dans Réglages → [votre nom] → Abonnements, sinon la facturation continue.</li>
+</ul>
+<p>Rien d’autre n’est conservé. Nous ne stockons à aucun moment d’e-mail, de nom, de photo, de mot de passe ni de données de paiement, et ne tenons aucun profil analytique ou publicitaire.</p>
+</div>
+
+<h2>Si vous administrez un groupe</h2>
+<p>Si vous êtes le seul administrateur d’un groupe comptant d’autres membres, l’application vous demandera de transmettre l’administration à quelqu’un d’autre avant de supprimer votre compte. Sinon le groupe resterait sans administrateur, et sa suppression effacerait les tâches des autres membres.</p>
+
+<h2>Voir aussi</h2>
+<p>Détails dans la <a href="./privacy.html?lang=fr">Politique de confidentialité</a>.</p>
+</div>
 
 </div>
 </body>

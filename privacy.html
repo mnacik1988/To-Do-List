@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Политика конфиденциальности — Mynado</title>
+<title>Privacy Policy — Mynado</title>
 <link rel="canonical" href="https://mynado.app/privacy.html">
 <!-- Переезд со старого адреса (22.10.2026): Search Console показал, что Google считает главной копию на
      mnacik1988.github.io, а mynado.app не индексирует вовсе — одной пометки canonical мало. Посетителей и поисковик со
@@ -37,32 +37,41 @@
   a{ color:var(--accent); }
   .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 20px; margin-top:8px; }
   code{ background:rgba(127,127,127,.15); padding:1px 5px; border-radius:5px; font-size:13px; }
-  .top{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
   .top .back{ margin-bottom:0; }
   .langs{ display:inline-flex; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:3px; }
-  .langs button{ background:none; border:0; color:var(--muted); font:inherit; font-size:14px; font-weight:700; padding:6px 12px; border-radius:9px; cursor:pointer; }
+  .langs button{ background:none; border:0; color:var(--muted); font:inherit; font-size:13px; font-weight:700; padding:6px 9px; border-radius:9px; cursor:pointer; }
   .langs button.on{ background:var(--accent); color:var(--bg); }
   [data-lang]{ display:none; }
-  html[data-show="ru"] [data-lang="ru"], html[data-show="en"] [data-lang="en"]{ display:block; }
-  html[data-show="ru"] span[data-lang="ru"], html[data-show="en"] span[data-lang="en"]{ display:inline; }
+  html[data-show="ru"] div[data-lang="ru"]{ display:block; }
+  html[data-show="ru"] span[data-lang="ru"]{ display:inline; }
+  html[data-show="uk"] div[data-lang="uk"]{ display:block; }
+  html[data-show="uk"] span[data-lang="uk"]{ display:inline; }
+  html[data-show="en"] div[data-lang="en"]{ display:block; }
+  html[data-show="en"] span[data-lang="en"]{ display:inline; }
+  html[data-show="de"] div[data-lang="de"]{ display:block; }
+  html[data-show="de"] span[data-lang="de"]{ display:inline; }
+  html[data-show="fr"] div[data-lang="fr"]{ display:block; }
+  html[data-show="fr"] span[data-lang="fr"]{ display:inline; }
 </style>
 </head>
-<body data-title-ru="Политика конфиденциальности — Mynado" data-title-en="Privacy Policy — Mynado">
+<body data-title-ru="Политика конфиденциальности — Mynado" data-title-uk="Політика конфіденційності — Mynado" data-title-en="Privacy Policy — Mynado" data-title-de="Datenschutzerklärung — Mynado" data-title-fr="Politique de confidentialité — Mynado">
 <script>(function(){
+  var ok={ru:1,uk:1,en:1,de:1,fr:1};
   var q=(location.search.match(/[?&]lang=([a-z]{2})/)||[])[1]||'';
   var n=String(navigator.language||'').slice(0,2).toLowerCase();
-  var l=q||n; l=(l==='ru'||l==='uk')?'ru':'en';
+  var l=ok[q]?q:(ok[n]?n:'en');
   document.documentElement.setAttribute('data-show',l); document.documentElement.lang=l;
 })();
 function mynLang(l){ document.documentElement.setAttribute('data-show',l); document.documentElement.lang=l;
   var b=document.querySelectorAll('.langs button'); for(var i=0;i<b.length;i++) b[i].className=(b[i].getAttribute('data-l')===l?'on':'');
-  document.title=l==='ru'?document.body.getAttribute('data-title-ru'):document.body.getAttribute('data-title-en'); }
+  var t=document.body.getAttribute('data-title-'+l); if(t) document.title=t; }
 document.addEventListener('DOMContentLoaded',function(){ mynLang(document.documentElement.getAttribute('data-show')); });
 function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
 <div class="wrap">
 <div class="top">
-<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="en">← Back</span></button>
-<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button></div>
+<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="uk">← Назад</span><span data-lang="en">← Back</span><span data-lang="de">← Zurück</span><span data-lang="fr">← Retour</span></button>
+<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="uk" onclick="mynLang('uk')">UA</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button><button type="button" data-l="de" onclick="mynLang('de')">DE</button><button type="button" data-l="fr" onclick="mynLang('fr')">FR</button></div>
 </div>
 
 <div data-lang="ru">
@@ -140,7 +149,7 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 <p>Если вы <b>единственный администратор группы, где есть другие люди</b>, Приложение сначала попросит передать права другому участнику и ничего не удалит. Так сделано намеренно: иначе группа осталась бы без администратора, а удаление группы стёрло бы задачи остальных участников.</p>
 <p>Общие задачи, которые вы создали в группе, остаются у группы — они принадлежат всем её участникам. Если вы хотите удалить и их, удалите задачи внутри группы до удаления аккаунта.</p>
 <p>Подписка PRO при удалении аккаунта не отменяется — её нужно отменить отдельно в Google Play или App Store.</p>
-<p>Отдельная страница с инструкцией: <a href="./delete-data.html">удаление данных</a>.</p>
+<p>Отдельная страница с инструкцией: <a href="./delete-data.html?lang=ru">удаление данных</a>.</p>
 
 <h2>Поддержка</h2>
 <p>Если вы обратитесь к нам с проблемой — например, пропала задача или нужно восстановить удалённую — мы можем открыть вашу запись на сервере, чтобы разобраться. Без вашего обращения мы этого не делаем. Именно для таких случаев удалённые задачи хранятся ещё 90 дней.</p>
@@ -153,6 +162,96 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 
 <h2>Контакты</h2>
 <p>По вопросам конфиденциальности и удаления данных: <a href="mailto:support@mynado.app">support@mynado.app</a></p>
+</div>
+
+<div data-lang="uk">
+<h1>Політика конфіденційності</h1>
+<div class="upd">Застосунок Mynado · оновлено 30 жовтня 2026</div>
+
+<p>Mynado (далі — «Застосунок») — список завдань із голосовим введенням, ШІ-помічником, нагадуваннями, календарем і спільними групами. Ми збираємо мінімум даних, потрібних для роботи цих функцій, і не заробляємо на даних: у Застосунку немає реклами, трекерів і продажу даних.</p>
+
+<p>Для ШІ-помічника, синхронізації між пристроями, push-сповіщень і груп потрібен вхід через Google або Apple — без пароля й без окремого облікового запису на наших серверах. Правила користування й підписки — в <a href="./terms.html?lang=uk">Умовах використання</a>.</p>
+
+<h2>Які дані обробляються</h2>
+<ul>
+<li><b>Ваші завдання</b> (назва, опис, дата, пріоритет, чек-лист) зберігаються на вашому пристрої. Якщо ви увійшли через Google або Apple — також на нашому сервері, щоб ті самі завдання було видно на всіх ваших пристроях. Вони прив’язані до ідентифікатора акаунта (псевдонімного: він не містить email чи імені, але за ним записи однієї людини пов’язані між собою).</li>
+<li><b>Вхід через Google.</b> Google видає Застосунку підтвердження входу (токен), у якому є ваш email та ідентифікатор акаунта. Токен надсилається на наш сервер для перевірки входу, але сервер використовує з нього лише ідентифікатор акаунта: <b>email на сервері не зберігається</b>, він лишається тільки на вашому пристрої (щоб показати «Ви увійшли як…»). Ім’я та фото профілю ми не запитуємо й не зберігаємо.</li>
+<li><b>Вхід через Apple</b> (застосунок для iPhone) влаштований так само: сервер перевіряє підтвердження входу й зберігає лише ідентифікатор акаунта Apple. Якщо ви обрали «Сховати e-mail», Apple передає Застосунку службову адресу замість справжньої. Під час видалення акаунта в Застосунку ми також відкликаємо вхід через Apple.</li>
+<li><b>Ваше ім’я (нік)</b> — необов’язкове поле в налаштуваннях. Якщо ви його заповнили, воно зберігається на сервері й <b>видиме всім учасникам груп, у яких ви перебуваєте</b>. Поле можна залишити порожнім або очистити будь-коли — тоді учасники бачать лише ваш анонімний ідентифікатор.</li>
+<li><b>Нагадування</b> — текст, дата й час передаються на сервер, щоб вчасно надіслати push-сповіщення. Видаляються після спрацювання.</li>
+<li><b>Push-підписка</b> — технічна адреса доставки сповіщень, окрема для кожного вашого пристрою.</li>
+<li><b>Мова інтерфейсу</b> — щоб сповіщення приходили зрозумілою вам мовою.</li>
+<li><b>Текст завдання під час використання ШІ.</b> Коли ви користуєтеся голосовим або текстовим ШІ-помічником, текст завдання чи команди передається сервісу Anthropic (Claude) для обробки й повернення результату.</li>
+<li><b>Голосове введення.</b> Розпізнавання мовлення виконується засобами вашого браузера або операційної системи. Аудіо обробляє постачальник ОС (Apple або Google), Застосунок звук не записує й не зберігає.</li>
+<li><b>Лічильник ШІ-запитів і статус підписки</b> — скільки запитів ви зробили за добу та чи діє у вас PRO. Потрібні для дотримання денного ліміту.</li>
+</ul>
+
+<h2>Групи: що бачать інші люди</h2>
+<div class="card">
+<p>Це важливо зрозуміти до того, як ви створите групу або приймете запрошення.</p>
+<ul>
+<li>Усі учасники групи бачать <b>назву, опис, дату, пріоритет і чек-лист</b> кожного спільного завдання, а також хто його створив і хто змінив останнім.</li>
+<li>Учасники бачать <b>ваш нік</b>, якщо ви його вказали, інакше — ваш анонімний ідентифікатор.</li>
+<li>Адміністратор групи бачить список учасників і їхні ролі, може змінювати ролі та видаляти учасників.</li>
+<li>Якщо вас позначили в завданні, вам надходить сповіщення; тому, хто позначив, видно, що вас позначено.</li>
+<li><b>Особисті завдання в групу не потрапляють.</b> Спільними стають лише завдання, які ви створили всередині групи.</li>
+</ul>
+<p>Запрошення працює за анонімним ідентифікатором («Мій ID» у налаштуваннях). Вас не можна знайти чи додати до групи за email або номером телефону.</p>
+</div>
+
+<h2>Чого ми НЕ робимо</h2>
+<ul>
+<li>Не запитуємо пароль і не створюємо окремий обліковий запис на своїх серверах.</li>
+<li>Не зберігаємо на сервері ваш email, ім’я чи фото профілю (email видно серверу лише всередині токена входу в момент перевірки).</li>
+<li>Не збираємо телефон, геолокацію, контакти, список встановлених застосунків.</li>
+<li>Не показуємо рекламу й не використовуємо рекламні трекери.</li>
+<li>Не продаємо й не передаємо ваші дані третім особам для маркетингу.</li>
+<li>Не ведемо аналітику поведінки й не профілюємо користувачів.</li>
+<li>Не переглядаємо ваші завдання — крім випадків, коли ви самі звернулися до підтримки з проблемою і для її вирішення треба зазирнути у ваш запис (наприклад, відновити зникле чи видалене завдання).</li>
+</ul>
+
+<h2>Сторонні сервіси</h2>
+<p>Для роботи Застосунку використовуються:</p>
+<ul>
+<li><b>Google Sign-In</b> — вхід в акаунт. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Політика Google</a>.</li>
+<li><b>Anthropic (Claude)</b> — обробка тексту завдань для ШІ-функцій. <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Політика Anthropic</a>.</li>
+<li><b>Cloudflare</b> — наш сервер і роздача самого Застосунку з адреси mynado.app: зберігання завдань, доставка сповіщень, звернення до ШІ. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Політика Cloudflare</a>.</li>
+<li><b>GitHub Pages</b> — колишня адреса Застосунку; зараз вона лише перенаправляє на mynado.app. <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Політика GitHub</a>.</li>
+<li><b>Sign in with Apple, App Store і Apple Push Notification service</b> — вхід, оплата PRO та сповіщення в застосунку для iPhone. Платіжні дані обробляє Apple, нам надходить лише факт активної підписки. <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Політика Apple</a>.</li>
+<li><b>Google Play Billing</b> — оформлення й продовження підписки PRO в Android-версії. Платіжні дані обробляє Google, ми їх не отримуємо й не зберігаємо: нам надходить лише факт, що підписка активна. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Політика Google</a>.</li>
+<li><b>Apple / Google</b> — розпізнавання мовлення й доставка push-сповіщень на рівні пристрою та браузера.</li>
+</ul>
+<p>Шрифти, значки й оформлення завантажуються з нашої ж адреси — до сторонніх шрифтових сервісів Застосунок не звертається.</p>
+
+<h2>Підписка Mynado PRO</h2>
+<p>PRO збільшує денний ліміт запитів до ШІ (точні цифри — в Умовах використання). Оформлюється через Google Play або App Store і <b>продовжується автоматично</b> щомісяця, доки ви її не скасуєте. Скасувати можна будь-коли в <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Підписки</a> або на iPhone у «Параметри → [ваше ім’я] → Підписки»; скасування набуває чинності в кінці оплаченого періоду. Ми зберігаємо лише позначку, що підписка активна. Докладно — в <a href="./terms.html?lang=uk">Умовах використання</a>.</p>
+
+<h2>Скільки даних зберігається</h2>
+<ul>
+<li>Завдання й налаштування — на пристрої, доки ви їх не видалите.</li>
+<li>На сервері (у тих, хто увійшов через Google або Apple) — завдання, нік, мова, push-підписки, активні нагадування, склад ваших груп і спільні завдання цих груп.</li>
+<li>Видалене завдання позначається як видалене й зберігається в такому вигляді до 90 днів — щоб видалення встигло дійти до ваших інших пристроїв, навіть якщо вони були вимкнені. Після цього запис стирається.</li>
+<li>Нагадування видаляється після спрацювання.</li>
+</ul>
+
+<h2>Як видалити свої дані</h2>
+<p>Кнопка <b>«Видалити акаунт і всі дані»</b> в налаштуваннях видаляє завдання й налаштування з пристрою і, якщо ви увійшли через Google або Apple, ваші дані з сервера: завдання, нагадування, push-підписки, нік, мову й налаштування сповіщень. З груп, де ви учасник, ви виходите; група, у якій ви єдиний учасник, видаляється разом зі своїми завданнями.</p>
+<p>Якщо ви <b>єдиний адміністратор групи, де є інші люди</b>, Застосунок спершу попросить передати права іншому учасникові й нічого не видалить. Так зроблено навмисно: інакше група лишилася б без адміністратора, а видалення групи стерло б завдання інших учасників.</p>
+<p>Спільні завдання, які ви створили в групі, лишаються в групі — вони належать усім її учасникам. Якщо хочете видалити й їх, видаліть завдання всередині групи до видалення акаунта.</p>
+<p>Підписка PRO під час видалення акаунта не скасовується — її треба скасувати окремо в Google Play або App Store.</p>
+<p>Окрема сторінка з інструкцією: <a href="./delete-data.html?lang=uk">видалення даних</a>.</p>
+
+<h2>Підтримка</h2>
+<p>Якщо ви звернетеся до нас із проблемою — наприклад, зникло завдання або треба відновити видалене — ми можемо відкрити ваш запис на сервері, щоб розібратися. Без вашого звернення ми цього не робимо. Саме для таких випадків видалені завдання зберігаються ще 90 днів.</p>
+
+<h2>Діти</h2>
+<p>Застосунок не призначений для дітей до 13 років і навмисно не збирає даних дітей.</p>
+
+<h2>Зміни</h2>
+<p>Ми можемо оновлювати цю політику. Актуальна версія завжди доступна за цією адресою із зазначенням дати оновлення.</p>
+
+<h2>Контакти</h2>
+<p>З питань конфіденційності й видалення даних: <a href="mailto:support@mynado.app">support@mynado.app</a></p>
 </div>
 
 <div data-lang="en">
@@ -230,7 +329,7 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 <p>If you are <b>the only administrator of a group that has other people</b>, the App first asks you to hand over the role to another member and deletes nothing. This is intentional: otherwise the group would be left without an administrator, and deleting the group would erase other members’ tasks.</p>
 <p>Shared tasks you created in a group stay with the group — they belong to all its members. If you want to delete them too, delete them inside the group before deleting your account.</p>
 <p>A PRO subscription is not cancelled when you delete your account — cancel it separately in Google Play or the App Store.</p>
-<p>Step-by-step page: <a href="./delete-data.html">data deletion</a>.</p>
+<p>Step-by-step page: <a href="./delete-data.html?lang=en">data deletion</a>.</p>
 
 <h2>Support</h2>
 <p>If you contact us with a problem — for example, a task went missing or a deleted one needs restoring — we may open your record on the server to investigate. We never do this without your request. This is exactly why deleted tasks are kept for 90 days.</p>
@@ -243,6 +342,186 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 
 <h2>Contact</h2>
 <p>Privacy and data deletion questions: <a href="mailto:support@mynado.app">support@mynado.app</a></p>
+</div>
+
+<div data-lang="de">
+<h1>Datenschutzerklärung</h1>
+<div class="upd">App Mynado · aktualisiert am 30. Oktober 2026</div>
+
+<p>Mynado (die „App“) ist eine Aufgabenliste mit Spracheingabe, KI-Assistent, Erinnerungen, Kalender und gemeinsamen Gruppen. Wir erheben nur die Daten, die für diese Funktionen nötig sind, und verdienen kein Geld mit Daten: Die App enthält keine Werbung und keine Tracker, und wir verkaufen keine Daten.</p>
+
+<p>Für den KI-Assistenten, die Synchronisierung zwischen Geräten, Push-Benachrichtigungen und Gruppen ist eine Anmeldung mit Google oder Apple erforderlich — ohne Passwort und ohne eigenes Konto auf unseren Servern. Nutzungs- und Abo-Regeln stehen in den <a href="./terms.html?lang=de">Nutzungsbedingungen</a>.</p>
+
+<h2>Welche Daten verarbeitet werden</h2>
+<ul>
+<li><b>Ihre Aufgaben</b> (Titel, Beschreibung, Datum, Priorität, Checkliste) werden auf Ihrem Gerät gespeichert. Wenn Sie mit Google oder Apple angemeldet sind, auch auf unserem Server, damit dieselben Aufgaben auf allen Ihren Geräten erscheinen. Sie sind mit einer Kontokennung verknüpft (pseudonym: Sie enthält weder E-Mail noch Namen, verknüpft aber die Einträge einer Person miteinander).</li>
+<li><b>Anmeldung mit Google.</b> Google übergibt der App eine Anmeldebestätigung (Token) mit Ihrer E-Mail und Kontokennung. Das Token wird zur Prüfung an unseren Server gesendet, der Server verwendet jedoch nur die Kontokennung: <b>Ihre E-Mail wird nicht auf dem Server gespeichert</b>, sie bleibt nur auf Ihrem Gerät (für die Anzeige „Angemeldet als…“). Name und Profilfoto fragen wir nicht ab und speichern sie nicht.</li>
+<li><b>Anmeldung mit Apple</b> (iPhone-App) funktioniert genauso: Der Server prüft die Anmeldung und speichert nur die Apple-Kontokennung. Wenn Sie „E-Mail-Adresse verbergen“ gewählt haben, übergibt Apple der App eine Weiterleitungsadresse statt Ihrer echten. Beim Löschen des Kontos in der App widerrufen wir auch die Anmeldung mit Apple.</li>
+<li><b>Ihr Name (Spitzname)</b> — ein optionales Feld in den Einstellungen. Wenn Sie es ausfüllen, wird es auf dem Server gespeichert und ist <b>für alle Mitglieder Ihrer Gruppen sichtbar</b>. Sie können es leer lassen oder jederzeit löschen — dann sehen Mitglieder nur Ihre anonyme Kennung.</li>
+<li><b>Erinnerungen</b> — Text, Datum und Uhrzeit werden an den Server übermittelt, damit die Push-Benachrichtigung pünktlich kommt. Sie werden nach dem Auslösen gelöscht.</li>
+<li><b>Push-Abonnement</b> — eine technische Zustelladresse für Benachrichtigungen, für jedes Ihrer Geräte separat.</li>
+<li><b>Sprache der Oberfläche</b> — damit Benachrichtigungen in einer für Sie verständlichen Sprache ankommen.</li>
+<li><b>Aufgabentext bei KI-Nutzung.</b> Wenn Sie den Sprach- oder Text-KI-Assistenten verwenden, wird der Text Ihrer Aufgabe oder Ihres Befehls an Anthropic (Claude) zur Verarbeitung gesendet.</li>
+<li><b>Spracheingabe.</b> Die Spracherkennung erfolgt durch Ihren Browser oder Ihr Betriebssystem. Audio wird vom Anbieter des Betriebssystems (Apple oder Google) verarbeitet; die App nimmt keinen Ton auf und speichert ihn nicht.</li>
+<li><b>Zähler der KI-Anfragen und Abo-Status</b> — wie viele Anfragen Sie heute gestellt haben und ob PRO aktiv ist. Nötig für das Tageslimit.</li>
+</ul>
+
+<h2>Gruppen: was andere sehen</h2>
+<div class="card">
+<p>Bitte lesen Sie das, bevor Sie eine Gruppe erstellen oder eine Einladung annehmen.</p>
+<ul>
+<li>Alle Gruppenmitglieder sehen <b>Titel, Beschreibung, Datum, Priorität und Checkliste</b> jeder gemeinsamen Aufgabe sowie, wer sie erstellt und zuletzt geändert hat.</li>
+<li>Mitglieder sehen <b>Ihren Spitznamen</b>, falls angegeben, sonst Ihre anonyme Kennung.</li>
+<li>Der Gruppenadministrator sieht die Mitgliederliste und Rollen und kann Rollen ändern und Mitglieder entfernen.</li>
+<li>Wenn Sie in einer Aufgabe erwähnt werden, erhalten Sie eine Benachrichtigung; wer Sie erwähnt hat, sieht, dass Sie erwähnt wurden.</li>
+<li><b>Persönliche Aufgaben gelangen nie in eine Gruppe.</b> Geteilt werden nur Aufgaben, die Sie innerhalb einer Gruppe erstellen.</li>
+</ul>
+<p>Einladungen funktionieren über die anonyme Kennung („Meine ID“ in den Einstellungen). Niemand kann Sie per E-Mail oder Telefonnummer finden oder zu einer Gruppe hinzufügen.</p>
+</div>
+
+<h2>Was wir NICHT tun</h2>
+<ul>
+<li>Wir fragen kein Passwort ab und legen kein eigenes Konto auf unseren Servern an.</li>
+<li>Wir speichern Ihre E-Mail, Ihren Namen oder Ihr Profilfoto nicht auf dem Server (die E-Mail sieht der Server nur im Anmelde-Token während der Prüfung).</li>
+<li>Wir erheben weder Telefonnummer noch Standort, Kontakte oder die Liste installierter Apps.</li>
+<li>Wir zeigen keine Werbung und nutzen keine Werbe-Tracker.</li>
+<li>Wir verkaufen Ihre Daten nicht und geben sie nicht zu Marketingzwecken an Dritte weiter.</li>
+<li>Wir betreiben keine Verhaltensanalyse und erstellen keine Nutzerprofile.</li>
+<li>Wir sehen uns Ihre Aufgaben nicht an — außer wenn Sie sich mit einem Problem an den Support wenden und zur Lösung ein Blick in Ihren Eintrag nötig ist (z. B. um eine verlorene oder gelöschte Aufgabe wiederherzustellen).</li>
+</ul>
+
+<h2>Dienste Dritter</h2>
+<p>Die App nutzt:</p>
+<ul>
+<li><b>Google Sign-In</b> — Anmeldung. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Datenschutzerklärung von Google</a>.</li>
+<li><b>Anthropic (Claude)</b> — Verarbeitung von Aufgabentexten für KI-Funktionen. <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Datenschutzerklärung von Anthropic</a>.</li>
+<li><b>Cloudflare</b> — unser Server und das Hosting der App unter mynado.app: Speicherung von Aufgaben, Zustellung von Benachrichtigungen, Aufrufe der KI. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Datenschutzerklärung von Cloudflare</a>.</li>
+<li><b>GitHub Pages</b> — frühere Adresse der App; leitet jetzt nur noch auf mynado.app weiter. <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</li>
+<li><b>Sign in with Apple, App Store und Apple Push Notification service</b> — Anmeldung, PRO-Zahlungen und Benachrichtigungen in der iPhone-App. Zahlungsdaten verarbeitet Apple; wir erfahren nur, dass ein Abo aktiv ist. <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Datenschutzrichtlinie von Apple</a>.</li>
+<li><b>Google Play Billing</b> — Kauf und Verlängerung von PRO in der Android-App. Zahlungsdaten verarbeitet Google; wir erhalten oder speichern sie nicht — wir erfahren nur, dass ein Abo aktiv ist. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Datenschutzerklärung von Google</a>.</li>
+<li><b>Apple / Google</b> — Spracherkennung und Zustellung von Push-Benachrichtigungen auf Geräte- und Browserebene.</li>
+</ul>
+<p>Schriften, Symbole und Gestaltung werden von unserer eigenen Adresse geladen — die App kontaktiert keine fremden Schriftdienste.</p>
+
+<h2>Abo Mynado PRO</h2>
+<p>PRO erhöht das Tageslimit für KI-Anfragen (genaue Zahlen in den Nutzungsbedingungen). Es wird über Google Play oder den App Store abgeschlossen und <b>verlängert sich automatisch</b> jeden Monat, bis Sie es kündigen. Kündigen können Sie jederzeit unter <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Abos</a> oder auf dem iPhone unter „Einstellungen → [Ihr Name] → Abonnements“; die Kündigung wird zum Ende des bezahlten Zeitraums wirksam. Wir speichern nur einen Vermerk, dass das Abo aktiv ist. Einzelheiten in den <a href="./terms.html?lang=de">Nutzungsbedingungen</a>.</p>
+
+<h2>Speicherdauer</h2>
+<ul>
+<li>Aufgaben und Einstellungen — auf dem Gerät, bis Sie sie löschen.</li>
+<li>Auf dem Server (bei Anmeldung mit Google oder Apple) — Aufgaben, Spitzname, Sprache, Push-Abonnements, aktive Erinnerungen, Ihre Gruppenmitgliedschaften und die gemeinsamen Aufgaben dieser Gruppen.</li>
+<li>Eine gelöschte Aufgabe wird bis zu 90 Tage als „gelöscht“ markiert aufbewahrt, damit die Löschung auch Ihre anderen Geräte erreicht, selbst wenn diese ausgeschaltet waren. Danach wird der Eintrag entfernt.</li>
+<li>Eine Erinnerung wird nach dem Auslösen gelöscht.</li>
+</ul>
+
+<h2>So löschen Sie Ihre Daten</h2>
+<p>Die Schaltfläche <b>„Konto und alle Daten löschen“</b> in den Einstellungen löscht Aufgaben und Einstellungen vom Gerät und, wenn Sie mit Google oder Apple angemeldet sind, Ihre Daten vom Server: Aufgaben, Erinnerungen, Push-Abonnements, Spitzname, Sprache und Benachrichtigungseinstellungen. Sie verlassen alle Gruppen, in denen Sie Mitglied sind; eine Gruppe, in der Sie das einzige Mitglied sind, wird mit ihren Aufgaben gelöscht.</p>
+<p>Wenn Sie <b>der einzige Administrator einer Gruppe mit weiteren Mitgliedern</b> sind, bittet die App Sie zuerst, die Rolle an ein anderes Mitglied zu übergeben, und löscht nichts. Das ist Absicht: Sonst bliebe die Gruppe ohne Administrator, und das Löschen der Gruppe würde die Aufgaben der anderen Mitglieder vernichten.</p>
+<p>Gemeinsame Aufgaben, die Sie in einer Gruppe erstellt haben, bleiben in der Gruppe — sie gehören allen Mitgliedern. Wenn Sie auch diese löschen möchten, löschen Sie sie vor dem Löschen des Kontos in der Gruppe.</p>
+<p>Ein PRO-Abo wird beim Löschen des Kontos nicht gekündigt — kündigen Sie es separat in Google Play oder im App Store.</p>
+<p>Schritt-für-Schritt-Seite: <a href="./delete-data.html?lang=de">Datenlöschung</a>.</p>
+
+<h2>Support</h2>
+<p>Wenn Sie uns wegen eines Problems kontaktieren — z. B. weil eine Aufgabe verschwunden ist oder eine gelöschte wiederhergestellt werden soll —, können wir Ihren Eintrag auf dem Server öffnen, um es zu klären. Ohne Ihre Anfrage tun wir das nie. Genau dafür werden gelöschte Aufgaben 90 Tage aufbewahrt.</p>
+
+<h2>Kinder</h2>
+<p>Die App ist nicht für Kinder unter 13 Jahren bestimmt und erhebt wissentlich keine Daten von Kindern.</p>
+
+<h2>Änderungen</h2>
+<p>Wir können diese Erklärung aktualisieren. Die aktuelle Fassung ist immer unter dieser Adresse mit Aktualisierungsdatum verfügbar.</p>
+
+<h2>Kontakt</h2>
+<p>Fragen zu Datenschutz und Datenlöschung: <a href="mailto:support@mynado.app">support@mynado.app</a></p>
+</div>
+
+<div data-lang="fr">
+<h1>Politique de confidentialité</h1>
+<div class="upd">Application Mynado · mise à jour le 30 octobre 2026</div>
+
+<p>Mynado (l’« Application ») est une liste de tâches avec saisie vocale, assistant IA, rappels, calendrier et groupes partagés. Nous ne collectons que les données nécessaires à ces fonctions et ne gagnons pas d’argent avec les données : l’Application ne contient ni publicité ni traceurs, et nous ne vendons aucune donnée.</p>
+
+<p>L’assistant IA, la synchronisation entre appareils, les notifications push et les groupes nécessitent une connexion avec Google ou Apple — sans mot de passe et sans compte distinct sur nos serveurs. Les règles d’utilisation et d’abonnement figurent dans les <a href="./terms.html?lang=fr">Conditions d’utilisation</a>.</p>
+
+<h2>Données traitées</h2>
+<ul>
+<li><b>Vos tâches</b> (titre, description, date, priorité, liste de contrôle) sont stockées sur votre appareil. Si vous êtes connecté avec Google ou Apple, elles le sont aussi sur notre serveur afin que les mêmes tâches apparaissent sur tous vos appareils. Elles sont liées à un identifiant de compte (pseudonyme : il ne contient ni e-mail ni nom, mais relie entre eux les enregistrements d’une même personne).</li>
+<li><b>Connexion avec Google.</b> Google remet à l’Application une confirmation de connexion (jeton) contenant votre e-mail et votre identifiant de compte. Le jeton est envoyé à notre serveur pour vérification, mais le serveur n’en utilise que l’identifiant : <b>votre e-mail n’est pas enregistré sur le serveur</b>, il reste uniquement sur votre appareil (pour afficher « Connecté en tant que… »). Nous ne demandons ni ne conservons votre nom ou votre photo de profil.</li>
+<li><b>Connexion avec Apple</b> (application iPhone) fonctionne de la même façon : le serveur vérifie la connexion et ne conserve que l’identifiant du compte Apple. Si vous avez choisi « Masquer mon adresse e-mail », Apple transmet une adresse relais au lieu de la vraie. Lorsque vous supprimez votre compte dans l’Application, nous révoquons aussi la connexion avec Apple.</li>
+<li><b>Votre nom (pseudo)</b> — champ facultatif dans les réglages. Si vous le renseignez, il est stocké sur le serveur et <b>visible par tous les membres de vos groupes</b>. Vous pouvez le laisser vide ou l’effacer à tout moment — les membres ne voient alors que votre identifiant anonyme.</li>
+<li><b>Rappels</b> — le texte, la date et l’heure sont envoyés au serveur pour que la notification push arrive à temps. Ils sont supprimés après déclenchement.</li>
+<li><b>Abonnement push</b> — adresse technique de livraison des notifications, distincte pour chacun de vos appareils.</li>
+<li><b>Langue de l’interface</b> — pour que les notifications arrivent dans une langue que vous comprenez.</li>
+<li><b>Texte des tâches lors de l’utilisation de l’IA.</b> Lorsque vous utilisez l’assistant IA vocal ou textuel, le texte de votre tâche ou commande est envoyé à Anthropic (Claude) pour traitement.</li>
+<li><b>Saisie vocale.</b> La reconnaissance vocale est effectuée par votre navigateur ou votre système d’exploitation. L’audio est traité par le fournisseur du système (Apple ou Google) ; l’Application n’enregistre ni ne conserve aucun son.</li>
+<li><b>Compteur de requêtes IA et statut d’abonnement</b> — combien de requêtes vous avez faites aujourd’hui et si PRO est actif. Nécessaires pour appliquer la limite quotidienne.</li>
+</ul>
+
+<h2>Groupes : ce que voient les autres</h2>
+<div class="card">
+<p>À comprendre avant de créer un groupe ou d’accepter une invitation.</p>
+<ul>
+<li>Tous les membres voient <b>le titre, la description, la date, la priorité et la liste de contrôle</b> de chaque tâche partagée, ainsi que qui l’a créée et modifiée en dernier.</li>
+<li>Les membres voient <b>votre pseudo</b> si vous l’avez indiqué, sinon votre identifiant anonyme.</li>
+<li>L’administrateur du groupe voit la liste des membres et leurs rôles, peut modifier les rôles et retirer des membres.</li>
+<li>Si vous êtes mentionné dans une tâche, vous recevez une notification ; la personne qui vous a mentionné voit que vous l’êtes.</li>
+<li><b>Les tâches personnelles ne vont jamais dans un groupe.</b> Seules les tâches créées à l’intérieur d’un groupe sont partagées.</li>
+</ul>
+<p>Les invitations fonctionnent par identifiant anonyme (« Mon ID » dans les réglages). Personne ne peut vous trouver ni vous ajouter à un groupe par e-mail ou numéro de téléphone.</p>
+</div>
+
+<h2>Ce que nous ne faisons PAS</h2>
+<ul>
+<li>Nous ne demandons pas de mot de passe et ne créons pas de compte distinct sur nos serveurs.</li>
+<li>Nous ne stockons pas votre e-mail, votre nom ni votre photo de profil sur le serveur (le serveur ne voit l’e-mail que dans le jeton de connexion au moment de la vérification).</li>
+<li>Nous ne collectons ni numéro de téléphone, ni position, ni contacts, ni liste des applications installées.</li>
+<li>Nous n’affichons pas de publicité et n’utilisons pas de traceurs publicitaires.</li>
+<li>Nous ne vendons pas vos données et ne les transmettons pas à des tiers à des fins marketing.</li>
+<li>Nous ne faisons pas d’analyse comportementale ni de profilage des utilisateurs.</li>
+<li>Nous ne consultons pas vos tâches — sauf si vous contactez le support pour un problème dont la résolution nécessite d’examiner votre enregistrement (par exemple, restaurer une tâche perdue ou supprimée).</li>
+</ul>
+
+<h2>Services tiers</h2>
+<p>L’Application utilise :</p>
+<ul>
+<li><b>Google Sign-In</b> — connexion au compte. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Règles de confidentialité de Google</a>.</li>
+<li><b>Anthropic (Claude)</b> — traitement du texte des tâches pour les fonctions IA. <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Politique de confidentialité d’Anthropic</a>.</li>
+<li><b>Cloudflare</b> — notre serveur et l’hébergement de l’Application sur mynado.app : stockage des tâches, envoi des notifications, appels à l’IA. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Politique de confidentialité de Cloudflare</a>.</li>
+<li><b>GitHub Pages</b> — ancienne adresse de l’Application ; elle redirige désormais vers mynado.app. <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Déclaration de confidentialité de GitHub</a>.</li>
+<li><b>Sign in with Apple, l’App Store et Apple Push Notification service</b> — connexion, paiement de PRO et notifications dans l’application iPhone. Les données de paiement sont traitées par Apple ; nous apprenons seulement qu’un abonnement est actif. <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Politique de confidentialité d’Apple</a>.</li>
+<li><b>Google Play Billing</b> — achat et renouvellement de PRO dans l’application Android. Les données de paiement sont traitées par Google ; nous ne les recevons ni ne les conservons — nous apprenons seulement qu’un abonnement est actif. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Règles de confidentialité de Google</a>.</li>
+<li><b>Apple / Google</b> — reconnaissance vocale et livraison des notifications push au niveau de l’appareil et du navigateur.</li>
+</ul>
+<p>Polices, icônes et styles sont servis depuis notre propre adresse — l’Application ne contacte aucun service de polices tiers.</p>
+
+<h2>Abonnement Mynado PRO</h2>
+<p>PRO augmente la limite quotidienne de requêtes IA (chiffres exacts dans les Conditions d’utilisation). Il se souscrit via Google Play ou l’App Store et <b>se renouvelle automatiquement</b> chaque mois jusqu’à résiliation. Vous pouvez le résilier à tout moment dans <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Abonnements</a> ou sur iPhone dans « Réglages → [votre nom] → Abonnements » ; la résiliation prend effet à la fin de la période payée. Nous ne conservons qu’un indicateur d’abonnement actif. Détails dans les <a href="./terms.html?lang=fr">Conditions d’utilisation</a>.</p>
+
+<h2>Durée de conservation</h2>
+<ul>
+<li>Tâches et réglages — sur l’appareil jusqu’à ce que vous les supprimiez.</li>
+<li>Sur le serveur (pour les utilisateurs connectés avec Google ou Apple) — tâches, pseudo, langue, abonnements push, rappels actifs, vos appartenances aux groupes et les tâches partagées de ces groupes.</li>
+<li>Une tâche supprimée est conservée sous forme de marqueur « supprimé » jusqu’à 90 jours, afin que la suppression atteigne vos autres appareils même s’ils étaient éteints. Ensuite, l’enregistrement est effacé.</li>
+<li>Un rappel est supprimé après déclenchement.</li>
+</ul>
+
+<h2>Supprimer vos données</h2>
+<p>Le bouton <b>« Supprimer le compte et toutes les données »</b> dans les réglages supprime les tâches et réglages de l’appareil et, si vous êtes connecté avec Google ou Apple, vos données du serveur : tâches, rappels, abonnements push, pseudo, langue et réglages de notification. Vous quittez les groupes dont vous êtes membre ; un groupe dont vous êtes le seul membre est supprimé avec ses tâches.</p>
+<p>Si vous êtes <b>le seul administrateur d’un groupe comptant d’autres membres</b>, l’Application vous demande d’abord de transmettre le rôle à un autre membre et ne supprime rien. C’est volontaire : sinon le groupe resterait sans administrateur, et sa suppression effacerait les tâches des autres membres.</p>
+<p>Les tâches partagées que vous avez créées dans un groupe restent au groupe — elles appartiennent à tous ses membres. Pour les supprimer aussi, supprimez-les dans le groupe avant de supprimer votre compte.</p>
+<p>Un abonnement PRO n’est pas résilié lors de la suppression du compte — résiliez-le séparément dans Google Play ou l’App Store.</p>
+<p>Page explicative : <a href="./delete-data.html?lang=fr">suppression des données</a>.</p>
+
+<h2>Support</h2>
+<p>Si vous nous contactez pour un problème — par exemple une tâche disparue ou une tâche supprimée à restaurer — nous pouvons ouvrir votre enregistrement sur le serveur pour l’examiner. Nous ne le faisons jamais sans votre demande. C’est précisément pour cela que les tâches supprimées sont conservées 90 jours.</p>
+
+<h2>Enfants</h2>
+<p>L’Application n’est pas destinée aux enfants de moins de 13 ans et ne collecte pas sciemment de données d’enfants.</p>
+
+<h2>Modifications</h2>
+<p>Nous pouvons mettre à jour cette politique. La version en vigueur est toujours disponible à cette adresse avec sa date de mise à jour.</p>
+
+<h2>Contact</h2>
+<p>Questions sur la confidentialité et la suppression des données : <a href="mailto:support@mynado.app">support@mynado.app</a></p>
 </div>
 
 </div>

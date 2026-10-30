@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Условия использования — Mynado</title>
+<title>Terms of Use — Mynado</title>
 <link rel="canonical" href="https://mynado.app/terms.html">
 <!-- Переезд со старого адреса (22.10.2026): Search Console показал, что Google считает главной копию на
      mnacik1988.github.io, а mynado.app не индексирует вовсе — одной пометки canonical мало. Посетителей и поисковик со
@@ -37,32 +37,41 @@
   a{ color:var(--accent); }
   .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 20px; margin-top:8px; }
   code{ background:rgba(127,127,127,.15); padding:1px 5px; border-radius:5px; font-size:13px; }
-  .top{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
   .top .back{ margin-bottom:0; }
   .langs{ display:inline-flex; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:3px; }
-  .langs button{ background:none; border:0; color:var(--muted); font:inherit; font-size:14px; font-weight:700; padding:6px 12px; border-radius:9px; cursor:pointer; }
+  .langs button{ background:none; border:0; color:var(--muted); font:inherit; font-size:13px; font-weight:700; padding:6px 9px; border-radius:9px; cursor:pointer; }
   .langs button.on{ background:var(--accent); color:var(--bg); }
   [data-lang]{ display:none; }
-  html[data-show="ru"] [data-lang="ru"], html[data-show="en"] [data-lang="en"]{ display:block; }
-  html[data-show="ru"] span[data-lang="ru"], html[data-show="en"] span[data-lang="en"]{ display:inline; }
+  html[data-show="ru"] div[data-lang="ru"]{ display:block; }
+  html[data-show="ru"] span[data-lang="ru"]{ display:inline; }
+  html[data-show="uk"] div[data-lang="uk"]{ display:block; }
+  html[data-show="uk"] span[data-lang="uk"]{ display:inline; }
+  html[data-show="en"] div[data-lang="en"]{ display:block; }
+  html[data-show="en"] span[data-lang="en"]{ display:inline; }
+  html[data-show="de"] div[data-lang="de"]{ display:block; }
+  html[data-show="de"] span[data-lang="de"]{ display:inline; }
+  html[data-show="fr"] div[data-lang="fr"]{ display:block; }
+  html[data-show="fr"] span[data-lang="fr"]{ display:inline; }
 </style>
 </head>
-<body data-title-ru="Условия использования — Mynado" data-title-en="Terms of Use — Mynado">
+<body data-title-ru="Условия использования — Mynado" data-title-uk="Умови використання — Mynado" data-title-en="Terms of Use — Mynado" data-title-de="Nutzungsbedingungen — Mynado" data-title-fr="Conditions d’utilisation — Mynado">
 <script>(function(){
+  var ok={ru:1,uk:1,en:1,de:1,fr:1};
   var q=(location.search.match(/[?&]lang=([a-z]{2})/)||[])[1]||'';
   var n=String(navigator.language||'').slice(0,2).toLowerCase();
-  var l=q||n; l=(l==='ru'||l==='uk')?'ru':'en';
+  var l=ok[q]?q:(ok[n]?n:'en');
   document.documentElement.setAttribute('data-show',l); document.documentElement.lang=l;
 })();
 function mynLang(l){ document.documentElement.setAttribute('data-show',l); document.documentElement.lang=l;
   var b=document.querySelectorAll('.langs button'); for(var i=0;i<b.length;i++) b[i].className=(b[i].getAttribute('data-l')===l?'on':'');
-  document.title=l==='ru'?document.body.getAttribute('data-title-ru'):document.body.getAttribute('data-title-en'); }
+  var t=document.body.getAttribute('data-title-'+l); if(t) document.title=t; }
 document.addEventListener('DOMContentLoaded',function(){ mynLang(document.documentElement.getAttribute('data-show')); });
 function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
 <div class="wrap">
 <div class="top">
-<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="en">← Back</span></button>
-<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button></div>
+<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="uk">← Назад</span><span data-lang="en">← Back</span><span data-lang="de">← Zurück</span><span data-lang="fr">← Retour</span></button>
+<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="uk" onclick="mynLang('uk')">UA</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button><button type="button" data-l="de" onclick="mynLang('de')">DE</button><button type="button" data-l="fr" onclick="mynLang('fr')">FR</button></div>
 </div>
 
 <div data-lang="ru">
@@ -75,7 +84,7 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 <ul>
 <li>Для работы ИИ, синхронизации, уведомлений и групп нужен вход через Google или Apple. Пароль Приложение не создаёт и не хранит.</li>
 <li><b>Разные способы входа — это разные аккаунты.</b> Задачи и подписка, оформленные в аккаунте Google, не появятся в аккаунте Apple, и наоборот. Входите тем же способом, что и раньше.</li>
-<li>Удалить аккаунт и все данные можно в настройках Приложения: «Удалить аккаунт и все данные». Подробнее — на странице <a href="./delete-data.html">удаления данных</a>.</li>
+<li>Удалить аккаунт и все данные можно в настройках Приложения: «Удалить аккаунт и все данные». Подробнее — на странице <a href="./delete-data.html?lang=ru">удаления данных</a>.</li>
 </ul>
 
 <h2>2. Бесплатная версия</h2>
@@ -123,6 +132,64 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 <p>Вопросы, проблемы с подпиской, предложения: <a href="mailto:support@mynado.app">support@mynado.app</a></p>
 </div>
 
+<div data-lang="uk">
+<h1>Умови використання</h1>
+<div class="upd">Застосунок Mynado · чинні з 30 жовтня 2026</div>
+
+<p>Mynado (далі — «Застосунок») — список завдань із голосовим введенням, ШІ-помічником, нагадуваннями, календарем і спільними групами. Застосунок розробляє й підтримує Олександр Мнацаканов (Україна), далі — «ми». Користуючись Застосунком, ви погоджуєтеся з цими умовами та з <a href="./privacy.html?lang=uk">Політикою конфіденційності</a>.</p>
+
+<h2>1. Акаунт</h2>
+<ul>
+<li>Для роботи ШІ, синхронізації, сповіщень і груп потрібен вхід через Google або Apple. Пароль Застосунок не створює й не зберігає.</li>
+<li><b>Різні способи входу — це різні акаунти.</b> Завдання й підписка, оформлені в акаунті Google, не з’являться в акаунті Apple, і навпаки. Входьте тим самим способом, що й раніше.</li>
+<li>Видалити акаунт і всі дані можна в налаштуваннях Застосунку: «Видалити акаунт і всі дані». Докладніше — на сторінці <a href="./delete-data.html?lang=uk">видалення даних</a>.</li>
+</ul>
+
+<h2>2. Безкоштовна версія</h2>
+<p>Завдання, нагадування, календар, групи й синхронізація безкоштовні. Запити до ШІ обмежені: <b>5 запитів на день</b>.</p>
+
+<h2>3. Підписка Mynado PRO</h2>
+<div class="card">
+<ul>
+<li><b>Що дає:</b> <b>50 запитів до ШІ на день</b> замість 5 і значок PRO в Застосунку.</li>
+<li><b>Що вважається запитом до ШІ:</b> кожна обробка голосової чи текстової фрази ШІ-помічником, розбиття завдання на чек-лист та інші дії, де Застосунок звертається до ШІ. Створення й редагування завдань вручну ліміт не витрачає.</li>
+<li><b>Коли оновлюється ліміт:</b> раз на добу, о 00:00 за всесвітнім часом (UTC) — це 02:00 узимку й 03:00 улітку за Києвом. Невикористані запити на наступний день не переносяться.</li>
+<li><b>Ціна:</b> $2.99 на місяць або еквівалент у місцевій валюті. Точну ціну з податками вашої країни магазин застосунків показує перед оплатою.</li>
+<li><b>Оплата:</b> через Google Play (Android) або App Store (iPhone). Кошти списуються з акаунта магазину під час підтвердження покупки.</li>
+<li><b>Автопродовження:</b> підписка продовжується автоматично щомісяця, доки ви її не скасуєте. Оплата за наступний місяць списується протягом 24 годин до закінчення поточного.</li>
+<li><b>Скасування:</b> будь-коли — <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Підписки</a> або на iPhone «Параметри → [ваше ім’я] → Підписки». Скасування набуває чинності в кінці оплаченого періоду, до того PRO продовжує працювати.</li>
+<li><b>Повернення коштів</b> оформлюється через магазин, де була покупка, за його правилами: <a href="https://support.google.com/googleplay/answer/2479637" target="_blank" rel="noopener">Google Play</a>, <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener">App Store</a>.</li>
+<li><b>Де діє:</b> PRO прив’язаний до акаунта Mynado, у якому оформлений, і працює на всіх ваших пристроях із цим акаунтом. Видалення акаунта чи Застосунку підписку <b>не скасовує</b> — скасуйте її в магазині.</li>
+<li><b>Зміна ціни чи лімітів:</b> про підвищення ціни магазин заздалегідь повідомить чинних передплатників. Якщо ми колись зменшимо денний ліміт PRO, це не торкнеться вже оплаченого періоду.</li>
+</ul>
+</div>
+
+<h2>4. ШІ й нагадування</h2>
+<ul>
+<li>ШІ може помилятися: неправильно зрозуміти дату, час або розбити фразу на завдання. Перевіряйте результат, особливо дати й нагадування.</li>
+<li>Сповіщення доставляють Apple і Google. Ми робимо все, щоб вони приходили вчасно, але доставка залежить від телефона, його налаштувань енергозбереження та мережі. Не використовуйте Застосунок як єдиний засіб для важливих подій — наприклад, прийому ліків.</li>
+<li>У рідкісних випадках (перевантаження чи збій у постачальника ШІ) ШІ-функції можуть бути тимчасово недоступні.</li>
+</ul>
+
+<h2>5. Правила використання</h2>
+<p>Заборонено: автоматизувати запити (скрипти, боти), обходити денні ліміти, перепродавати доступ, заважати роботі сервісу, розміщувати в спільних групах незаконні матеріали. У разі порушень ми можемо обмежити чи закрити доступ до ШІ-функцій або акаунта.</p>
+
+<h2>6. Ваші завдання</h2>
+<p>Завдання належать вам. Ми використовуємо їх лише для роботи Застосунку, як описано в <a href="./privacy.html?lang=uk">Політиці конфіденційності</a>. Учасники групи бачать спільні завдання цієї групи, і за те, що ви публікуєте в групі, відповідаєте ви.</p>
+
+<h2>7. Відповідальність</h2>
+<p>Застосунок надається «як є». Ми намагаємося, щоб він працював без збоїв і не втрачав даних, але не можемо гарантувати безперебійну роботу. У межах, дозволених законом, ми не відповідаємо за непрямі збитки — наприклад, пропущену зустріч через сповіщення, що не надійшло. Це не обмежує прав споживача, які за законом вашої країни обмежити не можна.</p>
+
+<h2>8. App Store</h2>
+<p>Якщо ви встановили Застосунок з App Store, додатково діє <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener">Стандартна ліцензійна угода Apple (EULA)</a>. Відповідальність за Застосунок і його підтримку несемо ми, а не Apple.</p>
+
+<h2>9. Зміни</h2>
+<p>Ми можемо оновлювати ці умови. Актуальна версія завжди доступна за цією адресою з датою набрання чинності. Про суттєві зміни повідомимо в Застосунку.</p>
+
+<h2>10. Контакти</h2>
+<p>Питання, проблеми з підпискою, пропозиції: <a href="mailto:support@mynado.app">support@mynado.app</a></p>
+</div>
+
 <div data-lang="en">
 <h1>Terms of Use</h1>
 <div class="upd">Mynado app · effective 30 October 2026</div>
@@ -133,7 +200,7 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 <ul>
 <li>AI, sync, notifications and groups require signing in with Google or Apple. The App does not create or store a password.</li>
 <li><b>Different sign-in methods are different accounts.</b> Tasks and a subscription from a Google account will not appear in an Apple account, and vice versa. Sign in the same way as before.</li>
-<li>You can delete your account and all data in the App settings: “Delete account and all data”. See the <a href="./delete-data.html">data deletion</a> page.</li>
+<li>You can delete your account and all data in the App settings: “Delete account and all data”. See the <a href="./delete-data.html?lang=en">data deletion</a> page.</li>
 </ul>
 
 <h2>2. Free version</h2>
@@ -179,6 +246,122 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 
 <h2>10. Contact</h2>
 <p>Questions, subscription issues, suggestions: <a href="mailto:support@mynado.app">support@mynado.app</a></p>
+</div>
+
+<div data-lang="de">
+<h1>Nutzungsbedingungen</h1>
+<div class="upd">App Mynado · gültig ab 30. Oktober 2026</div>
+
+<p>Mynado (die „App“) ist eine Aufgabenliste mit Spracheingabe, KI-Assistent, Erinnerungen, Kalender und gemeinsamen Gruppen. Die App wird von Aleksandr Mnatsakanov (Ukraine) entwickelt und betreut, im Folgenden „wir“. Mit der Nutzung der App stimmen Sie diesen Bedingungen und der <a href="./privacy.html?lang=de">Datenschutzerklärung</a> zu.</p>
+
+<h2>1. Konto</h2>
+<ul>
+<li>KI, Synchronisierung, Benachrichtigungen und Gruppen erfordern eine Anmeldung mit Google oder Apple. Die App erstellt und speichert kein Passwort.</li>
+<li><b>Verschiedene Anmeldemethoden sind verschiedene Konten.</b> Aufgaben und ein Abo aus einem Google-Konto erscheinen nicht in einem Apple-Konto und umgekehrt. Melden Sie sich so an wie zuvor.</li>
+<li>Konto und alle Daten löschen Sie in den App-Einstellungen: „Konto und alle Daten löschen“. Siehe die Seite <a href="./delete-data.html?lang=de">Datenlöschung</a>.</li>
+</ul>
+
+<h2>2. Kostenlose Version</h2>
+<p>Aufgaben, Erinnerungen, Kalender, Gruppen und Synchronisierung sind kostenlos. KI-Anfragen sind begrenzt: <b>5 Anfragen pro Tag</b>.</p>
+
+<h2>3. Abo Mynado PRO</h2>
+<div class="card">
+<ul>
+<li><b>Leistung:</b> <b>50 KI-Anfragen pro Tag</b> statt 5 und ein PRO-Abzeichen in der App.</li>
+<li><b>Was als KI-Anfrage zählt:</b> jede Verarbeitung einer gesprochenen oder getippten Eingabe durch den KI-Assistenten, das Aufteilen einer Aufgabe in eine Checkliste und andere Aktionen, bei denen die App die KI aufruft. Manuelles Erstellen und Bearbeiten von Aufgaben verbraucht kein Limit.</li>
+<li><b>Zurücksetzen des Limits:</b> einmal täglich um 00:00 Uhr UTC (01:00 Uhr MEZ, 02:00 Uhr MESZ). Nicht genutzte Anfragen verfallen.</li>
+<li><b>Preis:</b> 2,99 $ pro Monat oder der Gegenwert in Ihrer Landeswährung. Den genauen Preis inklusive Steuern Ihres Landes zeigt der Store vor dem Kauf an.</li>
+<li><b>Zahlung:</b> über Google Play (Android) oder den App Store (iPhone). Die Zahlung wird bei Kaufbestätigung über Ihr Store-Konto abgerechnet.</li>
+<li><b>Automatische Verlängerung:</b> Das Abo verlängert sich automatisch monatlich, sofern es nicht gekündigt wird. Der Folgemonat wird innerhalb von 24 Stunden vor Ende des laufenden Zeitraums abgerechnet.</li>
+<li><b>Kündigung:</b> jederzeit unter <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Abos</a> oder auf dem iPhone unter „Einstellungen → [Ihr Name] → Abonnements“. Die Kündigung wird zum Ende des bezahlten Zeitraums wirksam; bis dahin funktioniert PRO weiter.</li>
+<li><b>Erstattungen</b> erfolgen über den Store, in dem Sie gekauft haben, nach dessen Regeln: <a href="https://support.google.com/googleplay/answer/2479637" target="_blank" rel="noopener">Google Play</a>, <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener">App Store</a>.</li>
+<li><b>Geltungsbereich:</b> PRO ist an das Mynado-Konto gebunden, mit dem es gekauft wurde, und funktioniert auf allen Ihren Geräten mit diesem Konto. Das Löschen des Kontos oder der App <b>kündigt das Abo nicht</b> — kündigen Sie es im Store.</li>
+<li><b>Preis- oder Limitänderungen:</b> Über eine Preiserhöhung informiert der Store bestehende Abonnenten im Voraus. Sollten wir das Tageslimit von PRO je senken, betrifft das keinen bereits bezahlten Zeitraum.</li>
+</ul>
+</div>
+
+<h2>4. KI und Erinnerungen</h2>
+<ul>
+<li>Die KI kann Fehler machen: ein Datum oder eine Uhrzeit falsch verstehen oder eine Eingabe falsch in Aufgaben aufteilen. Prüfen Sie das Ergebnis, besonders Daten und Erinnerungen.</li>
+<li>Benachrichtigungen werden von Apple und Google zugestellt. Wir tun alles für eine pünktliche Zustellung, sie hängt aber von Ihrem Telefon, dessen Energiespareinstellungen und dem Netz ab. Verlassen Sie sich bei wichtigen Terminen — etwa der Einnahme von Medikamenten — nicht ausschließlich auf die App.</li>
+<li>In seltenen Fällen (Überlastung oder Störung beim KI-Anbieter) können KI-Funktionen vorübergehend nicht verfügbar sein.</li>
+</ul>
+
+<h2>5. Zulässige Nutzung</h2>
+<p>Untersagt sind: automatisierte Anfragen (Skripte, Bots), das Umgehen von Tageslimits, der Weiterverkauf des Zugangs, die Störung des Dienstes sowie das Einstellen rechtswidriger Inhalte in gemeinsamen Gruppen. Bei Verstößen können wir den Zugang zu KI-Funktionen oder zum Konto einschränken oder sperren.</p>
+
+<h2>6. Ihre Aufgaben</h2>
+<p>Ihre Aufgaben gehören Ihnen. Wir nutzen sie nur für den Betrieb der App, wie in der <a href="./privacy.html?lang=de">Datenschutzerklärung</a> beschrieben. Gruppenmitglieder sehen die gemeinsamen Aufgaben ihrer Gruppe, und für Inhalte, die Sie in einer Gruppe veröffentlichen, sind Sie verantwortlich.</p>
+
+<h2>7. Haftung</h2>
+<p>Die App wird „wie besehen“ bereitgestellt. Wir arbeiten daran, dass sie zuverlässig läuft und keine Daten verliert, können aber keinen unterbrechungsfreien Betrieb garantieren. Soweit gesetzlich zulässig, haften wir nicht für mittelbare Schäden — etwa einen verpassten Termin wegen einer nicht zugestellten Benachrichtigung. Zwingende Verbraucherrechte nach dem Recht Ihres Landes bleiben unberührt.</p>
+
+<h2>8. App Store</h2>
+<p>Wenn Sie die App aus dem App Store installiert haben, gilt zusätzlich die <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener">Standard-Endbenutzer-Lizenzvereinbarung von Apple (EULA)</a>. Verantwortlich für die App und ihren Support sind wir, nicht Apple.</p>
+
+<h2>9. Änderungen</h2>
+<p>Wir können diese Bedingungen aktualisieren. Die aktuelle Fassung ist immer unter dieser Adresse mit Gültigkeitsdatum verfügbar. Über wesentliche Änderungen informieren wir in der App.</p>
+
+<h2>10. Kontakt</h2>
+<p>Fragen, Probleme mit dem Abo, Vorschläge: <a href="mailto:support@mynado.app">support@mynado.app</a></p>
+</div>
+
+<div data-lang="fr">
+<h1>Conditions d’utilisation</h1>
+<div class="upd">Application Mynado · en vigueur depuis le 30 octobre 2026</div>
+
+<p>Mynado (l’« Application ») est une liste de tâches avec saisie vocale, assistant IA, rappels, calendrier et groupes partagés. L’Application est développée et maintenue par Aleksandr Mnatsakanov (Ukraine), ci-après « nous ». En utilisant l’Application, vous acceptez ces conditions et la <a href="./privacy.html?lang=fr">Politique de confidentialité</a>.</p>
+
+<h2>1. Compte</h2>
+<ul>
+<li>L’IA, la synchronisation, les notifications et les groupes nécessitent une connexion avec Google ou Apple. L’Application ne crée ni ne conserve de mot de passe.</li>
+<li><b>Des méthodes de connexion différentes sont des comptes différents.</b> Les tâches et l’abonnement d’un compte Google n’apparaîtront pas dans un compte Apple, et inversement. Connectez-vous de la même manière qu’auparavant.</li>
+<li>Vous pouvez supprimer votre compte et toutes vos données dans les réglages : « Supprimer le compte et toutes les données ». Voir la page <a href="./delete-data.html?lang=fr">suppression des données</a>.</li>
+</ul>
+
+<h2>2. Version gratuite</h2>
+<p>Les tâches, rappels, le calendrier, les groupes et la synchronisation sont gratuits. Les requêtes IA sont limitées : <b>5 requêtes par jour</b>.</p>
+
+<h2>3. Abonnement Mynado PRO</h2>
+<div class="card">
+<ul>
+<li><b>Ce que vous obtenez :</b> <b>50 requêtes IA par jour</b> au lieu de 5 et un badge PRO dans l’Application.</li>
+<li><b>Ce qui compte comme requête IA :</b> chaque traitement d’une phrase vocale ou écrite par l’assistant IA, la division d’une tâche en liste de contrôle et toute autre action où l’Application fait appel à l’IA. La création et la modification manuelles de tâches ne consomment pas la limite.</li>
+<li><b>Réinitialisation de la limite :</b> une fois par jour à 00:00 UTC (01:00 en hiver, 02:00 en été à Paris). Les requêtes non utilisées ne sont pas reportées.</li>
+<li><b>Prix :</b> 2,99 $ par mois ou l’équivalent dans votre devise locale. La boutique affiche le prix exact, taxes de votre pays comprises, avant le paiement.</li>
+<li><b>Paiement :</b> via Google Play (Android) ou l’App Store (iPhone). Le paiement est débité de votre compte de boutique à la confirmation de l’achat.</li>
+<li><b>Renouvellement automatique :</b> l’abonnement se renouvelle automatiquement chaque mois, sauf résiliation. Le mois suivant est débité dans les 24 heures précédant la fin de la période en cours.</li>
+<li><b>Résiliation :</b> à tout moment dans <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Abonnements</a> ou sur iPhone dans « Réglages → [votre nom] → Abonnements ». La résiliation prend effet à la fin de la période payée ; PRO fonctionne jusque-là.</li>
+<li><b>Les remboursements</b> sont gérés par la boutique où l’achat a été effectué, selon ses règles : <a href="https://support.google.com/googleplay/answer/2479637" target="_blank" rel="noopener">Google Play</a>, <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener">App Store</a>.</li>
+<li><b>Où il s’applique :</b> PRO est lié au compte Mynado avec lequel il a été acheté et fonctionne sur tous vos appareils connectés à ce compte. Supprimer le compte ou l’Application <b>ne résilie pas</b> l’abonnement — résiliez-le dans la boutique.</li>
+<li><b>Modification du prix ou des limites :</b> la boutique informe à l’avance les abonnés existants d’une hausse de prix. Si nous réduisons un jour la limite quotidienne de PRO, cela n’affectera pas une période déjà payée.</li>
+</ul>
+</div>
+
+<h2>4. IA et rappels</h2>
+<ul>
+<li>L’IA peut se tromper : mal comprendre une date ou une heure, ou mal découper une phrase en tâches. Vérifiez le résultat, surtout les dates et les rappels.</li>
+<li>Les notifications sont livrées par Apple et Google. Nous faisons tout pour qu’elles arrivent à l’heure, mais la livraison dépend de votre téléphone, de ses réglages d’économie d’énergie et du réseau. Ne vous fiez pas uniquement à l’Application pour des événements importants — par exemple la prise de médicaments.</li>
+<li>Dans de rares cas (surcharge ou panne chez le fournisseur d’IA), les fonctions IA peuvent être temporairement indisponibles.</li>
+</ul>
+
+<h2>5. Utilisation acceptable</h2>
+<p>Il est interdit d’automatiser les requêtes (scripts, bots), de contourner les limites quotidiennes, de revendre l’accès, de perturber le service ou de publier des contenus illicites dans les groupes partagés. En cas d’infraction, nous pouvons restreindre ou fermer l’accès aux fonctions IA ou au compte.</p>
+
+<h2>6. Vos tâches</h2>
+<p>Vos tâches vous appartiennent. Nous ne les utilisons que pour faire fonctionner l’Application, comme décrit dans la <a href="./privacy.html?lang=fr">Politique de confidentialité</a>. Les membres d’un groupe voient les tâches partagées de ce groupe, et vous êtes responsable de ce que vous y publiez.</p>
+
+<h2>7. Responsabilité</h2>
+<p>L’Application est fournie « en l’état ». Nous veillons à ce qu’elle soit fiable et ne perde pas de données, mais ne pouvons garantir un fonctionnement ininterrompu. Dans les limites permises par la loi, nous ne sommes pas responsables des dommages indirects — par exemple un rendez-vous manqué à cause d’une notification non reçue. Cela ne limite pas les droits des consommateurs auxquels la loi de votre pays ne permet pas de déroger.</p>
+
+<h2>8. App Store</h2>
+<p>Si vous avez installé l’Application depuis l’App Store, le <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener">contrat de licence utilisateur final standard d’Apple (EULA)</a> s’applique également. C’est nous, et non Apple, qui sommes responsables de l’Application et de son support.</p>
+
+<h2>9. Modifications</h2>
+<p>Nous pouvons mettre à jour ces conditions. La version en vigueur est toujours disponible à cette adresse avec sa date d’entrée en vigueur. Nous annoncerons les changements importants dans l’Application.</p>
+
+<h2>10. Contact</h2>
+<p>Questions, problèmes d’abonnement, suggestions : <a href="mailto:support@mynado.app">support@mynado.app</a></p>
 </div>
 
 </div>
