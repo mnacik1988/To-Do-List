@@ -652,6 +652,9 @@ function detectDeviceLang(){
 var WORKER_URL= 'https://autumn-violet-bb31.mnacik1988.workers.dev';
 var AI_DAILY_LIMIT = 5;
 var PRO_DAILY_LIMIT = 50; // как PRO_PURCHASE_DAILY_LIMIT в воркере — менять вместе
+// Настоящие лимиты планов задаёт админка (сервер присылает их в /limit); здесь — последние известные
+var TIER_LIMITS_KEY='vtodo-tier-limits';
+try{ var tl0=JSON.parse(localStorage.getItem(TIER_LIMITS_KEY)||'null'); if(tl0){ if(tl0.free>0)AI_DAILY_LIMIT=tl0.free; if(tl0.pro>0)PRO_DAILY_LIMIT=tl0.pro; } }catch(e){}
 
 /* ── Google Sign-In (привязывает ИИ-лимит к аккаунту, а не к устройству) ── */
 var GOOGLE_CLIENT_ID = '1053800558840-dftrtb0rhlbjtgjnah0jeinmsf4oqs1s.apps.googleusercontent.com';
@@ -1088,7 +1091,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.141';
+var APP_VERSION = '1.142';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1493,6 +1496,10 @@ function refreshAiLimit(){
         var was=webAccessDecision();
         saveWebAccess(data.web);
         if(was!==data.web && !isStoreApp()) render();
+      }
+      if(typeof data.freeLimit==='number'&&typeof data.proLimit==='number'){
+        AI_DAILY_LIMIT=data.freeLimit; PRO_DAILY_LIMIT=data.proLimit;
+        try{localStorage.setItem(TIER_LIMITS_KEY,JSON.stringify({free:data.freeLimit,pro:data.proLimit}));}catch(e){}
       }
       if(typeof data.limit==='number'){
         saveLimitInfo(data.limit,data.vip,data.pro);
