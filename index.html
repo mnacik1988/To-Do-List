@@ -435,6 +435,8 @@ body { background:var(--screen); transition:background-color .3s; }
 
 .modal-actions { display:flex; gap:10px; margin-top:2px; }
 .btn-outline { flex:1; padding:13px; border-radius:14px; border:1.5px solid var(--border-strong); background:transparent; color:var(--text); font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; }
+/* Кнопка добавления «ждёт» текст: data-needs="<id поля>" — серая, пока поле пустое (06.11.2026). */
+.btn-primary.needs-empty, .btn-outline.needs-empty { background:var(--surface2); color:var(--muted); border-color:transparent; opacity:.7; }
 .btn-primary { flex:1; padding:13px; border-radius:14px; border:none; background:var(--accent); color:#fff; font-family:inherit; font-size:13.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
 .btn-danger  { flex:1; padding:13px; border-radius:14px; border:1.5px solid var(--pri-high); background:transparent; color:var(--pri-high-ink); font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
 
@@ -1103,7 +1105,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.145';
+var APP_VERSION = '1.146';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2026,7 +2028,7 @@ function renderModal(){
       }).join('')+
       '<div class="checklist-edit-row">'+
         '<input id="checklist-new-item" class="form-input" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="80" style="flex:1">'+
-        '<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="checklist-add-item">'+L.checklist_add_btn+'</button>'+
+        '<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="checklist-add-item" data-needs="checklist-new-item">'+L.checklist_add_btn+'</button>'+
       '</div>'+
     '</div>'+
     // Дата и время — в один ряд (26.10.2026: два поля на всю ширину были лишними), в пустом времени пример.
@@ -2217,7 +2219,7 @@ function renderDaySheet(){
       '<div><div class="field-label">'+L.priority+'</div><div class="pri-picker">'+
         PRI_ORDER.map(function(k){ return '<button class="pri-pick-btn'+(state.dsAddPri===k?' sel':'')+'" data-pri="'+k+'" data-role="ds-set-pri">'+PRI_LABEL[k]+'</button>'; }).join('')+
       '</div></div>'+
-      '<button class="btn-primary" style="width:100%" data-role="ds-add-task">'+L.btn_add+'</button>'
+      '<button class="btn-primary" style="width:100%" data-role="ds-add-task" data-needs="ds-input">'+L.btn_add+'</button>'
     :'<button class="btn-outline" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" data-role="ds-toggle-add">'+IC.plus+' '+L.btn_add+'</button>';
 
   return '<div class="overlay">'+
@@ -2527,7 +2529,7 @@ function renderQuickAdd(){
           // только после настройки самой задачи») — то же поле, что в редактировании.
           '<div class="checklist-edit-row">'+
             '<input id="qa-cl-new" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="80" value="'+escA(state.qaClNew||'')+'">'+
-            '<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="qa-checklist-add">'+L.checklist_add_btn+'</button>'+
+            '<button class="btn-outline" style="padding:8px 12px;font-size:12px;flex:none" data-role="qa-checklist-add" data-needs="qa-cl-new">'+L.checklist_add_btn+'</button>'+
           '</div>'+
         '</div>'+
         '<div style="display:flex;gap:10px">'+
@@ -2548,7 +2550,7 @@ function renderQuickAdd(){
         '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<button class="btn-outline" data-role="qa-cancel">'+L.btn_cancel+'</button>'+
-          '<button class="btn-primary" data-role="qa-save">'+IC.plus+' '+L.btn_add+'</button>'+
+          '<button class="btn-primary" data-role="qa-save" data-needs="qa-text">'+IC.plus+' '+L.btn_add+'</button>'+
         '</div>'+
       '</div>'+
     '</div>'+
@@ -2688,7 +2690,7 @@ function renderGroupEditSheet(){
           checklistHtml+
           '<div style="display:flex;gap:8px;margin-top:6px">'+
             '<input id="g-edit-cl-new" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.checklist_add_ph)+'" maxlength="80" value="'+escA(state.gEditNewItem)+'">'+
-            '<button class="btn-outline" style="flex:none" data-role="g-add-cl-item">'+L.checklist_add_btn+'</button>'+
+            '<button class="btn-outline" style="flex:none" data-role="g-add-cl-item" data-needs="g-edit-cl-new">'+L.checklist_add_btn+'</button>'+
           '</div>'+
         '</div>'+
         // Один ИИ-помощник на всё — название, дата, время, приоритет и пункты чек-листа
@@ -2798,7 +2800,7 @@ function renderGroupTasksScreen(){
       (canAdd
         ?'<div style="display:flex;gap:8px;padding:0 4px 10px">'+
             '<input id="g-add-input" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.groups_add_task_ph)+'" maxlength="120" value="'+escA(state.gAddText)+'">'+
-            '<button class="btn-primary" style="flex:none;padding:0 14px" data-role="group-add-task">'+IC.plus+'</button>'+
+            '<button class="btn-primary" style="flex:none;padding:0 14px" data-role="group-add-task" data-needs="g-add-input">'+IC.plus+'</button>'+
           '</div>'
         :'')+
       (!state.groupTasksLoaded
@@ -3012,6 +3014,13 @@ function renderBottomNav(){
 }
 
 /* ── Main render ── */
+function syncNeedsButtons(){
+  document.querySelectorAll('[data-needs]').forEach(function(b){
+    var inp=document.getElementById(b.dataset.needs);
+    b.classList.toggle('needs-empty', !!inp && !inp.value.trim());
+  });
+}
+document.addEventListener('input', function(e){ if(e.target&&e.target.id&&document.querySelector('[data-needs="'+e.target.id+'"]')) syncNeedsButtons(); }, true);
 function render(){
   var savedScroll=0;
   var sheetEl=document.querySelector('.sheet-body');
@@ -3162,6 +3171,7 @@ function render(){
   mountGoogleButton(false);
 
   saveStorage();
+  syncNeedsButtons();
   clearAnim();
 }
 
