@@ -437,6 +437,8 @@ body { background:var(--screen); transition:background-color .3s; }
 .btn-outline { flex:1; padding:13px; border-radius:14px; border:1.5px solid var(--border-strong); background:transparent; color:var(--text); font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; }
 /* Кнопка добавления «ждёт» текст: data-needs="<id поля>" — серая, пока поле пустое (06.11.2026). */
 .btn-primary.needs-empty, .btn-outline.needs-empty { background:var(--surface2); color:var(--muted); border-color:transparent; opacity:.7; }
+.btn-primary.just-added { animation:addedPop .35s cubic-bezier(.2,.8,.2,1); }
+@keyframes addedPop { 0%{ transform:scale(.85); } 60%{ transform:scale(1.08); } 100%{ transform:scale(1); } }
 .btn-primary { flex:1; padding:13px; border-radius:14px; border:none; background:var(--accent); color:#fff; font-family:inherit; font-size:13.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
 .btn-danger  { flex:1; padding:13px; border-radius:14px; border:1.5px solid var(--pri-high); background:transparent; color:var(--pri-high-ink); font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
 
@@ -1105,7 +1107,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.149';
+var APP_VERSION = '1.150';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2791,7 +2793,7 @@ function renderGroupTasksScreen(){
       (canAdd
         ?'<div style="display:flex;gap:8px;padding:0 4px 10px">'+
             '<input id="g-add-input" class="day-add-input" style="flex:1;box-sizing:border-box" placeholder="'+escA(L.groups_add_task_ph)+'" maxlength="120" value="'+escA(state.gAddText)+'">'+
-            '<button class="btn-primary" style="flex:none;padding:0 14px" data-role="group-add-task" data-needs="g-add-input">'+IC.plus+'</button>'+
+            groupAddBtnHtml()+
           '</div>'
         :'')+
       (!state.groupTasksLoaded
@@ -4990,6 +4992,14 @@ function groupPollTick(){
 }
 setInterval(groupPollTick, 20000);
 
+// После добавления «+» на 2 секунды превращается в галочку — видно, что задача добавилась.
+var G_ADD_TICK_MS=2000, gAddedUntil=0, gAddTickTimer=null;
+var IC_TICK_BIG='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function groupAddBtnHtml(){
+  var ticked=Date.now()<gAddedUntil;
+  // Пока стоит галочка, кнопка не «ждёт текст» (не серая), иначе галочка была бы бледной.
+  return '<button class="btn-primary'+(ticked?' just-added':'')+'" style="flex:none;padding:0 14px" data-role="group-add-task"'+(ticked?'':' data-needs="g-add-input"')+'>'+(ticked?IC_TICK_BIG:IC.plus)+'</button>';
+}
 function groupAddTask(){
   var g=state.groupOpen; if(!g||(g.role!=='admin'&&g.role!=='editor')) return;
   var text=clampLen((state.gAddText||'').trim(),LEN_TITLE); if(!text) return;
@@ -4997,7 +5007,16 @@ function groupAddTask(){
   var now=Date.now();
   var newTask={syncId:syncId,text:text,desc:'',priority:state.gAddPri,done:false,date:'',checklist:[],deviceId:getDeviceId(),updatedAt:now,createdBy:getUserKey(),updatedBy:getUserKey()};
   state.groupTasks=[newTask].concat(state.groupTasks);
-  state.gAddText=''; render();
+  state.gAddText='';
+  gAddedUntil=Date.now()+G_ADD_TICK_MS;
+  render();
+  // Вернуть «+» точечно, без полной перерисовки — иначе сбился бы ввод, если человек уже печатает следующую задачу.
+  if(gAddTickTimer) clearTimeout(gAddTickTimer);
+  gAddTickTimer=setTimeout(function(){
+    gAddTickTimer=null;
+    var b=document.querySelector('[data-role="group-add-task"]'); if(!b) return;
+    b.outerHTML=groupAddBtnHtml(); syncNeedsButtons();
+  },G_ADD_TICK_MS+30);
   groupWriteStart();
   fetch(WORKER_URL+'/group/task',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({
     groupId:g.groupId, syncId:syncId, deviceId:getDeviceId(), updatedAt:now,
