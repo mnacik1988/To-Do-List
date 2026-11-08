@@ -1126,7 +1126,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.154';
+var APP_VERSION = '1.155';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3049,11 +3049,13 @@ document.addEventListener('change', function(e){
     render();
   }
 }, true);
+// Пример для пустой даты — сегодняшнее число словами («8 ноября»), серым (08.11.2026).
+function dateHintText(){ var d=new Date(); return d.getDate()+(state.lang==='de'?'.':'')+' '+MON_RU_G[d.getMonth()]; }
 function addTimeHint(inp){
   if(inp.parentNode&&inp.parentNode.classList&&inp.parentNode.classList.contains('tph-wrap')) return;
   var wrap=document.createElement('span'); wrap.className='tph-wrap';
   inp.parentNode.insertBefore(wrap,inp); wrap.appendChild(inp);
-  var ph=document.createElement('span'); ph.className='tph '+(inp.classList.contains('form-date')?'left':'center'); ph.textContent='10:00';
+  var ph=document.createElement('span'); ph.className='tph '+(inp.classList.contains('form-date')?'left':'center'); ph.textContent=inp.type==='date'?dateHintText():'10:00';
   wrap.appendChild(ph);
   function upd(){ var e=!inp.value; ph.classList.toggle('hide',!e); inp.classList.toggle('tph-empty',e); }
   upd(); inp.addEventListener('input',upd); inp.addEventListener('change',upd);
@@ -3217,7 +3219,7 @@ function render(){
     ta.addEventListener('input',function(){ if(/\n/.test(ta.value)){ var p=ta.selectionStart; ta.value=ta.value.replace(/\s*\n\s*/g,' '); try{ ta.setSelectionRange(p,p); }catch(_){} ta.dispatchEvent(new Event('input')); return; } fit(); });
     ta.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); ta.blur(); } });
   });
-  document.querySelectorAll('input[type="time"]').forEach(addTimeHint);
+  document.querySelectorAll('input[type="time"], input[type="date"]:not([data-od-date])').forEach(addTimeHint);
 
   if(savedScroll>0) requestAnimationFrame(function(){ var el=document.querySelector('.sheet-body'); if(el) el.scrollTop=savedScroll; });
 
