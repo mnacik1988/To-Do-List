@@ -52,11 +52,13 @@
   html[data-show="de"] span[data-lang="de"]{ display:inline; }
   html[data-show="fr"] div[data-lang="fr"]{ display:block; }
   html[data-show="fr"] span[data-lang="fr"]{ display:inline; }
+  html[data-show="pl"] div[data-lang="pl"]{ display:block; }
+  html[data-show="pl"] span[data-lang="pl"]{ display:inline; }
 </style>
 </head>
-<body data-title-ru="Удаление аккаунта и данных — Mynado" data-title-uk="Видалення акаунта й даних — Mynado" data-title-en="Account & Data Deletion — Mynado" data-title-de="Konto- und Datenlöschung — Mynado" data-title-fr="Suppression du compte et des données — Mynado">
+<body data-title-ru="Удаление аккаунта и данных — Mynado" data-title-uk="Видалення акаунта й даних — Mynado" data-title-en="Account & Data Deletion — Mynado" data-title-de="Konto- und Datenlöschung — Mynado" data-title-fr="Suppression du compte et des données — Mynado" data-title-pl="Usuwanie konta i danych — Mynado">
 <script>(function(){
-  var ok={ru:1,uk:1,en:1,de:1,fr:1};
+  var ok={ru:1,uk:1,en:1,de:1,fr:1,pl:1};
   var q=(location.search.match(/[?&]lang=([a-z]{2})/)||[])[1]||'';
   var n=String(navigator.language||'').slice(0,2).toLowerCase();
   var l=ok[q]?q:(ok[n]?n:'en');
@@ -69,8 +71,8 @@ document.addEventListener('DOMContentLoaded',function(){ mynLang(document.docume
 function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
 <div class="wrap">
 <div class="top">
-<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="uk">← Назад</span><span data-lang="en">← Back</span><span data-lang="de">← Zurück</span><span data-lang="fr">← Retour</span></button>
-<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="uk" onclick="mynLang('uk')">UA</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button><button type="button" data-l="de" onclick="mynLang('de')">DE</button><button type="button" data-l="fr" onclick="mynLang('fr')">FR</button></div>
+<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="uk">← Назад</span><span data-lang="en">← Back</span><span data-lang="de">← Zurück</span><span data-lang="fr">← Retour</span><span data-lang="pl">← Wstecz</span></button>
+<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="uk" onclick="mynLang('uk')">UA</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button><button type="button" data-l="de" onclick="mynLang('de')">DE</button><button type="button" data-l="fr" onclick="mynLang('fr')">FR</button><button type="button" data-l="pl" onclick="mynLang('pl')">PL</button></div>
 </div>
 
 <div data-lang="ru">
@@ -239,6 +241,48 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 
 <h2>Siehe auch</h2>
 <p>Einzelheiten in der <a href="./privacy.html?lang=de">Datenschutzerklärung</a>.</p>
+</div>
+
+<div data-lang="pl">
+<h1>Usuwanie konta i danych — Mynado</h1>
+<div class="upd">Aplikacja: Mynado · Deweloper: Aleksandr · support@mynado.app · aktualizacja: 30 października 2026</div>
+
+<p>Mynado nie ma własnego systemu kont — logujesz się kontem Google lub Apple. Ta strona wyjaśnia, jak usunąć swoje dane i co się z nimi dzieje.</p>
+
+<h2>Jak usunąć dane</h2>
+<ul>
+<li>Otwórz Mynado i dotknij <b>ikony koła zębatego</b> w prawym górnym rogu.</li>
+<li>Dotknij <b>„Usuń konto i wszystkie dane”</b> i potwierdź.</li>
+<li>Logowanie przez Google: aby dodatkowo odebrać Mynado dostęp, przejdź do Konto Google → Bezpieczeństwo → Dostęp aplikacji innych firm → usuń Mynado.</li>
+<li>Logowanie przez Apple: aplikacja automatycznie cofa dostęp przy usuwaniu konta. Możesz to też sprawdzić w Ustawieniach iPhone’a → [Twoje imię] → Zaloguj się, używając Apple.</li>
+</ul>
+<p>Możesz też poprosić o usunięcie e-mailem na adres <a href="mailto:support@mynado.app">support@mynado.app</a> — realizujemy prośby w ciągu 30 dni.</p>
+
+<h2>Co zostaje usunięte</h2>
+<ul>
+<li><b>Zadania</b> — od razu z urządzenia, a z naszego serwera, jeśli byłeś(-aś) zalogowany(-a).</li>
+<li><b>Przypomnienia</b> — z serwera.</li>
+<li><b>Subskrypcje push</b> — dla każdego urządzenia.</li>
+<li><b>Twoje imię (pseudonim)</b> — z serwera; inni przestają je widzieć.</li>
+<li><b>Język interfejsu i ustawienia powiadomień grup</b> — usuwane.</li>
+<li><b>Członkostwo w grupach</b> — opuszczasz wszystkie grupy. Grupa, w której byłeś(-aś) <b>jedynym</b> członkiem, zostaje usunięta razem z zadaniami.</li>
+</ul>
+
+<h2>Co zostaje zachowane i jak długo</h2>
+<div class="card">
+<ul>
+<li><b>Usunięte zadania są przechowywane jako znaczniki „usunięto” przez maksymalnie 90 dni.</b> Nie zawierają treści zadania — tylko identyfikator i fakt usunięcia. Dzięki temu usunięcie dociera do Twoich pozostałych urządzeń, nawet jeśli były wtedy wyłączone. Po 90 dniach wpis jest kasowany.</li>
+<li><b>Wspólne zadania utworzone przez Ciebie w grupie zostają w grupie</b> — należą do wszystkich jej członków, nie tylko do Ciebie. Jeśli chcesz, by zniknęły, usuń je najpierw w grupie.</li>
+<li><b>Subskrypcja PRO nie zostaje anulowana</b> przez usunięcie danych — jest przypisana do Twojego konta Google Play lub App Store. Anuluj ją w <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener">Google Play → Subskrypcje</a> lub na iPhonie w Ustawieniach → [Twoje imię] → Subskrypcje, w przeciwnym razie płatności będą pobierane dalej.</li>
+</ul>
+<p>Nic więcej nie jest przechowywane. Nigdy nie zapisujemy adresu e-mail, imienia i nazwiska, zdjęcia, hasła ani danych płatniczych i nie prowadzimy profili analitycznych ani reklamowych.</p>
+</div>
+
+<h2>Jeśli jesteś właścicielem grupy</h2>
+<p>Jeśli jesteś jedynym administratorem grupy, w której są jeszcze inni członkowie, aplikacja poprosi Cię o przekazanie uprawnień innej osobie przed usunięciem konta. Inaczej grupa zostałaby bez administratora, a jej usunięcie zniszczyłoby zadania pozostałych członków.</p>
+
+<h2>Powiązane</h2>
+<p>Pełne informacje o przetwarzaniu danych znajdziesz w <a href="./privacy.html?lang=pl">Polityce prywatności</a>.</p>
 </div>
 
 <div data-lang="fr">

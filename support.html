@@ -53,12 +53,14 @@
   html[data-show="de"] span[data-lang="de"]{ display:inline; }
   html[data-show="fr"] div[data-lang="fr"]{ display:block; }
   html[data-show="fr"] span[data-lang="fr"]{ display:inline; }
+  html[data-show="pl"] div[data-lang="pl"]{ display:block; }
+  html[data-show="pl"] span[data-lang="pl"]{ display:inline; }
   h3{ font-size:16px; margin:20px 0 6px; }
 </style>
 </head>
-<body data-title-ru="Поддержка Mynado" data-title-uk="Підтримка Mynado" data-title-en="Mynado Support" data-title-de="Mynado-Support" data-title-fr="Support Mynado">
+<body data-title-ru="Поддержка Mynado" data-title-uk="Підтримка Mynado" data-title-en="Mynado Support" data-title-de="Mynado-Support" data-title-fr="Support Mynado" data-title-pl="Wsparcie — Mynado">
 <script>(function(){
-  var ok={ru:1,uk:1,en:1,de:1,fr:1};
+  var ok={ru:1,uk:1,en:1,de:1,fr:1,pl:1};
   var q=(location.search.match(/[?&]lang=([a-z]{2})/)||[])[1]||'';
   var n=String(navigator.language||'').slice(0,2).toLowerCase();
   var l=ok[q]?q:(ok[n]?n:'en');
@@ -71,8 +73,8 @@ document.addEventListener('DOMContentLoaded',function(){ mynLang(document.docume
 function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.close(); }catch(e){} setTimeout(function(){ location.href='./'; },300); }</script>
 <div class="wrap">
 <div class="top">
-<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="uk">← Назад</span><span data-lang="en">← Back</span><span data-lang="de">← Zurück</span><span data-lang="fr">← Retour</span></button>
-<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="uk" onclick="mynLang('uk')">UA</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button><button type="button" data-l="de" onclick="mynLang('de')">DE</button><button type="button" data-l="fr" onclick="mynLang('fr')">FR</button></div>
+<button class="back" type="button" onclick="mynBack()"><span data-lang="ru">← Назад</span><span data-lang="uk">← Назад</span><span data-lang="en">← Back</span><span data-lang="de">← Zurück</span><span data-lang="fr">← Retour</span><span data-lang="pl">← Wstecz</span></button>
+<div class="langs"><button type="button" data-l="ru" onclick="mynLang('ru')">RU</button><button type="button" data-l="uk" onclick="mynLang('uk')">UA</button><button type="button" data-l="en" onclick="mynLang('en')">EN</button><button type="button" data-l="de" onclick="mynLang('de')">DE</button><button type="button" data-l="fr" onclick="mynLang('fr')">FR</button><button type="button" data-l="pl" onclick="mynLang('pl')">PL</button></div>
 </div>
 
 <div data-lang="ru">
@@ -204,6 +206,39 @@ function mynBack(){ if(history.length>1){ history.back(); return; } try{ window.
 <li><a href="./terms.html?lang=de">Nutzungsbedingungen</a></li>
 <li><a href="./privacy.html?lang=de">Datenschutzerklärung</a></li>
 <li><a href="./delete-data.html?lang=de">Konto- und Datenlöschung</a></li>
+</ul>
+</div>
+
+<div data-lang="pl">
+<h1>Wsparcie Mynado</h1>
+<div class="upd">Głosowa lista zadań · deweloper: Aleksandr Mnatsakanov</div>
+
+<div class="card">
+<p><b>Kontakt:</b> <a href="mailto:support@mynado.app">support@mynado.app</a><br>Zwykle odpowiadamy w ciągu 1–2 dni. Aby szybciej rozwiązać problem, podaj <b>„Moje ID”</b> z ustawień aplikacji, model telefonu i wersję Mynado (na dole ustawień).</p>
+</div>
+
+<h2>Najczęstsze pytania</h2>
+
+<h3>Wprowadzanie głosowe nie działa</h3>
+<p>Zezwól na dostęp do mikrofonu i rozpoznawania mowy. iPhone: Ustawienia → Mynado → włącz „Mikrofon” i „Rozpoznawanie mowy”. Android: Ustawienia → Aplikacje → Mynado → Uprawnienia → Mikrofon.</p>
+
+<h3>Przypomnienia nie przychodzą</h3>
+<p>Upewnij się, że zadanie ma ustawioną godzinę, a powiadomienia dla Mynado są dozwolone (iPhone: Ustawienia → Powiadomienia → Mynado). Na Androidzie wyłącz optymalizację baterii dla Mynado: Ustawienia → Aplikacje → Mynado → Bateria → „Bez ograniczeń”.</p>
+
+<h3>Po zalogowaniu zniknęły moje zadania</h3>
+<p>Logowanie przez Google i logowanie przez Apple to <b>różne konta</b>. Wyloguj się i zaloguj tak samo jak wcześniej: zadania są przechowywane na koncie, na którym zostały utworzone.</p>
+
+<h3>Jak działa subskrypcja PRO</h3>
+<p>Wersja bezpłatna obejmuje 5 zapytań AI dziennie, PRO — 50. Aby subskrybować: Ustawienia → „Przejdź na PRO”. Jeśli zapłaciłeś(-aś), a PRO się nie pojawiło, dotknij „Przywróć zakup” w oknie PRO. Anulowanie: iPhone — Ustawienia → [Twoje imię] → Subskrypcje; Android — Google Play → Subskrypcje. Szczegóły znajdziesz w <a href="./terms.html?lang=pl">Warunkach korzystania</a>.</p>
+
+<h3>Jak usunąć konto</h3>
+<p>Ustawienia → „Usuń konto i wszystkie dane”. Co zostaje usunięte, a co zachowane, wyjaśnia strona <a href="./delete-data.html?lang=pl">usuwania danych</a>.</p>
+
+<h2>Dokumenty</h2>
+<ul>
+<li><a href="./terms.html?lang=pl">Warunki korzystania</a></li>
+<li><a href="./privacy.html?lang=pl">Polityka prywatności</a></li>
+<li><a href="./delete-data.html?lang=pl">Usuwanie konta i danych</a></li>
 </ul>
 </div>
 
