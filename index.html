@@ -457,6 +457,13 @@ body { background:var(--screen); transition:background-color .3s; }
 .form-date::-webkit-date-and-time-value { text-align:left; }
 .dt-row { display:flex; gap:10px; }
 .dt-row > div { flex:1; min-width:0; position:relative; }
+.title-ta { display:block; resize:none; overflow:hidden; line-height:1.4; min-height:46px; white-space:pre-wrap; word-break:break-word; }
+/* Серая подсказка «10:00» в пустом поле времени (08.11.2026) — у type=time нет placeholder. */
+.tph-wrap { position:relative; display:block; min-width:0; }
+.tph { position:absolute; top:50%; transform:translateY(-50%); font-size:14px; font-weight:600; color:var(--muted); opacity:.55; pointer-events:none; }
+.tph.left { left:14px; } .tph.center { left:0; right:0; text-align:center; }
+.tph.hide, .tph-wrap input:focus + .tph { display:none; }
+input.tph-empty:not(:focus), input.tph-empty:not(:focus)::-webkit-datetime-edit { color:transparent; }
 .time-ph { position:absolute; left:14px; bottom:13px; font-size:14px; font-weight:600; color:var(--muted); pointer-events:none; }
 .time-ph.hide, .form-date:focus + .time-ph { display:none; }
 /* Пустое время: Android/Chrome рисуют «--:--» поверх примера — прячем их, пока поле не в фокусе. */
@@ -1119,7 +1126,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.153';
+var APP_VERSION = '1.154';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2042,7 +2049,7 @@ function renderModal(){
       '<span class="edit-hd-title">'+L.edit_hd+'</span>'+
       '<button class="close-btn" data-role="modal-close" style="margin-left:auto">'+IC.close+'</button>'+
     '</div>'+
-    '<div><div class="field-label">'+L.field_name+'</div><input id="edit-text" class="form-input" maxlength="120" value="'+escA(editText)+'"></div>'+
+    '<div><div class="field-label">'+L.field_name+'</div><textarea id="edit-text" class="form-input title-ta" rows="1" maxlength="120">'+esc(editText)+'</textarea></div>'+
     '<div><div class="field-label">'+L.desc+'</div><textarea id="edit-desc" class="form-textarea" rows="3" maxlength="500">'+esc(editDesc)+'</textarea></div>'+
     '<div><div class="field-label">'+L.checklist_hd+'</div>'+
       '<button class="btn-outline" style="width:100%;margin-bottom:8px;font-size:12.5px"'+(state.aiSplitting?' disabled':'')+' data-role="ai-split-checklist">'+(state.aiSplitting?L.checklist_ai_split_loading:L.checklist_ai_split_btn)+'</button>'+
@@ -2061,8 +2068,7 @@ function renderModal(){
     '<div>'+
       '<div class="dt-row">'+
         '<div><div class="field-label">'+L.field_date+'</div><input id="edit-date" type="date" class="form-date" value="'+escA(editDate)+'"></div>'+
-        '<div><div class="field-label">'+L.field_remind+'</div><input id="edit-reminder" type="time" class="form-date'+(editReminderTime?'':' empty')+'" value="'+escA(editReminderTime)+'">'+
-          '<span class="time-ph'+(editReminderTime?' hide':'')+'" id="edit-reminder-ph">'+esc(L.remind_ph)+'</span></div>'+
+        '<div><div class="field-label">'+L.field_remind+'</div><input id="edit-reminder" type="time" class="form-date" value="'+escA(editReminderTime)+'"></div>'+
       '</div>'+
       '<div style="display:flex;align-items:center;gap:10px;margin-top:6px">'+
         '<div style="flex:1;font-size:11px;color:var(--muted)">'+L.remind_hint+'</div>'+
@@ -2520,7 +2526,7 @@ function renderQuickAdd(){
         '<div style="font-size:17px;font-weight:800;color:var(--text)">'+L.qa_title+'</div>'+
         '<div>'+
           '<div class="field-label">'+L.field_name+'</div>'+
-          '<input id="qa-text" class="day-add-input" style="width:100%;box-sizing:border-box" placeholder="'+escA(L.task_ph)+'" maxlength="120" value="'+escA(state.qaText)+'">'+
+          '<textarea id="qa-text" class="day-add-input title-ta" rows="1" style="width:100%;box-sizing:border-box" placeholder="'+escA(L.task_ph)+'" maxlength="120">'+esc(state.qaText)+'</textarea>'+
         '</div>'+
         '<div>'+
           '<div class="field-label">'+L.desc+'</div>'+
@@ -2683,7 +2689,7 @@ function renderGroupEditSheet(){
       '<div class="sheet-body">'+
         '<div>'+
           '<div class="field-label">'+L.field_name+'</div>'+
-          '<input id="g-edit-text" class="day-add-input" style="width:100%;box-sizing:border-box" maxlength="120" value="'+escA(ed.text)+'">'+
+          '<textarea id="g-edit-text" class="day-add-input title-ta" rows="1" style="width:100%;box-sizing:border-box" maxlength="120">'+esc(ed.text)+'</textarea>'+
         '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<div style="flex:1">'+
@@ -3043,6 +3049,15 @@ document.addEventListener('change', function(e){
     render();
   }
 }, true);
+function addTimeHint(inp){
+  if(inp.parentNode&&inp.parentNode.classList&&inp.parentNode.classList.contains('tph-wrap')) return;
+  var wrap=document.createElement('span'); wrap.className='tph-wrap';
+  inp.parentNode.insertBefore(wrap,inp); wrap.appendChild(inp);
+  var ph=document.createElement('span'); ph.className='tph '+(inp.classList.contains('form-date')?'left':'center'); ph.textContent='10:00';
+  wrap.appendChild(ph);
+  function upd(){ var e=!inp.value; ph.classList.toggle('hide',!e); inp.classList.toggle('tph-empty',e); }
+  upd(); inp.addEventListener('input',upd); inp.addEventListener('change',upd);
+}
 function syncNeedsButtons(){
   document.querySelectorAll('[data-needs]').forEach(function(b){
     var inp=document.getElementById(b.dataset.needs);
@@ -3157,7 +3172,7 @@ function render(){
   if(te) te.addEventListener('input',function(e){if(state.edit) state.edit.text=e.target.value;});
   if(de) de.addEventListener('input',function(e){if(state.edit) state.edit.desc=e.target.value;});
   wireIC(dte,function(e){if(state.edit) state.edit.date=e.target.value;});
-  wireIC(dre,function(e){if(state.edit) state.edit.reminderTime=e.target.value; var ph=document.getElementById('edit-reminder-ph'); if(ph) ph.classList.toggle('hide',!!e.target.value); e.target.classList.toggle('empty',!e.target.value);});
+  wireIC(dre,function(e){if(state.edit) state.edit.reminderTime=e.target.value;});
   var dsi=document.getElementById('ds-input');
   if(dsi) dsi.addEventListener('input',function(e){state.dsAddText=e.target.value;});
   wireIC(document.getElementById('ds-time'),function(e){state.dsAddTime=e.target.value;});
@@ -3194,6 +3209,15 @@ function render(){
     aski.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); askOk(); } });
     setTimeout(function(){ var el=document.getElementById('ask-input'); if(el){ el.focus(); el.select(); } },80);
   }
+
+  // Название растёт по высоте; Enter не переносит строку (название — одна фраза), а убирает клавиатуру.
+  document.querySelectorAll('textarea.title-ta').forEach(function(ta){
+    function fit(){ ta.style.height='auto'; ta.style.height=(ta.scrollHeight+3)+'px'; }
+    fit(); requestAnimationFrame(fit);
+    ta.addEventListener('input',function(){ if(/\n/.test(ta.value)){ var p=ta.selectionStart; ta.value=ta.value.replace(/\s*\n\s*/g,' '); try{ ta.setSelectionRange(p,p); }catch(_){} ta.dispatchEvent(new Event('input')); return; } fit(); });
+    ta.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); ta.blur(); } });
+  });
+  document.querySelectorAll('input[type="time"]').forEach(addTimeHint);
 
   if(savedScroll>0) requestAnimationFrame(function(){ var el=document.querySelector('.sheet-body'); if(el) el.scrollTop=savedScroll; });
 
