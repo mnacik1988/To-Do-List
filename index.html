@@ -1119,7 +1119,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.152';
+var APP_VERSION = '1.153';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2627,12 +2627,13 @@ function canChangeGroupPri(t){
   var g=state.groupOpen; if(!g||(g.role!=='admin'&&g.role!=='editor')||!t) return false;
   return !t.createdBy || t.createdBy===getUserKey();
 }
-function renderGroupTaskRowCustom(t,canEditFields,canDelete,canCheck){
+function renderGroupTaskRowCustom(t,canEditFields,canDelete,canCheck,canMove){
   var hasChecklist=t.checklist&&t.checklist.length;
   var priAttr=canChangeGroupPri(t)?' data-role="group-cycle-pri" data-sync="'+escA(t.syncId)+'" title="'+escA(L.pri_title)+'" style="cursor:pointer"':'';
   var meta=[];
   if(hasChecklist) meta.push(t.checklist.filter(function(i){return i.done;}).length+'/'+t.checklist.length);
-  return '<div class="task-row" style="margin-bottom:8px">'+
+  var moving=gDrag&&gDrag.moved&&gDrag.id===t.syncId;
+  return '<div class="task-row'+(moving?' dragging':'')+'" style="margin-bottom:8px" data-g-row="'+escA(t.syncId)+'">'+
     '<button class="pri-bar" data-pri="'+priSafe(t.priority)+'"'+priAttr+'></button>'+
     '<div class="task-body">'+
       '<button class="chk'+(t.done?' done':'')+'"'+(canCheck?' data-role="group-toggle-done" data-sync="'+escA(t.syncId)+'"':' style="pointer-events:none;opacity:.5"')+'>'+(t.done?IC.check:'')+'</button>'+
@@ -2643,6 +2644,7 @@ function renderGroupTaskRowCustom(t,canEditFields,canDelete,canCheck){
       '<span class="pri-chip" data-pri="'+priSafe(t.priority)+'"'+priAttr+'>'+PRI_LABEL[priSafe(t.priority)]+'</span>'+
     '</div>'+
     (canDelete?'<button class="drag-handle" data-role="group-delete-task" data-sync="'+escA(t.syncId)+'" title="'+escA(L.btn_delete)+'">'+IC.trash+'</button>':'')+
+    (canMove?'<button class="drag-handle" data-role="g-drag-handle">'+IC.handle+'</button>':'')+
   '</div>';
 }
 
@@ -2797,7 +2799,7 @@ function renderGroupTasksScreen(){
   var canEdit=g.role==='admin'||g.role==='editor';
   var canCheck=g.role!=='viewer';
   var canAdd=canEdit;
-  var rows=state.groupTasks.map(function(t){ return renderGroupTaskRowCustom(t,canEdit,g.role==='admin',canCheck); }).join('');
+  var rows=state.groupTasks.map(function(t){ return renderGroupTaskRowCustom(t,canEdit,g.role==='admin',canCheck,canEdit&&state.groupTasks.length>1); }).join('');
   return '<div class="scroll-area" style="padding-bottom:120px">'+
       '<div class="sec-hd">'+
         '<button class="icon-btn" data-role="group-close">'+IC.chevL+'</button>'+
@@ -2824,7 +2826,7 @@ function renderGroupTasksScreen(){
       (!state.groupTasksLoaded
         ?'<div style="padding:28px 0;text-align:center;color:var(--muted);font-size:13.5px">'+IC.spin(18)+'</div>'
         :(state.groupTasks.length
-          ?'<div class="task-list" style="padding:0 4px">'+rows+'</div>'
+          ?'<div class="task-list" id="g-task-list" style="padding:0 4px">'+rows+'</div>'
           :'<div style="padding:28px 0;text-align:center;color:var(--muted);font-size:13.5px;font-weight:600">'+L.groups_no_tasks+'</div>')
       )+
     '</div>';
@@ -4997,6 +4999,7 @@ function groupPollSafe(){
   // Открыта шторка редактирования/подтверждения — render() пересобрал бы её
   // прямо под пальцем.
   if(state.gEdit||state.ask) return false;
+  if(gDrag) return false; // палец тащит задачу — перерисовка сорвала бы перетаскивание
   // Человек печатает (новая задача, приглашение, название группы) — молчим,
   // иначе перерисовка съест введённый текст и уберёт клавиатуру.
   var ae=document.activeElement;
@@ -5623,6 +5626,75 @@ appEl.addEventListener('dragover',function(e){
   if(list) list.innerHTML=arr.map(function(t){return renderTaskRow(t,sec);}).join('');
 });
 document.addEventListener('dragend',function(){ if(!drag) return; drag=null; render(); });
+
+/* ── Перетаскивание задач в группе (08.11.2026) ──
+   Pointer Events — одно и то же для мыши и пальца. Порядок общий для всех участников:
+   после отпускания уходит на сервер (/group/order), остальные увидят его при ближайшем опросе. */
+var gDrag=null;
+appEl.addEventListener('pointerdown',function(e){
+  var h=e.target.closest('[data-role="g-drag-handle"]'); if(!h) return;
+  var row=h.closest('[data-g-row]'); if(!row) return;
+  e.preventDefault();
+  var rect=row.getBoundingClientRect();
+  gDrag={id:row.dataset.gRow,row:row,pid:e.pointerId,startY:e.clientY,offsetY:e.clientY-rect.top,moved:false,clone:null,targetId:null,top:false};
+  try{ h.setPointerCapture(e.pointerId); }catch(_){}
+});
+document.addEventListener('pointermove',function(e){
+  if(!gDrag||e.pointerId!==gDrag.pid) return;
+  var y=e.clientY;
+  if(!gDrag.moved){
+    if(Math.abs(y-gDrag.startY)<6) return;
+    gDrag.moved=true;
+    var r0=gDrag.row.getBoundingClientRect();
+    gDrag.clone=gDrag.row.cloneNode(true);
+    gDrag.clone.className+=' touch-clone';
+    gDrag.clone.style.cssText='position:fixed;left:'+r0.left+'px;top:'+r0.top+'px;width:'+r0.width+'px;z-index:200;pointer-events:none;';
+    document.body.appendChild(gDrag.clone);
+    gDrag.row.style.opacity='0.35';
+  }
+  e.preventDefault();
+  gDrag.clone.style.top=(y-gDrag.offsetY)+'px';
+  var list=document.getElementById('g-task-list'); if(!list) return;
+  var rows=list.querySelectorAll('[data-g-row]'), targetId=null, firstOther=null;
+  rows.forEach(function(r){
+    r.style.borderTop=''; r.style.borderBottom='';
+    if(r.dataset.gRow===gDrag.id) return;
+    if(firstOther===null) firstOther=r;
+    if(y>r.getBoundingClientRect().top+r.offsetHeight/2) targetId=r.dataset.gRow;
+  });
+  gDrag.top=!targetId&&!!firstOther;
+  if(gDrag.top) firstOther.style.borderTop='2px solid var(--accent)';
+  else if(targetId){ var t=list.querySelector('[data-g-row="'+CSS.escape(targetId)+'"]'); if(t) t.style.borderBottom='2px solid var(--accent)'; }
+  gDrag.targetId=targetId;
+},{passive:false});
+function gDragEnd(e,cancel){
+  if(!gDrag||(e&&e.pointerId!==gDrag.pid)) return;
+  var d=gDrag; gDrag=null;
+  if(d.clone) d.clone.remove();
+  if(!d.moved||cancel){ render(); return; }
+  var arr=state.groupTasks.slice(), from=-1;
+  for(var i=0;i<arr.length;i++) if(arr[i].syncId===d.id) from=i;
+  if(from<0){ render(); return; }
+  var moved=arr.splice(from,1)[0];
+  if(d.top) arr.unshift(moved);
+  else{
+    var to=-1; for(var j=0;j<arr.length;j++) if(arr[j].syncId===d.targetId) to=j;
+    if(to<0){ render(); return; }
+    arr.splice(to+1,0,moved);
+  }
+  var changed=arr.some(function(t,k){ return t.syncId!==state.groupTasks[k].syncId; });
+  state.groupTasks=arr; render();
+  if(changed) saveGroupOrder();
+}
+document.addEventListener('pointerup',function(e){ gDragEnd(e,false); });
+document.addEventListener('pointercancel',function(e){ gDragEnd(e,true); });
+function saveGroupOrder(){
+  var g=state.groupOpen; if(!g||(g.role!=='admin'&&g.role!=='editor')) return;
+  groupWriteStart();
+  fetch(WORKER_URL+'/group/order',{method:'POST',headers:groupAuthHeaders(),body:JSON.stringify({
+    groupId:g.groupId, order:state.groupTasks.map(function(t){ return t.syncId; })
+  })}).then(function(r){ groupWriteEnd(); if(!r||!r.ok) pullGroupTasks(); }).catch(function(){ groupWriteEnd(); pullGroupTasks(); });
+}
 
 /* ── Touch drag (mobile) ── */
 var touchDrag=null, touchClone=null;
