@@ -38,6 +38,9 @@
      (1.0.18 и раньше) открывают именно github.io, и уход на другой адрес показал бы адресную строку и сломал оплату. -->
 <script>(function(){try{
   if(location.hostname!=='mnacik1988.github.io') return;
+  // 09.11.2026: Google всё равно выбрал github.io главной копией (mynado.app — «копия»). Старый адрес закрываем от
+  // индексации: noindex только здесь, на mynado.app его нет. Приложению из Play это ничем не мешает.
+  try{ var nr=document.createElement('meta'); nr.name='robots'; nr.content='noindex'; document.head.appendChild(nr); }catch(e){}
   var ref=String(document.referrer||'');
   var store=ref.indexOf('android-app://')===0||('getDigitalGoodsService' in window)||!!window.AndroidAuth;
   try{ if(localStorage.getItem('vtodo-store-app')==='1') store=true; }catch(e){}
@@ -1132,7 +1135,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.156';
+var APP_VERSION = '1.157';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
