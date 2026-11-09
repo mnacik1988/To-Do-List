@@ -27,6 +27,9 @@
 !delete-data.html
 !terms.html
 !support.html
+# SEO (09.11.2026): карта сайта и robots для Search Console
+!sitemap.xml
+!robots.txt
 !.well-known/
 !.well-known/assetlinks.json
 
