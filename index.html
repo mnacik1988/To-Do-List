@@ -1135,7 +1135,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.159';
+var APP_VERSION = '1.160';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3995,13 +3995,33 @@ function addTaskLocallyFromVoice(transcript, dayDate, undated){
   // CL_LOCAL.lead — «надо позвонить маме и папе» тоже разложилось бы на
   // «маме»/«папе» и превратилось бы в «Список», чего никто не просил.
   var raw=String(transcript||'');
+  var tripTitle='';
   if(raw.length>VOICE_LONG_CHARS || hasBuyVerb(raw)){
-    var split=localSplitChecklistItems(transcript);
+    // «В 19:00 сходить в магазин и купить помидоры, огурцы, молоко» (10.11.2026):
+    // всё, что ДО глагола покупки, — это само дело («сходить в магазин»), а товары — после.
+    // Раньше начало фразы вместе со временем попадало в чек-лист мусорным пунктом.
+    var buyAt=-1, low=raw.toLowerCase(), bl=CL_BUY[voiceLangCode()]||CL_BUY.ru;
+    for(var bi=0;bi<bl.length;bi++){
+      var mm=new RegExp('(^|[\\s,.;:!?])'+bl[bi]+'(?=[\\s,.;:!?]|$)','i').exec(low);
+      if(mm){ var pos=mm.index+mm[1].length; if(buyAt<0||pos<buyAt) buyAt=pos; }
+    }
+    var listPart=transcript;
+    if(buyAt>0){
+      var cfgL=CL_LOCAL[voiceLangCode()]||CL_LOCAL.ru;
+      var pre=localCleanText(raw.slice(0,buyAt))||'';
+      pre=pre.replace(new RegExp('[\\s,.;:!?—-]+(?:'+cfgL.conj.join('|')+')?[\\s,.;:!?—-]*$','i'),'').replace(/[\s,.;:!?—-]+$/,'').trim();
+      // Название берём, только если в начале есть настоящее дело, а не «Привет, на вечер надо».
+      var skip=[].concat(cfgL.drop||[],cfgL.lead||[],cfgL.conj||[],CL_CMD[voiceLangCode()]||[]);
+      var content=pre.toLowerCase().split(/[\s,.;:!?—-]+/).filter(function(w){ return w.length>=3 && skip.indexOf(w)<0; });
+      if(content.length) tripTitle=pre.charAt(0).toUpperCase()+pre.slice(1);
+      listPart=raw.slice(buyAt);
+    }
+    var split=localSplitChecklistItems(listPart);
     // Один пункт — значит разделителей не нашлось и разбивать было нечего.
     if(split.length>1){ items=split; desc=raw; }
   }
-  // Название: если получился список — короткое родовое, иначе как раньше.
-  var title=items.length?L.voice_list_title:localText;
+  // Название: дело из начала фразы («Сходить в магазин»), иначе короткое родовое, иначе как раньше.
+  var title=items.length?(tripTitle||L.voice_list_title):localText;
   addTasksBatch([{text:title,priority:'mid',date:localDate,reminderTime:localTime,checklist:items,desc:desc}], undated);
 }
 function processTranscript(transcript){
@@ -4031,7 +4051,8 @@ function processTranscript(transcript){
     'IMPORTANT: Respond in the same language as the voice message.\n\n'+
     'Decide what the user wants:\n\n'+
     '1. ADD new tasks — user dictates new task(s) to create.\n'+
-    'If the user names a place to go (store, pharmacy, etc.) followed by a list of specific items/errands there, do NOT create a separate generic "go to X" task — the item tasks already imply the trip. Only create one task per item.\n'+
+    'If the user names a place to go (store, market, pharmacy, etc.) and then lists THINGS TO BUY or get there, create ONE task named after the trip in the voice message\'s language (e.g. "Сходить в магазин", "Сходить в аптеку", "Go to the store") with every item as a separate string in "checklist" — never one task per item, and never a separate generic trip task next to it. Date and time apply to that one task.\n'+
+    'Only DIFFERENT errands (different actions, e.g. "забрать посылку и оплатить интернет") become separate tasks.\n'+
     'If the user dictates a bare list of items to buy/get WITHOUT naming a place (e.g. "купить молоко, хлеб, помидоры, огурцы" / "buy milk, bread, tomatoes, cucumbers") — do NOT create one task per item and do NOT put the list in "text". Instead create ONE task with a short generic name (e.g. "Покупки" / "Groceries", in the voice message\'s language) and put each item as a separate string in "checklist".\n'+
     'Return: {"type":"add","tasks":[{"text":"task name without dates/times/filler","priority":"high|mid|low","date":"YYYY-MM-DD","reminderTime":"HH:MM or empty","checklist":["item1","item2"] or omit/empty if not a shopping list}]}\n'+
     // Без этого правила ЛОМАЛСЯ ЛЮБОЙ следующий список покупок (баг-репорт
