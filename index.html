@@ -1141,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.166';
+var APP_VERSION = '1.167';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5311,6 +5311,7 @@ function openGroupEdit(syncId){
     notify:(t.notifyUids||[]).slice()
   };
   state.gEditNewItem='';
+  state.gEditOrig=gEditSig(state.gEdit);   // снимок — чтобы при закрытии понять, есть ли несохранённые правки
   state.aiRec=false; state.aiProc=false; state.aiNote=''; state.clRec=false; state.clProc=false; state.aiSplitting=false;
   // Без этого флага лист "выезжал дважды": анимация открытия у него была
   // безусловной на КАЖДЫЙ рендер, а не только на первый — как только
@@ -5321,6 +5322,25 @@ function openGroupEdit(syncId){
   anim.gEdit=true;
   render();
   if(!state.groupMembersLoaded) pullGroupMembers();
+}
+function gEditSig(ed){
+  if(!ed) return '';
+  return JSON.stringify([ed.text||'',ed.desc||'',ed.priority||'',ed.date||'',ed.reminderTime||'',
+    (ed.checklist||[]).map(function(c){ return [c.text||'',!!c.done]; }),(ed.notify||[]).slice().sort()]);
+}
+// Закрыть правку общей задачи. Есть несохранённые правки — сначала спрашиваем, как в обычной задаче (12.11.2026:
+// свайп или касание фона молча стирали правки). true — закрыто сразу; false — показан вопрос.
+function requestCloseGroupEdit(){
+  var ed=state.gEdit; if(!ed){ closeGroupEdit(); return true; }
+  var changed=gEditSig(ed)!==state.gEditOrig || !!(state.gEditNewItem||'').trim();
+  if(!changed){ closeGroupEdit(); return true; }
+  askChoice(L.edit_unsaved, L.btn_save, function(){
+    var e=state.gEdit; if(!e) return;
+    var pend=(state.gEditNewItem||'').trim();
+    if(pend){ e.checklist=(e.checklist||[]).concat([checklistItem(clampLen(pend,LEN_CHECKLIST_ITEM))]); state.gEditNewItem=''; }
+    saveGroupEdit(); if(state.gEdit) render();   // без названия saveGroupEdit не сохраняет — окно остаётся
+  }, L.btn_discard, closeGroupEdit);
+  return false;
 }
 function closeGroupEdit(){ state.gEdit=null; state.aiRec=false; state.aiProc=false; state.aiNote=''; state.clRec=false; state.clProc=false; state.aiSplitting=false; render(); }
 
@@ -6015,7 +6035,7 @@ document.addEventListener('touchend',function(){
     else if(s.key==='modal') closeModal();
     else if(s.key==='day') closeDaySheet();
     else if(s.key==='qa'){ if(!closeQuickAdd()){ s.sheet.style.transition='transform .25s cubic-bezier(.2,.8,.2,1)'; s.sheet.style.transform='translateY(0)'; } }
-    else if(s.key==='gedit') closeGroupEdit();
+    else if(s.key==='gedit'){ if(!requestCloseGroupEdit()){ s.sheet.style.transition='transform .25s cubic-bezier(.2,.8,.2,1)'; s.sheet.style.transform='translateY(0)'; } }
     else if(s.key==='od') closeOdSheet();
   } else {
     s.sheet.style.transition='transform .25s cubic-bezier(.2,.8,.2,1)';
@@ -6140,7 +6160,7 @@ appEl.addEventListener('click',function(e){
       (function(u){ askPrompt(L.groups_rename_prompt,getUidAliases()[u]||'',function(aliasVal){ setUidAlias(u,aliasVal); render(); }); })(gUidVal);
       break;
     case 'group-open-edit':     openGroupEdit(gSync); break;
-    case 'g-edit-cancel':       closeGroupEdit(); break;
+    case 'g-edit-cancel':       requestCloseGroupEdit(); break;
     case 'g-edit-save':         saveGroupEdit(); break;
     case 'g-set-pri':           if(state.gEdit && (!state.gEdit.createdBy || state.gEdit.createdBy===getUserKey())) state.gEdit.priority=el.dataset.pri; render(); break;
     case 'group-cycle-pri':     groupCyclePri(gSync); break;
@@ -6213,7 +6233,7 @@ function hasOpenLayer(){
 function closeTopLayer(){
   if(state.ask){ askCancel(); return true; }
   if(state.paywall){ closePaywall(); return true; }
-  if(state.gEdit){ closeGroupEdit(); return true; }
+  if(state.gEdit){ requestCloseGroupEdit(); return true; }
   if(state.gSettings){ state.gSettings=false; render(); return true; }
   if(state.settings){ closeSettings(); return true; }
   if(state.quickAdd){ closeQuickAdd(); return true; }
