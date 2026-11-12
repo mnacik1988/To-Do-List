@@ -953,14 +953,19 @@ window.onAndroidGoogleCredential = function(idToken){
 // В браузере и в Android-версии window.Capacitor нет — блок не срабатывает.
 var GOOGLE_IOS_CLIENT_ID='1053800558840-asf4k53h1vgod4689g6nibugap99v50c.apps.googleusercontent.com';
 function isIosApp(){ var C=window.Capacitor; return !!(C && C.isNativePlatform && C.isNativePlatform() && C.getPlatform && C.getPlatform()==='ios'); }
+// Android-приложение на Capacitor (с 10.11.2026; раньше это был TWA — Chrome без своего кода): нативные голос, вход, оплата, пуши.
+function isAndroidApp(){ var C=window.Capacitor; return !!(C && C.isNativePlatform && C.isNativePlatform() && C.getPlatform && C.getPlatform()==='android'); }
+function isNativeApp(){ return isIosApp()||isAndroidApp(); }
 (function(){
-  if(!isIosApp()) return;
+  if(!isNativeApp()) return;
   var C=window.Capacitor;
   var SL=(C.Plugins&&C.Plugins.SocialLogin)||(C.registerPlugin&&C.registerPlugin('SocialLogin'));
   if(!SL) return;
   var ready=null;
   function init(){
-    if(!ready) ready=SL.initialize({google:{iOSClientId:GOOGLE_IOS_CLIENT_ID, iOSServerClientId:GOOGLE_CLIENT_ID, mode:'online'}, apple:{clientId:'app.mynado.ios'}});
+    if(!ready) ready=SL.initialize(isIosApp()
+      ? {google:{iOSClientId:GOOGLE_IOS_CLIENT_ID, iOSServerClientId:GOOGLE_CLIENT_ID, mode:'online'}, apple:{clientId:'app.mynado.ios'}}
+      : {google:{webClientId:GOOGLE_CLIENT_ID, mode:'online'}});
     return ready;
   }
   function nativeLogin(provider, scopes){
@@ -1135,7 +1140,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.160';
+var APP_VERSION = '1.161';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1276,7 +1281,7 @@ window.__nativeSpeechEnd=function(){
 // промежуточный текст; когда сессия закончилась (человек нажал «стоп» или iOS сама остановила запись после
 // паузы), отдаём последний текст как окончательный и сообщаем о конце — дальше всё как в Android-обёртке.
 (function(){
-  if(!isIosApp()) return;
+  if(!isNativeApp()) return;
   var C=window.Capacitor;
   var SR=(C.Plugins&&C.Plugins.SpeechRecognition)||(C.registerPlugin&&C.registerPlugin('SpeechRecognition'));
   if(!SR) return;
@@ -4555,7 +4560,7 @@ function openPaywall(){ state.paywall=true; anim.paywall=true; state.aiNote=''; 
 // (UX-аудит 06.10.2026). Без магазина (сайт, iPhone) остаётся прежний текст.
 var _proPrice=null;
 function loadProPrice(){
-  if(!_proPrice && isIosApp()){
+  if(!_proPrice && isNativeApp()){
     var NP=iosPurchasesPlugin(); if(!NP) return;
     NP.getProducts({productIdentifiers:[PRO_PRODUCT_ID], productType:'subs'}).then(function(r){
       var p=r&&r.products&&r.products[0];
@@ -4635,6 +4640,14 @@ function proGranted(data){
     state.aiNote=L.pro_verify_failed; anim.aiNote=true; render();
   }
 }
+// Android (Google Play): сервер проверяет токен покупки у Google — тот же /verify-purchase, что был у TWA.
+function verifyGoogleToken(token){
+  return fetch(WORKER_URL+'/verify-purchase',{
+    method:'POST',
+    headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
+    body: JSON.stringify({ purchaseToken: String(token) })
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+}
 function verifyAppleTx(txId){
   return fetch(WORKER_URL+'/verify-purchase',{
     method:'POST',
@@ -4650,8 +4663,20 @@ function iosStartPurchase(){
     return;
   }
   state.proPurchasePending=true; render();
-  NP.purchaseProduct({productIdentifier:PRO_PRODUCT_ID, productType:'subs'})
+  // На Android подписке нужен идентификатор базового плана и токен предложения — берём их у самого Google Play.
+  var buy=isAndroidApp()
+    ? NP.getProducts({productIdentifiers:[PRO_PRODUCT_ID], productType:'subs'}).then(function(r){
+        var p=(r&&r.products||[])[0];
+        if(!p||!p.identifier) throw new Error('no product');
+        return NP.purchaseProduct({productIdentifier:PRO_PRODUCT_ID, planIdentifier:p.identifier, offerToken:p.offerToken, productType:'subs'});
+      })
+    : NP.purchaseProduct({productIdentifier:PRO_PRODUCT_ID, productType:'subs'});
+  buy
     .then(function(tx){
+      if(isAndroidApp()){
+        if(!tx||!tx.purchaseToken) throw new Error('no token');
+        return verifyGoogleToken(tx.purchaseToken);
+      }
       if(!tx||!tx.transactionId) throw new Error('no transaction');
       return verifyAppleTx(tx.transactionId);
     })
@@ -4675,6 +4700,10 @@ function iosRestorePurchase(){
     .then(function(){ return NP.getPurchases({onlyCurrentEntitlements:true}); })
     .then(function(r){
       var p=((r&&r.purchases)||[]).filter(function(x){ return x.productIdentifier===PRO_PRODUCT_ID; })[0];
+      if(isAndroidApp()){
+        if(!p||!p.purchaseToken) throw { restoreNone:true };
+        return verifyGoogleToken(p.purchaseToken);
+      }
       if(!p||!p.transactionId) throw { restoreNone:true };
       return verifyAppleTx(p.transactionId);
     })
@@ -4686,7 +4715,7 @@ function iosRestorePurchase(){
     });
 }
 function startProPurchase(){
-  if(isIosApp()){ iosStartPurchase(); return; }
+  if(isNativeApp()){ iosStartPurchase(); return; }
   if(!window.PaymentRequest){
     state.aiNote=L.pro_need_playstore; anim.aiNote=true; render();
     return;
@@ -4790,7 +4819,7 @@ function startProPurchase(){
 // подписчиком, а наш сервер об этом не узнал. Digital Goods API даёт токен
 // УЖЕ существующей покупки без повторной оплаты.
 function restorePendingPurchase(){
-  if(isIosApp()){ iosRestorePurchase(); return; }
+  if(isNativeApp()){ iosRestorePurchase(); return; }
   if(!isGoogleSignedIn()){
     handleAuthFailure(function(){ restorePendingPurchase(); }, function(){
       state.aiNote=L.pro_restore_need_auth; anim.aiNote=true; render();
@@ -5592,8 +5621,8 @@ function unsubscribePushForSignOut(){
     var done=false;
     var finish=function(){ if(done) return; done=true; resolve(); };
     setTimeout(finish,4000);
-    if(isIosApp()){
-      // iPhone-приложение: снимаем подписку устройства на сервере и отключаем токен в iOS.
+    if(isNativeApp()){
+      // Приложение (iPhone / Android): снимаем подписку устройства на сервере и отключаем токен.
       var PN=iosPushPlugin();
       (isGoogleSignedIn()
         ? fetch(WORKER_URL+'/unsubscribe',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},body:JSON.stringify({deviceId:getDeviceId()})}).catch(function(){})
@@ -6233,13 +6262,15 @@ var iosPushHooked=false;
 function iosPushPlugin(){ var C=window.Capacitor; return C&&((C.Plugins&&C.Plugins.PushNotifications)||(C.registerPlugin&&C.registerPlugin('PushNotifications'))); }
 function iosSubscribePush(){
   var PN=iosPushPlugin(); if(!PN){ state.pushStatus='unsupported'; render(); return; }
+  // Android: отдельный канал «Напоминания» с высокой важностью — со звуком и всплывающей плашкой (его же называет сервер).
+  if(isAndroidApp() && PN.createChannel){ try{ PN.createChannel({id:'reminders', name:L.notif_reminder||'Reminders', importance:5, visibility:1, vibration:true}); }catch(e){} }
   if(!isGoogleSignedIn()){ state.pushStatus='needAuth'; render(); return; }
   if(!iosPushHooked){
     iosPushHooked=true;
     PN.addListener('registration',function(tok){
       var v=tok&&tok.value; if(!v) return;
       fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},
-        body:JSON.stringify({apnsToken:v,deviceId:getDeviceId(),lang:state.lang})
+        body:JSON.stringify(isAndroidApp()?{fcmToken:v,deviceId:getDeviceId(),lang:state.lang}:{apnsToken:v,deviceId:getDeviceId(),lang:state.lang})
       }).then(function(r){ state.pushStatus=(r&&r.ok)?'ok':'error'; if(r&&r.ok){ pushActive=true; try{ localStorage.setItem('vtodo-push-was-ok','1'); }catch(e){} } render(); })
         .catch(function(){ state.pushStatus='error'; render(); });
     });
@@ -6253,7 +6284,7 @@ function iosSubscribePush(){
   }).catch(function(){ state.pushStatus='error'; render(); });
 }
 function subscribePush(){
-  if(isIosApp()){ iosSubscribePush(); return; }
+  if(isNativeApp()){ iosSubscribePush(); return; }
   if(!VAPID_PUBLIC_KEY||!('PushManager' in window)||!('serviceWorker' in navigator)){
     state.pushStatus='unsupported'; render(); return;
   }
