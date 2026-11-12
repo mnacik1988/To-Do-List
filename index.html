@@ -1141,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.164';
+var APP_VERSION = '1.165';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -6175,6 +6175,13 @@ appEl.addEventListener('click',function(e){
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape') closeTopLayer();
 });
+// Android (12.11.2026, жалоба тестера: пункт чек-листа добавлялся только со второй попытки): кнопка «Добавить» рядом с
+// полем ввода отбирала у него фокус — клавиатура закрывалась, окно сдвигалось, и касание не доходило до кнопки как клик.
+// Не даём кнопке забирать фокус: клавиатура остаётся, ничего не сдвигается, клик срабатывает с первого раза.
+document.addEventListener('mousedown',function(e){
+  var b=e.target&&e.target.closest&&e.target.closest('button[data-needs]'); if(!b) return;
+  var a=document.activeElement; if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')) e.preventDefault();
+},true);
 
 /* ── Кнопка «Назад» (UX-аудит 06.10.2026) ──
    Шторки не попадали в историю браузера, поэтому системное «Назад» на Android
