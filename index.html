@@ -1141,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.163';
+var APP_VERSION = '1.164';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -5628,7 +5628,7 @@ function unsubscribePushForSignOut(){
       (isGoogleSignedIn()
         ? fetch(WORKER_URL+'/unsubscribe',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+getGoogleToken()},body:JSON.stringify({deviceId:getDeviceId()})}).catch(function(){})
         : Promise.resolve()
-      ).then(function(){ return PN&&PN.unregister?PN.unregister().catch(function(){}):null; }).then(finish,finish);
+      ).then(function(){ return (PN&&PN.unregister&&(!isAndroidApp()||ANDROID_PUSH_READY))?PN.unregister().catch(function(){}):null; }).then(finish,finish);
       return;
     }
     if(!('serviceWorker' in navigator)){ finish(); return; }
