@@ -1141,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.167';
+var APP_VERSION = '1.168';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -6304,7 +6304,7 @@ var iosPushHooked=false;
 function iosPushPlugin(){ var C=window.Capacitor; return C&&((C.Plugins&&C.Plugins.PushNotifications)||(C.registerPlugin&&C.registerPlugin('PushNotifications'))); }
 // Android: пока в сборке нет Firebase (google-services.json), PushNotifications.register() роняет приложение
 // (IllegalStateException «FirebaseApp is not initialized»). Поменять на true вместе с подключением Firebase.
-var ANDROID_PUSH_READY=false;
+var ANDROID_PUSH_READY=true;
 function iosSubscribePush(){
   var PN=iosPushPlugin(); if(!PN){ state.pushStatus='unsupported'; render(); return; }
   if(isAndroidApp() && !ANDROID_PUSH_READY){ state.pushStatus='unsupported'; render(); return; }
