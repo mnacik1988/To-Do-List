@@ -986,7 +986,8 @@ function isNativeApp(){ return isIosApp()||isAndroidApp(); }
   window.AndroidAuth={
     startAppleSignIn:function(){ nativeLogin('apple',['email','name']); },
     startGoogleSignIn:function(){
-      init().then(function(){ return SL.login({provider:'google', options:{scopes:['email','profile']}}); })
+      // Android: параметр scopes плагин отвергает («нельзя без правки MainActivity»), а токен входа есть и без него.
+      init().then(function(){ return SL.login({provider:'google', options:isIosApp()?{scopes:['email','profile']}:{}}); })
         .then(function(r){
           var t=r&&r.result&&r.result.idToken;
           if(t) onGoogleCredential({credential:t});
@@ -1140,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.161';
+var APP_VERSION = '1.162';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
