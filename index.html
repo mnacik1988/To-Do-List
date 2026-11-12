@@ -1141,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.162';
+var APP_VERSION = '1.163';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -6261,8 +6261,12 @@ function wasPushOk(){ try{ return localStorage.getItem('vtodo-push-was-ok')==='1
 // PushNotifications, его и отправляем на сервер вместо веб-подписки. Разрешение спрашиваем после входа.
 var iosPushHooked=false;
 function iosPushPlugin(){ var C=window.Capacitor; return C&&((C.Plugins&&C.Plugins.PushNotifications)||(C.registerPlugin&&C.registerPlugin('PushNotifications'))); }
+// Android: пока в сборке нет Firebase (google-services.json), PushNotifications.register() роняет приложение
+// (IllegalStateException «FirebaseApp is not initialized»). Поменять на true вместе с подключением Firebase.
+var ANDROID_PUSH_READY=false;
 function iosSubscribePush(){
   var PN=iosPushPlugin(); if(!PN){ state.pushStatus='unsupported'; render(); return; }
+  if(isAndroidApp() && !ANDROID_PUSH_READY){ state.pushStatus='unsupported'; render(); return; }
   // Android: отдельный канал «Напоминания» с высокой важностью — со звуком и всплывающей плашкой (его же называет сервер).
   if(isAndroidApp() && PN.createChannel){ try{ PN.createChannel({id:'reminders', name:L.notif_reminder||'Reminders', importance:5, visibility:1, vibration:true}); }catch(e){} }
   if(!isGoogleSignedIn()){ state.pushStatus='needAuth'; render(); return; }
