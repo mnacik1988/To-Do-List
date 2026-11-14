@@ -1141,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.168';
+var APP_VERSION = '1.170';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1414,10 +1414,57 @@ var timerIv=null, aiTimeout=null, poolIdx=0, drag=null, dsAiTimeout=null, swReg=
 var anim={taskIds:{},summary:false,modal:false,aiNote:false,daySheet:false,settings:false,paywall:false,gEdit:false,ask:false,gSettings:false,qa:false,odSheet:false};
 function clearAnim(){ requestAnimationFrame(function(){ anim.taskIds={};anim.summary=anim.modal=anim.aiNote=anim.daySheet=anim.settings=anim.paywall=anim.gEdit=anim.ask=anim.gSettings=anim.qa=anim.odSheet=false; }); }
 
+/* ── Виджеты Android (13.11.2026): приложение отдаёт список «на сегодня», виджет нажали — стартуем запись ── */
+var WIDGET_L={ru:{title:'Сегодня',empty:'На сегодня задач нет'},uk:{title:'Сьогодні',empty:'На сьогодні завдань немає'},en:{title:'Today',empty:'No tasks for today'},de:{title:'Heute',empty:'Keine Aufgaben für heute'},fr:{title:'Aujourd’hui',empty:'Aucune tâche aujourd’hui'},pl:{title:'Dzisiaj',empty:'Brak zadań na dziś'}};
+var _wgPlugin=null, _wgTimer=null, _wgBusy=false;
+function widgetPlugin(){
+  if(!isAndroidApp()) return null;
+  if(_wgPlugin) return _wgPlugin;
+  var C=window.Capacitor;
+  try{ _wgPlugin=(C.Plugins&&C.Plugins.MynadoWidget)||(C.registerPlugin&&C.registerPlugin('MynadoWidget'))||null; }catch(e){ _wgPlugin=null; }
+  return _wgPlugin;
+}
+function widgetSync(){
+  var W=widgetPlugin(); if(!W) return;
+  clearTimeout(_wgTimer);
+  _wgTimer=setTimeout(function(){
+    try{
+      var today=todayStr();
+      var list=((state.sections&&state.sections.day)||[]).filter(function(t){ return !t.done && t.date===today; });
+      list.sort(function(a,b){ var x=a.reminderTime||'99:99', y=b.reminderTime||'99:99'; return x<y?-1:(x>y?1:0); });
+      var lg=WIDGET_L[state.lang]||WIDGET_L.en;
+      W.update({date:today,total:list.length,title:lg.title,empty:lg.empty,
+        tasks:list.slice(0,3).map(function(t){ return {id:t.id,time:t.reminderTime||'',text:t.text||''}; })}).catch(function(){});
+    }catch(e){}
+  },400);
+}
+// Нажали микрофон на виджете: ждём, пока нарисуется главный экран (после входа), и начинаем запись.
+function widgetStartVoice(n){
+  if(state.recording||state.processing) return;
+  if(!document.querySelector('[data-role="fab-toggle"]')){ if(n<24) setTimeout(function(){ widgetStartVoice(n+1); },500); return; }
+  onFabMic();
+}
+// Нажали задачу в виджете: открываем её карточку (ищем по id во всех разделах).
+function widgetOpenTask(id,n){
+  if(!document.querySelector('[data-role="fab-toggle"]')){ if(n<24) setTimeout(function(){ widgetOpenTask(id,n+1); },500); return; }
+  var secs=state.sections||{};
+  for(var k in secs){ if(!secs.hasOwnProperty(k)||!Array.isArray(secs[k])) continue;
+    for(var i=0;i<secs[k].length;i++){ if(secs[k][i].id===id){ openModal(k,id); return; } } }
+}
+function widgetCheckLaunch(){
+  var W=widgetPlugin(); if(!W||_wgBusy) return;
+  _wgBusy=true;
+  W.getLaunchAction().then(function(r){ _wgBusy=false; if(!r||!r.action) return; if(r.action==='voice') widgetStartVoice(0); else if(r.action.indexOf('task:')===0) widgetOpenTask(r.action.slice(5),0); }).catch(function(){ _wgBusy=false; });
+}
+if(isAndroidApp()){
+  window.addEventListener('load', function(){ setTimeout(function(){ widgetSync(); widgetCheckLaunch(); },1200); });
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ widgetCheckLaunch(); widgetSync(); } });
+}
+
 /* ── localStorage ── */
 var _saveFailAt=0;
 function saveStorage(){
-  try{ localStorage.setItem(STORE_KEY,JSON.stringify({sections:state.sections,theme:state.theme})); }
+  try{ localStorage.setItem(STORE_KEY,JSON.stringify({sections:state.sections,theme:state.theme})); widgetSync(); }
   catch(e){
     // Раньше ошибка молча глоталась: память заполнена/закрыта — человек не знал, что правки не сохранены.
     // Плашку показываем не чаще раза в минуту, с задержкой и только если нет висящего «Отменить»:
