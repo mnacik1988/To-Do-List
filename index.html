@@ -336,7 +336,7 @@ body { background:var(--screen); transition:background-color .3s; }
 .fab-transcript { position:absolute; bottom:-52px; left:50%; transform:translateX(-50%); font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; max-width:260px; overflow:hidden; text-overflow:ellipsis; background:var(--surface); padding:5px 10px; border-radius:20px; box-shadow:0 2px 10px rgba(0,0,0,.12); }
 /* Speed dial */
 .fab-dial { position:absolute; bottom:72px; right:0; display:flex; flex-direction:column; align-items:flex-end; gap:14px; }
-.fab-dial-item { display:flex; align-items:center; gap:10px; animation:fadein .18s ease both; }
+.fab-dial-item { display:flex; align-items:center; gap:10px; }
 .fab-dial-lbl { background:var(--surface); color:var(--text); font-size:13px; font-weight:600; padding:5px 12px; border-radius:20px; box-shadow:0 2px 10px rgba(0,0,0,.15); white-space:nowrap; }
 .fab-dial-btn { width:46px; height:46px; border-radius:50%; border:none; background:var(--surface); color:var(--accent); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.22); flex:none; transition:transform .12s; }
 .fab-dial-btn:active { transform:scale(.93); }
@@ -550,7 +550,7 @@ input[type="date"].day-add-input, input[type="time"].day-add-input { -webkit-app
 .ai-answer-card { background:var(--accent-soft); border:1.5px solid var(--accent); border-radius:16px; padding:15px 16px; animation:fadein .3s ease both; }
 .ai-answer-card .ai-card-hd { margin-bottom:8px; }
 .ai-answer-txt  { font-size:14.5px; line-height:1.6; color:var(--text); font-weight:600; }
-.due-banner { background:var(--pri-high-ink); color:#fff; border-radius:16px; padding:14px 16px; animation:fadein .3s ease both; display:flex; flex-direction:column; gap:8px; }
+.due-banner { background:#8a4133; color:#fff; border-radius:16px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
 .due-banner-hd { display:flex; align-items:center; gap:8px; }
 .due-banner-title { font-size:12px; font-weight:800; letter-spacing:.07em; flex:1; }
 .due-banner-close { width:26px; height:26px; border-radius:50%; border:none; background:rgba(255,255,255,.22); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; flex:none; }
@@ -1141,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.170';
+var APP_VERSION = '1.171';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2576,13 +2576,15 @@ function renderFab(){
       (hasPartial?'<span class="fab-transcript">'+esc(recTranscript)+'</span>':'')+
     '</div>';
   }
+  // Кнопки под «+» анимируем только в момент открытия, а не при каждой перерисовке (иначе мигают).
+  var dA=state.fabOpen&&!_fabDialShown; _fabDialShown=!!state.fabOpen;
   var dial=state.fabOpen
     ?'<div class="fab-dial">'+
-        '<div class="fab-dial-item" style="animation-delay:.06s">'+
+        '<div class="fab-dial-item"'+(dA?' style="animation:fadein .18s ease both;animation-delay:.06s"':'')+'>'+
           '<span class="fab-dial-lbl">'+L.add_voice+aiLeftChip()+'</span>'+
           '<button class="fab-dial-btn" data-role="fab-dial-mic">'+IC.mic(20,20)+'</button>'+
         '</div>'+
-        '<div class="fab-dial-item" style="animation-delay:0s">'+
+        '<div class="fab-dial-item"'+(dA?' style="animation:fadein .18s ease both"':'')+'>'+
           '<span class="fab-dial-lbl">'+L.add_manual+'</span>'+
           '<button class="fab-dial-btn" data-role="fab-dial-text">'+IC.edit+'</button>'+
         '</div>'+
@@ -2664,17 +2666,22 @@ function renderQuickAdd(){
   '</div>';
 }
 
+var _dueBannerSig='', _fabDialShown=false;
 function renderDueBanner(){
-  var items=state.dueReminders; if(!items||!items.length) return '';
+  var items=state.dueReminders; if(!items||!items.length){ _dueBannerSig=''; return ''; }
   // Отмеченные выполненными или удалённые задачи из плашки убираем (09.11.2026, просьба Александра):
   // напоминание о сделанном только мешает. Берём живую задачу из списков, а не снимок на момент срабатывания.
   items=items.map(function(t){
     for(var s in state.sections){ var arr=state.sections[s]; for(var j=0;j<arr.length;j++) if(arr[j].id===t.id) return arr[j]; }
     return null;
   }).filter(function(t){ return t&&!t.done; });
-  if(!items.length){ state.dueReminders=null; return ''; }
+  if(!items.length){ state.dueReminders=null; _dueBannerSig=''; return ''; }
   state.dueReminders=items;
-  return '<div class="due-banner">'+
+  // 14.11.2026: экран перерисовывается несколько раз подряд (подтяжка задач при открытии) —
+  // анимация появления каждый раз начиналась заново, и плашка «мигала». Анимируем только новую плашку.
+  var dSig=items.map(function(t){ return t.id; }).join(',');
+  var dAnim=dSig!==_dueBannerSig; _dueBannerSig=dSig;
+  return '<div class="due-banner"'+(dAnim?' style="animation:fadein .3s ease both"':'')+'>'+
     '<div class="due-banner-hd">'+
       '<span style="font-size:18px">🔔</span>'+
       '<span class="due-banner-title">'+(items.length===1?L.rem_single:L.rem_multi)+'</span>'+
