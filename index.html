@@ -1141,7 +1141,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.171';
+var APP_VERSION = '1.172';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1414,11 +1414,11 @@ var timerIv=null, aiTimeout=null, poolIdx=0, drag=null, dsAiTimeout=null, swReg=
 var anim={taskIds:{},summary:false,modal:false,aiNote:false,daySheet:false,settings:false,paywall:false,gEdit:false,ask:false,gSettings:false,qa:false,odSheet:false};
 function clearAnim(){ requestAnimationFrame(function(){ anim.taskIds={};anim.summary=anim.modal=anim.aiNote=anim.daySheet=anim.settings=anim.paywall=anim.gEdit=anim.ask=anim.gSettings=anim.qa=anim.odSheet=false; }); }
 
-/* ── Виджеты Android (13.11.2026): приложение отдаёт список «на сегодня», виджет нажали — стартуем запись ── */
+/* ── Виджеты Android (13.11.2026) и iPhone (14.11.2026): приложение отдаёт список «на сегодня», виджет нажали — стартуем запись ── */
 var WIDGET_L={ru:{title:'Сегодня',empty:'На сегодня задач нет'},uk:{title:'Сьогодні',empty:'На сьогодні завдань немає'},en:{title:'Today',empty:'No tasks for today'},de:{title:'Heute',empty:'Keine Aufgaben für heute'},fr:{title:'Aujourd’hui',empty:'Aucune tâche aujourd’hui'},pl:{title:'Dzisiaj',empty:'Brak zadań na dziś'}};
 var _wgPlugin=null, _wgTimer=null, _wgBusy=false;
 function widgetPlugin(){
-  if(!isAndroidApp()) return null;
+  if(!isNativeApp()) return null;
   if(_wgPlugin) return _wgPlugin;
   var C=window.Capacitor;
   try{ _wgPlugin=(C.Plugins&&C.Plugins.MynadoWidget)||(C.registerPlugin&&C.registerPlugin('MynadoWidget'))||null; }catch(e){ _wgPlugin=null; }
@@ -1433,8 +1433,10 @@ function widgetSync(){
       var list=((state.sections&&state.sections.day)||[]).filter(function(t){ return !t.done && t.date===today; });
       list.sort(function(a,b){ var x=a.reminderTime||'99:99', y=b.reminderTime||'99:99'; return x<y?-1:(x>y?1:0); });
       var lg=WIDGET_L[state.lang]||WIDGET_L.en;
-      W.update({date:today,total:list.length,title:lg.title,empty:lg.empty,
-        tasks:list.slice(0,3).map(function(t){ return {id:t.id,time:t.reminderTime||'',text:t.text||''}; })}).catch(function(){});
+      var snap={date:today,total:list.length,title:lg.title,empty:lg.empty,
+        tasks:list.slice(0,3).map(function(t){ return {id:t.id,time:t.reminderTime||'',text:t.text||''}; })};
+      // Android читает поля напрямую, iPhone — готовую строку json (кладёт её в App Group как есть).
+      W.update(isIosApp()?{json:JSON.stringify(snap)}:snap).catch(function(){});
     }catch(e){}
   },400);
 }
@@ -1456,7 +1458,7 @@ function widgetCheckLaunch(){
   _wgBusy=true;
   W.getLaunchAction().then(function(r){ _wgBusy=false; if(!r||!r.action) return; if(r.action==='voice') widgetStartVoice(0); else if(r.action.indexOf('task:')===0) widgetOpenTask(r.action.slice(5),0); }).catch(function(){ _wgBusy=false; });
 }
-if(isAndroidApp()){
+if(isNativeApp()){
   window.addEventListener('load', function(){ setTimeout(function(){ widgetSync(); widgetCheckLaunch(); },1200); });
   document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ widgetCheckLaunch(); widgetSync(); } });
 }
