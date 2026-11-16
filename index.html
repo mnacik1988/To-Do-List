@@ -1142,7 +1142,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.176';
+var APP_VERSION = '1.177';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -2740,7 +2740,11 @@ function renderGroupTaskRowCustom(t,canEditFields,canDelete,canCheck,canMove){
   var meta=[];
   if(hasChecklist) meta.push(t.checklist.filter(function(i){return i.done;}).length+'/'+t.checklist.length);
   var moving=gDrag&&gDrag.moved&&gDrag.id===t.syncId;
-  return '<div class="task-row'+(moving?' dragging':'')+'" style="margin-bottom:8px" data-g-row="'+escA(t.syncId)+'">'+
+  // Удаление — свайпом влево с красной кнопкой, как у личных задач (16.11.2026, просьба
+  // Александра; раньше была иконка корзины в строке). Свайп есть только у тех, кто может удалять.
+  return '<div class="task-row-wrap" style="margin-bottom:8px">'+
+    (canDelete?'<button class="swipe-del" data-role="group-swipe-delete" data-sync="'+escA(t.syncId)+'">'+IC.trash+'<span>'+L.btn_delete+'</span></button>':'')+
+    '<div class="task-row'+(moving?' dragging':'')+'" data-g-row="'+escA(t.syncId)+'"'+(canDelete?' data-g-swipe="1"':'')+'>'+
     '<button class="pri-bar" data-pri="'+priSafe(t.priority)+'"'+priAttr+'></button>'+
     '<div class="task-body">'+
       '<button class="chk'+(t.done?' done':'')+'"'+(canCheck?' data-role="group-toggle-done" data-sync="'+escA(t.syncId)+'"':' style="pointer-events:none;opacity:.5"')+'>'+(t.done?IC.check:'')+'</button>'+
@@ -2750,9 +2754,8 @@ function renderGroupTaskRowCustom(t,canEditFields,canDelete,canCheck,canMove){
       '</div>'+
       '<span class="pri-chip" data-pri="'+priSafe(t.priority)+'"'+priAttr+'>'+PRI_LABEL[priSafe(t.priority)]+'</span>'+
     '</div>'+
-    (canDelete?'<button class="drag-handle" data-role="group-delete-task" data-sync="'+escA(t.syncId)+'" title="'+escA(L.btn_delete)+'">'+IC.trash+'</button>':'')+
     (canMove?'<button class="drag-handle" data-role="g-drag-handle">'+IC.handle+'</button>':'')+
-  '</div>';
+  '</div></div>';
 }
 
 function renderGroupEditSheet(){
@@ -2827,6 +2830,10 @@ function renderGroupEditSheet(){
           '<button class="btn-outline" data-role="g-edit-cancel">'+L.btn_cancel+'</button>'+
           '<button class="btn-primary" data-role="g-edit-save">'+L.btn_save+'</button>'+
         '</div>'+
+        // Как «Удалить задачу» в личной карточке. Нужна и для компьютера, где свайпа нет.
+        (state.groupOpen&&state.groupOpen.role==='admin'
+          ?'<button class="btn-danger" data-role="g-edit-delete">'+IC.trash+' '+L.btn_del_task+'</button>'
+          :'')+
       '</div>'+
     '</div>'+
   '</div>';
@@ -5199,6 +5206,8 @@ function groupPollSafe(){
   // иначе перерисовка съест введённый текст и уберёт клавиатуру.
   var ae=document.activeElement;
   if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA')) return false;
+  // Задачу смахивают или красная кнопка «Удалить» открыта — перерисовка бы её захлопнула.
+  if(openSwipeEl||(swipe&&swipe.active)) return false;
   // Свои записи ещё в полёте или только что прошли — KV мог не догнать.
   if(groupWriteBusy>0) return false;
   if(Date.now()-groupWriteDoneAt<GROUP_WRITE_SETTLE_MS) return false;
@@ -6014,11 +6023,14 @@ function closeSwipe(){
 appEl.addEventListener('touchstart',function(e){
   if(openSwipeEl && !openSwipeEl.contains(e.target)) closeSwipe();
   if(state.selectMode) return;
-  if(e.target.closest('[data-role="drag-handle"]')) return;
-  var row=e.target.closest('[data-role="task-row"]'); if(!row) return;
+  if(e.target.closest('[data-role="drag-handle"],[data-role="g-drag-handle"]')) return;
+  // Задачи группы (data-g-swipe) смахиваются так же, но без долгого нажатия:
+  // режим выбора работает только с личными задачами.
+  var row=e.target.closest('[data-role="task-row"],[data-g-swipe]'); if(!row) return;
   var t=e.touches[0];
   swipe={row:row,wrap:row.closest('.task-row-wrap'),startX:t.clientX,startY:t.clientY,dx:0,active:false,id:row.dataset.id,sec:row.dataset.sec};
   if(pressTimer) clearTimeout(pressTimer);
+  if(row.hasAttribute('data-g-swipe')) return;
   pressTimer=setTimeout(function(){
     if(swipe && !swipe.active){
       if(navigator.vibrate){ try{ navigator.vibrate(15); }catch(_e){} }
@@ -6214,7 +6226,10 @@ appEl.addEventListener('click',function(e){
     case 'group-create-save':   createGroup(); break;
     case 'group-add-task':      groupAddTask(); break;
     case 'group-toggle-done':   groupToggleDone(gSync); break;
-    case 'group-delete-task':   (function(sid){ askConfirm(L.groups_delete_confirm,true,function(){ groupDeleteTask(sid); }); })(gSync); break;
+    case 'group-swipe-delete':  openSwipeEl=null; groupDeleteTask(gSync); break;
+    case 'g-edit-delete':
+      (function(sid){ askConfirm(L.groups_delete_confirm,true,function(){ state.gEdit=null; groupDeleteTask(sid); }); })(state.gEdit&&state.gEdit.syncId);
+      break;
     case 'group-restore-task':  groupRestoreTask(gSync); break;
     case 'group-open-members':  state.gSettings=false; state.groupSub='members'; render(); if(!state.groupMembersLoaded) pullGroupMembers(); break;
     case 'group-open-trash':    state.gSettings=false; state.groupSub='trash'; render(); if(!state.groupTrashLoaded) pullGroupTrash(); break;
