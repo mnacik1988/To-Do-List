@@ -1142,7 +1142,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.177';
+var APP_VERSION = '1.178';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -3029,7 +3029,7 @@ function renderGroupsView(){
    webaccess:<uid> на сервере — сам Александр и его люди на iPhone, пока нет
    версии в App Store. Это замок от обычных людей, а не от программиста: обход
    проверки в браузере даст ровно бесплатную версию, которую и так раздаёт магазин. */
-var STORE_URL={ play:'', appstore:'' };  // пусто = «Скоро в…»; Google Play: https://play.google.com/store/apps/details?id=app.mynado.twa
+var STORE_URL={ play:'', appstore:'https://apps.apple.com/app/id6828399231?ct=web_gate&mt=8' };  // пусто = «Скоро в…»; Google Play: https://play.google.com/store/apps/details?id=app.mynado.twa
 var STORE_APP_KEY='vtodo-store-app', WEB_ACCESS_KEY='vtodo-web-access';
 // Приложение из Google Play (TWA) при запуске сообщает о себе через referrer, а
 // Digital Goods API Chrome даёт только ему. Отладочная обёртка — свой мост,

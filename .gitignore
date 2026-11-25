@@ -6,6 +6,8 @@
 !.nojekyll
 !README.md
 !index.html
+# Визитка на главной mynado.app (25.11.2026); приложение — /index.html
+!landing.html
 !sw.js
 !manifest.json
 !icon.png

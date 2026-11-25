@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}</style>
+<title>Mynado — голосовой список задач с ИИ</title>
+<meta name="description" content="Mynado: скажите дела голосом — ИИ разложит их по задачам с датой, временем и приоритетом. Напоминания, чек-листы, общие задачи в группах. Для iPhone и Android.">
+<link rel="canonical" href="https://mynado.app/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mynado.app/">
+<meta property="og:title" content="Mynado — голосовой список задач с ИИ">
+<meta property="og:description" content="Скажите дела голосом — ИИ разложит их по задачам с датой, временем и приоритетом.">
+<meta property="og:image" content="https://mynado.app/icon.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>(function(){try{
+  // Визитка mynado.app (25.11.2026). Само приложение живёт на /index.html.
+  // 1) Копия на github.io — сразу на mynado.app.
+  if(location.hostname==='mnacik1988.github.io'){ location.replace('https://mynado.app/'+location.search+location.hash); return; }
+  // 2) Приложение из Google Play (TWA стартует с https://mynado.app/), установленная веб-версия и
+  //    уже вошедшие пользователи — сразу в приложение, визитку им не показываем.
+  var ref=String(document.referrer||''), app=false;
+  if(ref.indexOf('android-app://')===0||('getDigitalGoodsService' in window)||window.AndroidAuth) app=true;
+  if((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone) app=true;
+  try{ if(localStorage.getItem('vtodo-store-app')==='1'||localStorage.getItem('vtodo-session-jwt')) app=true; }catch(e){}
+  if(/[?&]app=1(&|$)/.test(location.search)) app=true;
+  if(app) location.replace('/index.html'+location.hash);
+}catch(e){}})();</script>
+<style>
+/* Шрифт со своего сервера, а не с Google Fonts (в ЕС загрузка с серверов Google без согласия — риск по GDPR). */
+@font-face{font-family:'Manrope';font-style:normal;font-weight:400 800;font-display:swap;src:url('manrope-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:400 800;font-display:swap;src:url('manrope-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:400 800;font-display:swap;src:url('manrope-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+/* Макет: тёмно-синяя полоса сверху с живым телефоном — фраза превращается в задачу;
+   ниже спокойные «бумажные» разделы по брендбуку. Один шрифт, золото только на знаке и PRO. */
+:root{
+  --paper:#f5f2ec; --card:#ffffff; --card2:#ece7dd;
+  --ink:#2c2a26; --muted:#76706a; --line:rgba(44,42,38,.10); --line-strong:rgba(44,42,38,.24);
+  --navy:#22375c; --navy-soft:#e6eaf2; --gold-ink:#8a6a1c; --on-navy:#ffffff;
+  --hero:#152238; --hero-2:#1c2c49; --hero-ink:#f5f2ec; --hero-muted:#aab4c8; --hero-line:rgba(255,255,255,.12);
+  --h:#e7b3a6; --hi:#8a4133; --m:#ebd4a0; --mi:#85652c; --lo:#bcd9c4; --loi:#3f6850;
+  --sage:#d3e6d8; --sage-ink:#3c6450;
+  --font:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --r-sheet:20px; --r-card:14px; --r-chip:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#1a1922; --card:#252332; --card2:#2e2b3d;
+    --ink:#ecebf2; --muted:#a19db3; --line:rgba(255,255,255,.10); --line-strong:rgba(255,255,255,.24);
+    --navy:#5170ad; --navy-soft:#28324c; --gold-ink:#e6c56e;
+    --h:#7d4338; --hi:#f4cabf; --m:#6e5a2f; --mi:#f0dca5; --lo:#3c5a47; --loi:#c0e0cc;
+    --sage:#2f4a3e; --sage-ink:#bfe0cc;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1a1922; --card:#252332; --card2:#2e2b3d;
+  --ink:#ecebf2; --muted:#a19db3; --line:rgba(255,255,255,.10); --line-strong:rgba(255,255,255,.24);
+  --navy:#5170ad; --navy-soft:#28324c; --gold-ink:#e6c56e;
+  --h:#7d4338; --hi:#f4cabf; --m:#6e5a2f; --mi:#f0dca5; --lo:#3c5a47; --loi:#c0e0cc;
+  --sage:#2f4a3e; --sage-ink:#bfe0cc;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.02em}
+p{margin:0}
+a{color:inherit}
+.in{max-width:1120px;margin:0 auto;padding-inline:20px}
+:focus-visible{outline:2px solid var(--gold-ink);outline-offset:3px;border-radius:8px}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink)}
+.btn{display:inline-flex;align-items:center;gap:9px;border-radius:14px;padding:14px 20px;font:800 15px var(--font);text-decoration:none;border:0;cursor:pointer}
+.btn svg{width:18px;height:18px}
+.btn-navy{background:var(--navy);color:var(--on-navy)}
+.btn-paper{background:var(--hero-ink);color:#152238}
+.btn-ghost{background:transparent;color:var(--hero-ink);box-shadow:inset 0 0 0 1.5px var(--hero-line)}
+
+/* ── Шапка и главный экран ───────────── */
+.top{background:linear-gradient(180deg,var(--hero) 0%,var(--hero-2) 100%);color:var(--hero-ink);padding-bottom:72px}
+.nav{display:flex;align-items:center;gap:20px;padding-block:18px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;font-size:21px;letter-spacing:-.03em}
+.brand svg{width:34px;height:34px}
+.nav nav{display:flex;gap:22px;margin-left:auto}
+.nav nav a{text-decoration:none;font-weight:700;font-size:14px;color:var(--hero-muted)}
+.nav nav a:hover{color:var(--hero-ink)}
+.nav .btn{padding:10px 16px;font-size:14px}
+@media (max-width:820px){.nav nav{display:none}.nav .btn{margin-left:auto}}
+
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;padding-top:40px}
+.hero h1{font-size:clamp(40px,6.2vw,68px);font-weight:800;line-height:1.02;letter-spacing:-.035em}
+.hero h1 .said{color:var(--hero-muted)}
+.hero .sub{font-size:19px;line-height:1.55;color:var(--hero-muted);margin-top:20px;max-width:34ch}
+.hero .ctas{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:30px}
+/* «Что он умеет» — той же формы, что значки магазинов рядом: высота 52, скругление 11 */
+.hero .ctas .btn-ghost{height:52px;padding:0 20px;border-radius:11px}
+.hero .note{margin-top:14px;font-size:13.5px;color:var(--hero-muted)}
+@media (max-width:900px){.hero{grid-template-columns:1fr;gap:40px}.hero .sub{max-width:none}}
+
+/* Телефон: металлическая рамка, чёрная окантовка экрана, Dynamic Island,
+   строка состояния, боковые кнопки и полоска жеста — чтобы читался как телефон. */
+.stage{display:grid;justify-items:center;gap:16px}
+.phone{position:relative;width:100%;max-width:318px;aspect-ratio:9/19.4;border-radius:56px;padding:4px;
+  background:linear-gradient(150deg,#a4adbb 0%,#4c5361 16%,#262a31 42%,#4f5664 68%,#98a1b0 100%);
+  box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06)}
+.bezel{height:100%;background:#05070a;border-radius:52px;padding:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.pbtn{position:absolute;width:4px;border-radius:2px;background:linear-gradient(90deg,#8a93a2,#3a404b)}
+.pb-action{left:-3px;top:16%;height:5%}
+.pb-vup{left:-3px;top:24%;height:9%}
+.pb-vdn{left:-3px;top:35%;height:9%}
+.pb-pwr{right:-3px;top:27%;height:14%}
+.scr{background:var(--paper);height:100%;border-radius:43px;padding:0 16px 26px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;color:var(--ink)}
+.sbar{position:relative;flex:none;height:46px;display:flex;align-items:center;justify-content:space-between;padding:4px 12px 0 18px}
+.clock{font-size:15px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.island{position:absolute;left:50%;top:11px;transform:translateX(-50%);width:94px;height:28px;border-radius:15px;background:#000}
+.sicons{display:flex;gap:5px;align-items:center}
+.sicons svg{height:11px;width:auto;display:block}
+.homebar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:120px;height:5px;border-radius:3px;background:var(--ink);opacity:.75}
+.scr-t{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.scr-s{font-size:12.5px;color:var(--muted);font-weight:600}
+.bubble{background:var(--navy-soft);border-radius:18px 18px 18px 6px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;min-height:62px}
+.bubble svg{width:18px;height:18px;flex:none;margin-top:2px}
+.bubble .said{font-size:14.5px;font-weight:600;line-height:1.4}
+.caret{display:inline-block;width:2px;height:1em;background:var(--navy);vertical-align:-2px;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.status{font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px;min-height:18px}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.status.listen .dot{background:#d9534f;animation:pulse 1.2s ease-out infinite}
+.status.done .dot{background:var(--loi)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,83,79,.5)}100%{box-shadow:0 0 0 9px rgba(217,83,79,0)}}
+.result{display:grid;gap:9px}
+.tk{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:grid;grid-template-columns:5px 1fr;animation:rise .35s ease both}
+.tk .bar{background:var(--m)}
+.tk .body{padding:11px 12px;display:grid;gap:6px}
+.tk .row{display:flex;align-items:center;gap:9px}
+.tk .ck{width:18px;height:18px;border-radius:6px;border:2px solid var(--line-strong);flex:none}
+.tk .tt{flex:1;font-size:14.5px;font-weight:600;line-height:1.3;min-width:0}
+.pc{font-size:10px;font-weight:800;padding:4px 8px;border-radius:var(--r-chip);flex:none}
+.tk .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;font-weight:700;color:var(--muted);padding-left:27px}
+.tk .meta span{display:inline-flex;align-items:center;gap:4px}
+.tk .meta svg{width:12px;height:12px}
+.tk .cl{display:grid;gap:4px;padding-left:27px}
+.tk .cl div{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.tk .cl i{width:13px;height:13px;border-radius:4px;border:1.8px solid var(--line-strong);flex:none}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fab{margin-top:auto;align-self:center;width:62px;height:62px;border-radius:50%;background:var(--navy);display:grid;place-items:center;box-shadow:0 10px 24px rgba(34,55,92,.35)}
+.fab svg{width:26px;height:26px}
+.fab.on{animation:ring 1.4s ease-out infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(81,112,173,.55)}100%{box-shadow:0 0 0 18px rgba(81,112,173,0)}}
+.picks{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.picks button{font:700 13px var(--font);color:var(--hero-muted);background:transparent;border:1.5px solid var(--hero-line);border-radius:999px;padding:7px 13px;cursor:pointer}
+.picks button[aria-pressed="true"]{color:#152238;background:var(--hero-ink);border-color:var(--hero-ink)}
+
+/* ── Разделы ─────────────────────────── */
+section{padding-block:88px 0}
+.sec-h{display:grid;gap:12px;max-width:640px;margin-bottom:40px}
+.sec-h h2{font-size:clamp(30px,4vw,44px);font-weight:800;line-height:1.08}
+.sec-h p{font-size:17.5px;color:var(--muted)}
+
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;counter-reset:s}
+.step{background:var(--card);border:1px solid var(--line);border-radius:var(--r-sheet);padding:24px;display:grid;gap:10px;align-content:start}
+.step .n{width:34px;height:34px;border-radius:10px;background:var(--navy-soft);color:var(--navy);font-weight:800;display:grid;place-items:center;font-size:15px}
+.step h3{font-size:19px;font-weight:800}
+.step p{color:var(--muted);font-size:15px}
+.step q{quotes:"«" "»";font-weight:700;color:var(--ink)}
+@media (max-width:820px){.steps{grid-template-columns:1fr}}
+
+.feats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.ft{background:var(--card);border:1px solid var(--line);border-radius:var(--r-sheet);padding:24px;display:grid;gap:10px;align-content:start;grid-column:span 2;min-width:0}
+.ft.wide{grid-column:span 3}
+.ft .ic{width:40px;height:40px;border-radius:12px;background:var(--navy-soft);display:grid;place-items:center}
+.ft .ic svg{width:21px;height:21px}
+.ft h3{font-size:19px;font-weight:800}
+.ft p{color:var(--muted);font-size:15px}
+.ft .demo{margin-top:6px}
+@media (max-width:980px){.feats{grid-template-columns:repeat(2,minmax(0,1fr))}.ft,.ft.wide{grid-column:span 1}}
+@media (max-width:620px){.feats{grid-template-columns:1fr}}
+.say{display:grid;gap:6px}
+.say div{font-size:13.5px;font-weight:600;background:var(--paper);border-radius:10px;padding:8px 11px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.say div span:last-child{color:var(--muted);font-weight:700}
+.notif{background:var(--paper);border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:center}
+.notif svg{width:30px;height:30px}
+.notif b{font-size:13.5px;display:block}
+.notif small{font-size:12px;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs span{font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:999px;background:var(--paper)}
+.tabs span.on{background:var(--navy);color:var(--on-navy)}
+.devices{display:flex;gap:8px;flex-wrap:wrap}
+.devices span{font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:10px;background:var(--paper);display:inline-flex;gap:6px;align-items:center}
+.devices svg{width:14px;height:14px}
+
+/* Группы */
+.groups{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.glist{display:grid;gap:14px;margin-top:24px}
+.gl{display:grid;grid-template-columns:24px 1fr;gap:12px}
+.gl svg{width:22px;height:22px;margin-top:2px}
+.gl b{display:block;font-weight:800}
+.gl span{color:var(--muted);font-size:15px}
+.gcard{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px;display:grid;gap:14px}
+.gcard .gh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gcard .gh b{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.gcard .gh span{font-size:12px;font-weight:700;color:var(--muted)}
+.mem{display:grid;gap:8px}
+.mem div{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:800;flex:none}
+.role{margin-left:auto;font-size:11px;font-weight:800;padding:4px 9px;border-radius:var(--r-chip);background:var(--paper);color:var(--muted)}
+.role.admin{background:var(--navy-soft);color:var(--navy)}
+.gpush{background:var(--navy);color:var(--on-navy);border-radius:14px;padding:11px 13px;display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:center}
+.gpush svg{width:26px;height:26px}
+.gpush b{font-size:13px;display:block}
+.gpush small{font-size:12px;opacity:.85}
+@media (max-width:900px){.groups{grid-template-columns:1fr}}
+
+/* Языки и офлайн — полоса */
+.band{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.band > div{background:var(--card);border:1px solid var(--line);border-radius:var(--r-sheet);padding:28px;display:grid;gap:14px;align-content:start}
+.band h3{font-size:24px;font-weight:800}
+.band p{color:var(--muted)}
+.langs{display:flex;flex-wrap:wrap;gap:8px}
+.langs span{font-weight:700;font-size:14px;padding:8px 13px;border-radius:999px;background:var(--navy-soft)}
+.off{display:grid;gap:8px}
+.off div{display:grid;grid-template-columns:20px 1fr;gap:10px;font-size:15px}
+.off svg{width:18px;height:18px;margin-top:3px}
+@media (max-width:820px){.band{grid-template-columns:1fr}}
+
+/* PRO */
+.pro{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch}
+.plan{border-radius:24px;padding:28px;display:grid;gap:16px;align-content:start}
+.plan.free{background:var(--card);border:1px solid var(--line)}
+.plan.paid{background:var(--hero);color:var(--hero-ink)}
+.plan .pn{font-size:14px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.plan.paid .pn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#f6d888,#e8b34e 50%,#cf9430);color:#1c2436;padding:6px 12px;border-radius:999px;justify-self:start;letter-spacing:.04em}
+.plan .price{font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.plan .price small{font-size:16px;font-weight:700;color:var(--muted);letter-spacing:0}
+.plan.paid .price small{color:var(--hero-muted)}
+.plan ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.plan li{display:grid;grid-template-columns:20px 1fr;gap:10px;font-size:15px}
+.plan li svg{width:18px;height:18px;margin-top:3px}
+.plan .fine{font-size:13px;color:var(--muted)}
+.plan.paid .fine{color:var(--hero-muted)}
+@media (max-width:820px){.pro{grid-template-columns:1fr}}
+
+
+/* Значки магазинов по образцу официальных: чёрная плашка, серый кант, знак
+   магазина и две строки. Пока адреса нет — не нажимаются, а над ними «Скоро». */
+.stores-wrap{display:grid;gap:10px;justify-items:start}
+.stores-soon{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--hero-muted)}
+.stores{display:flex;gap:10px;flex-wrap:wrap}
+.store-badge{display:inline-flex;align-items:center;gap:9px;height:52px;min-width:164px;padding:0 17px 0 13px;border-radius:11px;background:#000;color:#fff;box-shadow:inset 0 0 0 1px #a6a6a6;text-decoration:none}
+.store-badge svg{width:27px;height:27px;flex:none}
+.store-badge small{display:block;font-size:10.5px;font-weight:600;line-height:1.15;letter-spacing:.02em}
+.store-badge b{display:block;font-size:20px;font-weight:700;line-height:1.1;letter-spacing:-.01em;white-space:nowrap}
+.store-badge.soon{cursor:default}
+a.store-badge:hover{box-shadow:inset 0 0 0 1px #fff}
+.final .stores-wrap{justify-items:end}
+@media (max-width:820px){.final .stores-wrap{justify-items:start}}
+
+
+/* Плавная прокрутка к разделам по ссылкам меню. Без анимации — для тех, у
+   кого в системе включено «уменьшить движение». */
+@media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+section,#download{scroll-margin-top:24px}
+[tabindex="-1"]:focus{outline:none}
+
+/* Приватность и подвал */
+.trust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.tr{border-top:2px solid var(--navy);padding-top:16px;display:grid;gap:8px}
+.tr b{font-size:17px;font-weight:800}
+.tr span{color:var(--muted);font-size:15px}
+@media (max-width:820px){.trust{grid-template-columns:1fr}}
+.final{margin-top:96px;background:var(--hero);color:var(--hero-ink);border-radius:28px;padding:48px 32px;display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:center}
+.final svg.mk{width:84px;height:84px}
+.final h2{font-size:clamp(26px,3.4vw,36px);font-weight:800;line-height:1.1}
+.final p{color:var(--hero-muted);margin-top:8px}
+@media (max-width:820px){.final{grid-template-columns:1fr;padding:32px 22px}}
+footer{padding-block:32px 48px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;color:var(--muted);font-size:14px}
+footer a{text-decoration:none;font-weight:700}
+footer a:hover{text-decoration:underline}
+footer .sp{margin-left:auto}
+
+@media (prefers-reduced-motion:reduce){
+  .tk,.fab.on,.caret,.status.listen .dot{animation:none}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="g-navy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e2f52"/><stop offset="1" stop-color="#0f1a30"/></linearGradient>
+    <linearGradient id="g-gold" x1="0.1" y1="0.05" x2="0.9" y2="0.95"><stop offset="0" stop-color="#f6d888"/><stop offset="0.5" stop-color="#e8b34e"/><stop offset="1" stop-color="#cf9430"/></linearGradient>
+    <symbol id="mark" viewBox="0 0 512 512">
+      <rect width="512" height="512" rx="112" fill="url(#g-navy)"/>
+      <path d="M158 262 L222 340 L372 150" fill="none" stroke="#0e1830" stroke-width="50" stroke-linecap="round" stroke-linejoin="round" opacity="0.30" transform="translate(0,9)"/>
+      <path d="M158 254 L222 332 L372 142" fill="none" stroke="url(#g-gold)" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="b-apple" viewBox="0 0 24 24"><path fill="#fff" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></symbol>
+    <symbol id="b-gplay" viewBox="0 0 24 24"><path fill="#00A0FF" d="M1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087L1.337.924z"/><path fill="#00D26A" d="M13.544 10.989l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179l11.04 10.973z"/><path fill="#FF3A44" d="M13.544 13.056l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54-3.23-3.21z"/><path fill="#FFD500" d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594z"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Zm-6 9a6 6 0 0 0 12 0M12 18v3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 10h16M9 3v4M15 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M12 4a6 6 0 0 1 6 6v3.5l1.8 2.5H4.2L6 13.5V10a6 6 0 0 1 6-6Zm-2.2 13.5a2.2 2.2 0 0 0 4.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 7h11M9 12h11M9 17h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 6.5l1 1 1.8-2M4 11.5l1 1 1.8-2M4 16.5l1 1 1.8-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.7 4.8L18.5 9.5l-4.8 1.7L12 16l-1.7-4.8L5.5 9.5l4.8-1.7L12 3Zm6 11l.8 2.2 2.2.8-2.2.8L18 20l-.8-2.2-2.2-.8 2.2-.8L18 14Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4m0 1h11l-2 4 2 4H6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M19 8a7.5 7.5 0 0 0-13.4-1.5M5 16a7.5 7.5 0 0 0 13.4 1.5M5 3v4h4M19 21v-4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5M16 5.2a3 3 0 0 1 0 5.6M18 14.6c1.8.6 2.8 2.2 3 4.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12 12.5a3.3 3.3 0 1 0 0-6.6 3.3 3.3 0 0 0 0 6.6Zm-6 7c.9-3 3.2-4.6 6-4.6s5.1 1.6 6 4.6M18.5 3.5v5M16 6h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13M10.5 11v5M13.5 11v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5L7 4.5Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 18h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="M7.5 18.5h9.8a3.7 3.7 0 0 0 1-7.3A6 6 0 0 0 7.6 8.7M4 4l16 16M6.3 9.4A4.6 4.6 0 0 0 7.5 18.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="top" id="top">
+  <div class="in">
+    <div class="nav">
+      <a class="brand" href="#top"><svg aria-hidden="true"><use href="#mark"/></svg>Mynado</a>
+      <nav aria-label="Разделы"><a href="#how">Как работает</a><a href="#features">Возможности</a><a href="#groups">Группы</a><a href="#pro">PRO</a></nav>
+      <a class="btn btn-paper" href="#download">Скачать</a>
+    </div>
+
+    <div class="hero">
+      <div>
+        <h1>Скажите вслух. <span class="said">Mynado запишет.</span></h1>
+        <p class="sub">Нажмите микрофон и скажите, как есть. ИИ-помощник сам поставит дату и время, выставит приоритет и превратит список покупок в чек-лист.</p>
+        <div class="ctas">
+          <div class="stores-wrap">
+            <span class="stores-soon" data-stores-soon>Google Play — скоро</span>
+            <div class="stores">
+              <span class="store-badge soon" data-store="appstore" aria-label="Загрузить в App Store"><svg aria-hidden="true"><use href="#b-apple"/></svg><span><small>Загрузите в</small><b>App Store</b></span></span>
+              <span class="store-badge soon" data-store="play" aria-label="Скоро в Google Play"><svg aria-hidden="true"><use href="#b-gplay"/></svg><span><small>ДОСТУПНО В</small><b>Google Play</b></span></span>
+            </div>
+          </div>
+          <a class="btn btn-ghost" href="#features">Что он умеет</a>
+        </div>
+              </div>
+
+      <div class="stage">
+        <div class="phone" aria-label="Пример: сказанная фраза превращается в задачу">
+          <span class="pbtn pb-action"></span><span class="pbtn pb-vup"></span><span class="pbtn pb-vdn"></span><span class="pbtn pb-pwr"></span>
+          <div class="bezel"><div class="scr">
+            <div class="sbar" aria-hidden="true">
+              <span class="clock">9:41</span>
+              <span class="island"></span>
+              <span class="sicons">
+                <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+                <svg viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0L8 11.5Zm-4.2-4.3a6 6 0 0 1 8.4 0l-1.3 1.3a4.2 4.2 0 0 0-5.8 0L3.8 7.2ZM1 4.4a10 10 0 0 1 14 0l-1.3 1.3a8.2 8.2 0 0 0-11.4 0L1 4.4Z" fill="currentColor"/></svg>
+                <svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="16" height="8" rx="2" fill="currentColor"/><path d="M24 4v4a2 2 0 0 0 0-4Z" fill="currentColor" opacity=".5"/></svg>
+              </span>
+            </div>
+            <div><div class="scr-t">Сегодня</div><div class="scr-s">Вторник, 29 сентября</div></div>
+            <div class="bubble"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-mic"/></svg><span class="said" id="said">«Завтра в девять утра позвонить в банк, это срочно»</span></div>
+            <div class="status done" id="status"><span class="dot"></span><span id="status-t">Готово — задача добавлена</span></div>
+            <div class="result" id="result" aria-live="polite">
+              <div class="tk"><span class="bar" style="background:var(--h)"></span><div class="body">
+                <div class="row"><span class="ck"></span><span class="tt">Позвонить в банк</span><span class="pc" style="background:var(--h);color:var(--hi)">Высокий</span></div>
+                <div class="meta"><span><svg aria-hidden="true"><use href="#i-cal"/></svg>Завтра</span><span><svg aria-hidden="true"><use href="#i-bell"/></svg>09:00</span></div>
+              </div></div>
+            </div>
+            <div class="fab" id="fab"><svg aria-hidden="true" style="color:#fff"><use href="#i-mic"/></svg></div>
+            <span class="homebar" aria-hidden="true"></span>
+          </div></div>
+        </div>
+        <div class="picks" id="picks" role="group" aria-label="Примеры фраз">
+          <button type="button" aria-pressed="true" data-i="0">Напоминание</button>
+          <button type="button" aria-pressed="false" data-i="1">Покупки</button>
+          <button type="button" aria-pressed="false" data-i="2">Две задачи сразу</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="in">
+  <!-- Как работает -->
+  <section id="how">
+    <div class="sec-h">
+      <span class="eyebrow">Как это работает</span>
+      <h2>Три шага от мысли до записанного дела</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><h3>Нажмите микрофон</h3><p>Большая кнопка внизу экрана. Можно и напечатать — клавиатура тоже работает.</p></div>
+      <div class="step"><span class="n">2</span><h3>Скажите как есть</h3><p>Без шаблонов и команд: <q>в пятницу вечером купить подарок маме</q>.</p></div>
+      <div class="step"><span class="n">3</span><h3>Проверьте результат</h3><p>ИИ уже расставил название, дату, время и приоритет. Что-то не так — поправьте голосом.</p></div>
+    </div>
+  </section>
+
+  <!-- Возможности -->
+  <section id="features">
+    <div class="sec-h">
+      <span class="eyebrow">Возможности</span>
+      <h2>Всё, чтобы дела не терялись</h2>
+      <p>Голос в центре, остальное помогает не забыть сказанное.</p>
+    </div>
+    <div class="feats">
+      <div class="ft wide">
+        <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-spark"/></svg></span>
+        <h3>Правки голосом</h3>
+        <p>Откройте задачу и скажите, что поменять. ИИ-помощник поймёт и поправит нужное поле.</p>
+        <div class="demo say">
+          <div><span>«Перенеси на завтра»</span><span>дата</span></div>
+          <div><span>«Напомни в девять вечера»</span><span>21:00</span></div>
+          <div><span>«Сделай высокий приоритет»</span><span>приоритет</span></div>
+        </div>
+      </div>
+      <div class="ft wide">
+        <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-bell"/></svg></span>
+        <h3>Напоминания, которые приходят</h3>
+        <p>Уведомление придёт в нужное время, даже если приложение закрыто, — на том языке, на котором вы пользуетесь Mynado.</p>
+        <div class="demo notif"><svg aria-hidden="true"><use href="#mark"/></svg><div><b>Позвонить в банк</b><small>Напоминание · завтра 09:00</small></div></div>
+      </div>
+      <div class="ft">
+        <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-list"/></svg></span>
+        <h3>Чек-листы</h3>
+        <p>Список покупок одной фразой. А пришлют список в сообщении — вставьте текст, и он разобьётся на пункты.</p>
+      </div>
+      <div class="ft">
+        <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-cal"/></svg></span>
+        <h3>Календарь и разделы</h3>
+        <p>Дела сами раскладываются по срокам.</p>
+        <div class="demo tabs"><span class="on">Сегодня</span><span>Эта неделя</span><span>Этот месяц</span><span>Без даты</span></div>
+      </div>
+      <div class="ft">
+        <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-flag"/></svg></span>
+        <h3>Приоритеты</h3>
+        <p>Важное видно сразу — по цвету и подписи.</p>
+        <div class="demo chips"><span class="pc" style="background:var(--h);color:var(--hi)">Высокий</span><span class="pc" style="background:var(--m);color:var(--mi)">Средний</span><span class="pc" style="background:var(--lo);color:var(--loi)">Низкий</span></div>
+      </div>
+      <div class="ft">
+        <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-mic"/></svg></span>
+        <h3>Длинные сообщения</h3>
+        <p>Наговорите всё, что накопилось за день, одним сообщением — Mynado разделит его на отдельные задачи.</p>
+      </div>
+      <div class="ft">
+        <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-sync"/></svg></span>
+        <h3>На всех устройствах</h3>
+        <p>Вошли через Google — и задачи одинаковые на телефоне и планшете.</p>
+        <div class="demo devices"><span><svg aria-hidden="true"><use href="#i-phone"/></svg>Android</span><span><svg aria-hidden="true"><use href="#i-phone"/></svg>iPhone</span></div>
+      </div>
+      <div class="ft">
+        <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-clock"/></svg></span>
+        <h3>Светлая и тёмная тема</h3>
+        <p>Тёплая бумага днём, глубокий синий вечером. Переключается одной кнопкой.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Группы -->
+  <section id="groups">
+    <div class="groups">
+      <div>
+        <div class="sec-h" style="margin-bottom:0">
+          <span class="eyebrow">Общие списки</span>
+          <h2>Одни дела на семью или команду</h2>
+          <p>Создайте группу, пригласите людей — и все видят одни и те же задачи.</p>
+        </div>
+        <div class="glist">
+          <div class="gl"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-users"/></svg><div><b>Роли для каждого</b><span>Админ, редактор, «смотрит и отмечает» или только просмотр. Ребёнку можно разрешить отмечать сделанное, но не удалять.</span></div></div>
+          <div class="gl"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-tag"/></svg><div><b>Отметьте человека</b><span>Ему сразу придёт уведомление, а если задачу потом изменят — ещё одно.</span></div></div>
+          <div class="gl"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-trash"/></svg><div><b>Корзина</b><span>Удалённое из группы можно вернуть.</span></div></div>
+        </div>
+      </div>
+      <div class="gcard" aria-label="Пример группы">
+        <div class="gh"><b>Семья</b><span>3 участника</span></div>
+        <div class="mem">
+          <div><span class="av" style="background:var(--navy-soft);color:var(--navy)">А</span>Александр<span class="role admin">Админ</span></div>
+          <div><span class="av" style="background:var(--sage);color:var(--sage-ink)">М</span>Марина<span class="role">Редактор</span></div>
+          <div><span class="av" style="background:var(--m);color:var(--mi)">Д</span>Даня<span class="role">Смотрит и отмечает</span></div>
+        </div>
+        <div class="tk" style="animation:none"><span class="bar" style="background:var(--m)"></span><div class="body">
+          <div class="row"><span class="ck"></span><span class="tt">Купить продукты</span><span class="pc" style="background:var(--m);color:var(--mi)">Средний</span></div>
+          <div class="cl"><div><i></i>Хлеб</div><div><i></i>Молоко</div><div><i></i>Гречка</div></div>
+        </div></div>
+        <div class="gpush"><svg aria-hidden="true"><use href="#mark"/></svg><div><b>Новое в чек-листе</b><small>Купить продукты: молоко</small></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Языки и офлайн -->
+  <section>
+    <div class="band">
+      <div>
+        <span class="eyebrow">Пять языков</span>
+        <h3>Говорите на своём</h3>
+        <p>Интерфейс, голос и уведомления — на пяти языках. Приложение можно держать на одном языке, а говорить на другом.</p>
+        <div class="langs"><span>Русский</span><span>Українська</span><span>English</span><span>Deutsch</span><span>Français</span></div>
+      </div>
+      <div>
+        <span class="eyebrow">Без интернета</span>
+        <h3>Работает и в метро</h3>
+        <p>Нет связи — ничего не теряется.</p>
+        <div class="off">
+          <div><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg><span>Задачи открываются, добавляются и правятся</span></div>
+          <div><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg><span>«Завтра в 9» и список через запятую поймёт и без ИИ</span></div>
+          <div><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg><span>Всё отправится на другие устройства, как только появится связь</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRO -->
+  <section id="pro">
+    <div class="sec-h">
+      <span class="eyebrow">Цена</span>
+      <h2>Всё основное — бесплатно</h2>
+      <p>PRO нужен тем, кто пользуется ИИ-помощником много и каждый день.</p>
+    </div>
+    <div class="pro">
+      <div class="plan free">
+        <span class="pn">Бесплатно</span>
+        <div class="price">0 <small>навсегда</small></div>
+        <ul>
+          <li><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg>Голосовой ввод и ИИ-помощник</li>
+          <li><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg>Задачи, чек-листы, календарь, приоритеты</li>
+          <li><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg>Напоминания и общие группы</li>
+          <li><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg>Синхронизация и работа без интернета</li>
+        </ul>
+      </div>
+      <div class="plan paid">
+        <span class="pn">★ PRO</span>
+        <div class="price">$2.99 <small>в месяц</small></div>
+        <ul>
+          <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>Расширенный доступ к ИИ-помощнику</li>
+          <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>Золотой бейдж PRO в приложении</li>
+        </ul>
+        <p class="fine">Оплата через Google Play или App Store. Подписка продлевается каждый месяц, пока вы её не отмените, — отменить можно в любой момент в настройках магазина.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Приватность -->
+  <section>
+    <div class="sec-h">
+      <span class="eyebrow">Ваши данные</span>
+      <h2>Задачи остаются вашими</h2>
+    </div>
+    <div class="trust">
+      <div class="tr"><b>Вход через Google или Apple</b><span>Без отдельных паролей. Задачи привязаны к аккаунту и не пропадут при смене телефона.</span></div>
+      <div class="tr"><b>Не читаем ваши задачи</b><span>Смотрим их, только если вы сами обратились в поддержку и попросили помочь.</span></div>
+      <div class="tr"><b>Удаление одной кнопкой</b><span>В настройках можно удалить свои данные с сервера. Что именно и когда удаляется — <a href="delete-data.html">на отдельной странице</a>.</span></div>
+    </div>
+  </section>
+
+  <div class="final" id="download">
+    <svg class="mk" aria-hidden="true"><use href="#mark"/></svg>
+    <div><h2>Скачайте Mynado</h2><p>Для Android и iPhone. Подписка PRO оформляется прямо в магазине.</p></div>
+    <div class="stores-wrap">
+            <span class="stores-soon" data-stores-soon>Google Play — скоро</span>
+            <div class="stores">
+              <span class="store-badge soon" data-store="appstore" aria-label="Загрузить в App Store"><svg aria-hidden="true"><use href="#b-apple"/></svg><span><small>Загрузите в</small><b>App Store</b></span></span>
+              <span class="store-badge soon" data-store="play" aria-label="Скоро в Google Play"><svg aria-hidden="true"><use href="#b-gplay"/></svg><span><small>ДОСТУПНО В</small><b>Google Play</b></span></span>
+            </div>
+          </div>
+  </div>
+
+  <footer>
+    <a class="brand" href="#top" style="font-size:17px"><svg aria-hidden="true" style="width:26px;height:26px"><use href="#mark"/></svg>Mynado</a>
+    <a href="privacy.html">Политика конфиденциальности</a>
+    <a href="delete-data.html">Удаление данных</a>
+    <a href="support.html">Поддержка</a>
+    <a href="terms.html">Условия</a>
+    <span class="sp">© 2026 Mynado</span>
+  </footer>
+</main>
+
+<script>
+(function(){
+  // Ссылки на разделы прокручиваем сами: страница живёт во встроенной рамке, и
+  // обычный переход по #якорю там прыгает рывком или не срабатывает вовсе.
+  var reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a[href^="#"]'); if(!a) return;
+    var id=a.getAttribute('href').slice(1);
+    var el=id?document.getElementById(id):null; if(!el) return;
+    e.preventDefault();
+    el.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+    if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','-1');
+    try{ el.focus({preventScroll:true}); }catch(err){}
+  });
+})();
+(function(){
+  // Адреса магазинов. Пусто — кнопка показывает «Скоро».
+  // Google Play — вписать, когда приложение выйдет из закрытого тестирования:
+  //   https://play.google.com/store/apps/details?id=app.mynado.twa
+  var STORE_LINKS={ play:'', appstore:'https://apps.apple.com/app/id6828399231' };
+  // App Store Connect → Аналитика → Кампании: номер поставщика (pt). Без него Apple не считает метку ct.
+  var APPLE_PT='';
+
+  // Откуда пришёл посетитель (25.11.2026) — метка уходит в ссылку магазина:
+  // Google Play передаёт её в приложение (Install Referrer), App Store показывает в отчёте «Кампании».
+  function source(){
+    var q=new URLSearchParams(location.search);
+    var s=(q.get('utm_source')||q.get('src')||'').toLowerCase();
+    if(!s){
+      var h=''; try{ h=new URL(document.referrer).hostname.replace(/^www\./,''); }catch(e){}
+      if(!h||h==='mynado.app') s='direct';
+      else if(/(^|\.)(gemini|bard)\.google\.com$/.test(h)) s='gemini';
+      else if(/(^|\.)google\./.test(h)) s='google';
+      else if(/(^|\.)bing\.com$/.test(h)) s='bing';
+      else if(/(^|\.)(chatgpt\.com|openai\.com)$/.test(h)) s='chatgpt';
+      else if(/(^|\.)perplexity\.ai$/.test(h)) s='perplexity';
+      else if(/copilot\.microsoft\.com$/.test(h)) s='copilot';
+      else if(/(^|\.)yandex\./.test(h)) s='yandex';
+      else if(/(^|\.)duckduckgo\.com$/.test(h)) s='duckduckgo';
+      else s=h;
+    }
+    if(s==='chatgpt.com') s='chatgpt';
+    return s.replace(/[^a-z0-9._-]/g,'').slice(0,40)||'direct';
+  }
+  var SRC=source();
+  var MEDIUM=(new URLSearchParams(location.search).get('utm_medium')||(/^(google|bing|yandex|duckduckgo)$/.test(SRC)?'organic':(/^(chatgpt|perplexity|gemini|copilot)$/.test(SRC)?'ai':(SRC==='direct'?'none':'referral')))).toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,30);
+  function tagged(store,url){
+    if(store==='play') return url+'&referrer='+encodeURIComponent('utm_source='+SRC+'&utm_medium='+MEDIUM+'&utm_campaign=landing');
+    if(store==='appstore') return url+'?ct='+encodeURIComponent(('web_'+SRC).slice(0,40))+(APPLE_PT?'&pt='+APPLE_PT:'')+'&mt=8';
+    return url;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-store]'),function(el){
+    var store=el.getAttribute('data-store'), url=STORE_LINKS[store];
+    if(!url) return;
+    var a=document.createElement('a');
+    a.className='store-badge'; a.href=tagged(store,url); a.rel='noopener';
+    a.setAttribute('aria-label',el.textContent.replace(/\s+/g,' ').trim());
+    a.innerHTML=el.innerHTML;
+    el.parentNode.replaceChild(a,el);
+  });
+  if(STORE_LINKS.play && STORE_LINKS.appstore){
+    Array.prototype.forEach.call(document.querySelectorAll('[data-stores-soon]'),function(el){ el.hidden=true; });
+  }
+})();
+(function(){
+  var EX=[
+    { said:'«Завтра в девять утра позвонить в банк, это срочно»',
+      tasks:[{t:'Позвонить в банк',p:'h',pl:'Высокий',when:'Завтра',time:'09:00'}] },
+    { said:'«Купить хлеб, молоко, гречку и сыр»',
+      tasks:[{t:'Купить продукты',p:'m',pl:'Средний',when:'Сегодня',items:['Хлеб','Молоко','Гречка','Сыр']}] },
+    { said:'«В пятницу забрать посылку и оплатить интернет»',
+      tasks:[{t:'Забрать посылку',p:'m',pl:'Средний',when:'Пятница'},{t:'Оплатить интернет',p:'lo',pl:'Низкий',when:'Пятница'}] }
+  ];
+  var INK={h:'--hi',m:'--mi',lo:'--loi'};
+  var said=document.getElementById('said'), res=document.getElementById('result'),
+      st=document.getElementById('status'), stT=document.getElementById('status-t'),
+      fab=document.getElementById('fab'), picks=document.getElementById('picks');
+  var reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cur=0, timers=[];
+
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function card(k){
+    var meta='<span><svg aria-hidden="true"><use href="#i-cal"/></svg>'+esc(k.when)+'</span>'+
+      (k.time?'<span><svg aria-hidden="true"><use href="#i-bell"/></svg>'+esc(k.time)+'</span>':'');
+    var cl=k.items?'<div class="cl">'+k.items.map(function(x){return '<div><i></i>'+esc(x)+'</div>';}).join('')+'</div>':'';
+    return '<div class="tk"><span class="bar" style="background:var(--'+k.p+')"></span><div class="body">'+
+      '<div class="row"><span class="ck"></span><span class="tt">'+esc(k.t)+'</span>'+
+      '<span class="pc" style="background:var(--'+k.p+');color:var('+INK[k.p]+')">'+esc(k.pl)+'</span></div>'+
+      '<div class="meta">'+meta+'</div>'+cl+'</div></div>';
+  }
+  function setStatus(cls,txt){ st.className='status '+cls; stT.textContent=txt; }
+  function clear(){ timers.forEach(clearTimeout); timers=[]; }
+  function later(fn,ms){ timers.push(setTimeout(fn,ms)); }
+  function mark(i){ Array.prototype.forEach.call(picks.querySelectorAll('button'),function(b){ b.setAttribute('aria-pressed', String(+b.dataset.i===i)); }); }
+  function done(i){
+    var ex=EX[i];
+    res.innerHTML=ex.tasks.map(card).join('');
+    setStatus('done', ex.tasks.length>1?'Готово — добавлено задач: '+ex.tasks.length:'Готово — задача добавлена');
+    fab.classList.remove('on');
+  }
+  function play(i,auto){
+    clear(); cur=i; mark(i);
+    var ex=EX[i];
+    if(reduce){ said.textContent=ex.said; done(i); return; }
+    res.innerHTML=''; said.innerHTML='<span class="caret"></span>';
+    setStatus('listen','Слушаю…'); fab.classList.add('on');
+    var txt=ex.said, n=0;
+    (function type(){
+      n++;
+      said.innerHTML=esc(txt.slice(0,n))+(n<txt.length?'<span class="caret"></span>':'');
+      if(n<txt.length){ later(type, 34); }
+      else{
+        fab.classList.remove('on');
+        setStatus('', 'ИИ раскладывает по местам…');
+        later(function(){
+          done(i);
+          if(auto) later(function(){ play((i+1)%EX.length,true); }, 3600);
+        }, 750);
+      }
+    })();
+  }
+  picks.addEventListener('click',function(e){
+    var b=e.target.closest('button[data-i]'); if(!b) return;
+    play(+b.dataset.i,true);
+  });
+  // На старте виден готовый результат первого примера; через паузу начинается показ.
+  if(!reduce) later(function(){ play(1,true); }, 3200);
+})();
+</script>
+
+</html>
