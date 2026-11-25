@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>body{margin:0}</style>
-<title>Mynado — голосовой список задач с ИИ</title>
+<title>Mynado — персональный голосовой ассистент</title>
 <meta name="description" content="Mynado: скажите дела голосом — ИИ разложит их по задачам с датой, временем и приоритетом. Напоминания, чек-листы, общие задачи в группах. Для iPhone и Android.">
 <link rel="canonical" href="https://mynado.app/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://mynado.app/">
-<meta property="og:title" content="Mynado — голосовой список задач с ИИ">
+<meta property="og:title" content="Mynado — персональный голосовой ассистент">
 <meta property="og:description" content="Скажите дела голосом — ИИ разложит их по задачам с датой, временем и приоритетом.">
 <meta property="og:image" content="https://mynado.app/icon.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -95,6 +95,8 @@ a{color:inherit}
 .hero .ctas{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:30px}
 /* «Что он умеет» — той же формы, что значки магазинов рядом: высота 52, скругление 11 */
 .hero .ctas .btn-ghost{height:52px;padding:0 20px;border-radius:11px}
+.hero .hero-eyebrow{display:block;color:#e6c56e;margin-bottom:16px}
+.hero .sub.sub2{margin-top:10px}
 .hero .note{margin-top:14px;font-size:13.5px;color:var(--hero-muted)}
 @media (max-width:900px){.hero{grid-template-columns:1fr;gap:40px}.hero .sub{max-width:none}}
 
@@ -325,8 +327,10 @@ footer .sp{margin-left:auto}
 
     <div class="hero">
       <div>
-        <h1>Скажите вслух. <span class="said">Mynado запишет.</span></h1>
-        <p class="sub">Нажмите микрофон и скажите, как есть. ИИ-помощник сам поставит дату и время, выставит приоритет и превратит список покупок в чек-лист.</p>
+        <span class="eyebrow hero-eyebrow">Персональный голосовой ассистент</span>
+        <h1>Помощник, <span class="said">который слушает.</span></h1>
+        <p class="sub">Надиктуйте голосом рабочие задачи, список покупок или важную мысль.</p>
+        <p class="sub sub2">ИИ-помощник сам распределит их по датам, расставит приоритеты, составит чек-лист и заранее напомнит о важном.</p>
         <div class="ctas">
           <div class="stores-wrap">
             <span class="stores-soon" data-stores-soon>Google Play — скоро</span>
@@ -335,7 +339,7 @@ footer .sp{margin-left:auto}
               <span class="store-badge soon" data-store="play" aria-label="Скоро в Google Play"><svg aria-hidden="true"><use href="#b-gplay"/></svg><span><small>ДОСТУПНО В</small><b>Google Play</b></span></span>
             </div>
           </div>
-          <a class="btn btn-ghost" href="#features">Что он умеет</a>
+          <a class="btn btn-ghost" href="#download">Попробовать бесплатно</a>
         </div>
               </div>
 
@@ -393,8 +397,8 @@ footer .sp{margin-left:auto}
   <section id="features">
     <div class="sec-h">
       <span class="eyebrow">Возможности</span>
-      <h2>Всё, чтобы дела не терялись</h2>
-      <p>Голос в центре, остальное помогает не забыть сказанное.</p>
+      <h2>Всё сказанное — на своём месте</h2>
+      <p>Задача сама получит дату, приоритет и напоминание. А если что-то поменялось — просто скажите.</p>
     </div>
     <div class="feats">
       <div class="ft wide">
@@ -506,13 +510,13 @@ footer .sp{margin-left:auto}
   <section id="pro">
     <div class="sec-h">
       <span class="eyebrow">Цена</span>
-      <h2>Всё основное — бесплатно</h2>
-      <p>PRO нужен тем, кто пользуется ИИ-помощником много и каждый день.</p>
+      <h2>Попробуйте бесплатно, дальше — PRO</h2>
+      <p>Начните бесплатно: все возможности приложения и 5 голосовых задач в день. Когда этого станет мало — подключите PRO.</p>
     </div>
     <div class="pro">
       <div class="plan free">
         <span class="pn">Бесплатно</span>
-        <div class="price">0 <small>навсегда</small></div>
+        <div class="price">0 <small>5 голосовых задач в день</small></div>
         <ul>
           <li><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg>Голосовой ввод и ИИ-помощник</li>
           <li><svg aria-hidden="true" style="color:var(--loi)"><use href="#i-check"/></svg>Задачи, чек-листы, календарь, приоритеты</li>
@@ -524,7 +528,11 @@ footer .sp{margin-left:auto}
         <span class="pn">★ PRO</span>
         <div class="price">$2.99 <small>в месяц</small></div>
         <ul>
-          <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>Расширенный доступ к ИИ-помощнику</li>
+          <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>До 50 голосовых задач в день</li>
+          <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>Голосовой ввод и ИИ-помощник</li>
+          <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>Задачи, чек-листы, календарь, приоритеты</li>
+          <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>Напоминания и общие группы</li>
+          <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>Синхронизация и работа без интернета</li>
           <li><svg aria-hidden="true" style="color:#e6c56e"><use href="#i-check"/></svg>Золотой бейдж PRO в приложении</li>
         </ul>
         <p class="fine">Оплата через Google Play или App Store. Подписка продлевается каждый месяц, пока вы её не отмените, — отменить можно в любой момент в настройках магазина.</p>
