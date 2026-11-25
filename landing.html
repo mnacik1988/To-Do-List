@@ -6,6 +6,13 @@
 <style>body{margin:0}</style>
 <title>Mynado — персональный голосовой ассистент</title>
 <meta name="description" content="Mynado: скажите дела голосом — ИИ разложит их по задачам с датой, временем и приоритетом. Напоминания, чек-листы, общие задачи в группах. Для iPhone и Android.">
+<link rel="alternate" hreflang="ru" href="https://mynado.app/">
+<link rel="alternate" hreflang="uk" href="https://mynado.app/uk">
+<link rel="alternate" hreflang="en" href="https://mynado.app/en">
+<link rel="alternate" hreflang="de" href="https://mynado.app/de">
+<link rel="alternate" hreflang="fr" href="https://mynado.app/fr">
+<link rel="alternate" hreflang="pl" href="https://mynado.app/pl">
+<link rel="alternate" hreflang="x-default" href="https://mynado.app/en">
 <link rel="canonical" href="https://mynado.app/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://mynado.app/">
@@ -25,7 +32,19 @@
   if((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone) app=true;
   try{ if(localStorage.getItem('vtodo-store-app')==='1'||localStorage.getItem('vtodo-session-jwt')) app=true; }catch(e){}
   if(/[?&]app=1(&|$)/.test(location.search)) app=true;
-  if(app) location.replace('/index.html'+location.hash);
+  if(app){ window.__mynadoApp=1; location.replace('/index.html'+location.hash); }
+}catch(e){}})();</script>
+<script>(function(){try{
+  // Автовыбор языка на главной: только для людей, не для поисковых роботов.
+  var PAGES={ru:"/",en:"/en",uk:"/uk",de:"/de",fr:"/fr",pl:"/pl"};
+  if(window.__mynadoApp) return;
+  if(document.documentElement.lang!=="ru"||location.pathname!=="/") return;
+  if(/bot|crawl|spider|slurp|preview|lighthouse/i.test(navigator.userAgent)) return;
+  var want=null; try{ want=localStorage.getItem("mynado-site-lang"); }catch(e){}
+  if(!want){ var ls=navigator.languages||[navigator.language||""];
+    for(var i=0;i<ls.length&&!want;i++){ var c=String(ls[i]).slice(0,2).toLowerCase(); if(PAGES[c]) want=c; }
+    if(!want) want="en"; }
+  if(want!=="ru"&&PAGES[want]) location.replace(PAGES[want]+location.search+location.hash);
 }catch(e){}})();</script>
 <style>
 /* Шрифт со своего сервера, а не с Google Fonts (в ЕС загрузка с серверов Google без согласия — риск по GDPR). */
@@ -86,7 +105,10 @@ a{color:inherit}
 .nav nav a{text-decoration:none;font-weight:700;font-size:14px;color:var(--hero-muted)}
 .nav nav a:hover{color:var(--hero-ink)}
 .nav .btn{padding:10px 16px;font-size:14px}
-@media (max-width:820px){.nav nav{display:none}.nav .btn{margin-left:auto}}
+.lang-sel{appearance:none;-webkit-appearance:none;background:transparent;color:var(--hero-muted);border:1px solid rgba(255,255,255,.22);border-radius:10px;font:700 13px/1 Manrope,system-ui,sans-serif;padding:9px 12px;cursor:pointer}
+.lang-sel:hover{color:var(--hero-ink)}
+.lang-sel option{color:#1c2436;background:#fff}
+@media (max-width:820px){.nav nav{display:none}.nav .btn{margin-left:auto}.nav .lang-sel{margin-left:auto}.nav .lang-sel+.btn{margin-left:0}}
 
 .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;padding-top:40px}
 .hero h1{font-size:clamp(40px,6.2vw,68px);font-weight:800;line-height:1.02;letter-spacing:-.035em}
@@ -322,6 +344,7 @@ footer .sp{margin-left:auto}
     <div class="nav">
       <a class="brand" href="#top"><svg aria-hidden="true"><use href="#mark"/></svg>Mynado</a>
       <nav aria-label="Разделы"><a href="#how">Как работает</a><a href="#features">Возможности</a><a href="#groups">Группы</a><a href="#pro">PRO</a></nav>
+      <select class="lang-sel" aria-label="Язык" data-lang-sel><option value="ru" selected>Русский</option><option value="uk">Українська</option><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="pl">Polski</option></select>
       <a class="btn btn-paper" href="#download">Скачать</a>
     </div>
 
@@ -442,7 +465,7 @@ footer .sp{margin-left:auto}
       <div class="ft">
         <span class="ic"><svg aria-hidden="true" style="color:var(--navy)"><use href="#i-sync"/></svg></span>
         <h3>На всех устройствах</h3>
-        <p>Вошли через Google — и задачи одинаковые на телефоне и планшете.</p>
+        <p>Вошли через Google или Apple — и задачи одинаковые на всех ваших устройствах.</p>
         <div class="demo devices"><span><svg aria-hidden="true"><use href="#i-phone"/></svg>Android</span><span><svg aria-hidden="true"><use href="#i-phone"/></svg>iPhone</span></div>
       </div>
       <div class="ft">
@@ -488,10 +511,10 @@ footer .sp{margin-left:auto}
   <section>
     <div class="band">
       <div>
-        <span class="eyebrow">Пять языков</span>
+        <span class="eyebrow">Шесть языков</span>
         <h3>Говорите на своём</h3>
-        <p>Интерфейс, голос и уведомления — на пяти языках. Приложение можно держать на одном языке, а говорить на другом.</p>
-        <div class="langs"><span>Русский</span><span>Українська</span><span>English</span><span>Deutsch</span><span>Français</span></div>
+        <p>Интерфейс, голос и уведомления — на шести языках. Приложение можно держать на одном языке, а говорить на другом.</p>
+        <div class="langs"><span>Русский</span><span>Українська</span><span>English</span><span>Deutsch</span><span>Français</span><span>Polski</span></div>
       </div>
       <div>
         <span class="eyebrow">Без интернета</span>
@@ -705,4 +728,9 @@ footer .sp{margin-left:auto}
 })();
 </script>
 
+<script>(function(){try{
+  var PAGES={ru:"/",en:"/en",uk:"/uk",de:"/de",fr:"/fr",pl:"/pl"};
+  var sel=document.querySelector("[data-lang-sel]");
+  if(sel) sel.addEventListener("change",function(){ try{localStorage.setItem("mynado-site-lang",sel.value);}catch(e){} location.href=PAGES[sel.value]+location.search; });
+}catch(e){}})();</script>
 </html>
