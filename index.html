@@ -1149,7 +1149,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.180';
+var APP_VERSION = '1.181';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
@@ -1644,6 +1644,35 @@ function handleAuthFailure(retryFn, cb){
   }
   cb({needAuth:true},null);
 }
+// ── Просьба оценить приложение (28.11.2026, решение Александра) ──
+// После 5-го удачного запроса к ИИ — системное окно оценки App Store / Google Play
+// (плагин CapgoInAppReview, только в приложениях из магазинов). Своё окно «Оцените нас»
+// Apple запрещает (5.6.1), а спрашивать «нравится ли» перед магазином запрещает Google —
+// поэтому сразу системное. Как часто показывать, решают сами Apple/Google (не чаще 3 раз в год),
+// мы просим один раз. Не в момент, когда открыто окно, идёт запись или висит PRO — тогда
+// попробуем после следующего удачного запроса.
+var REVIEW_AFTER_AI=5, REVIEW_CNT_KEY='vtodo-review-ai-ok', REVIEW_DONE_KEY='vtodo-review-asked';
+function reviewPlugin(){
+  var C=window.Capacitor;
+  if(!C||!C.isNativePlatform||!C.isNativePlatform()) return null;
+  return (C.Plugins&&C.Plugins.CapgoInAppReview)||(C.registerPlugin&&C.registerPlugin('CapgoInAppReview'))||null;
+}
+function noteAiSuccessForReview(){
+  try{
+    if(localStorage.getItem(REVIEW_DONE_KEY)) return;
+    var n=(parseInt(localStorage.getItem(REVIEW_CNT_KEY)||'0',10)||0)+1;
+    localStorage.setItem(REVIEW_CNT_KEY,String(n));
+    if(n<REVIEW_AFTER_AI||!reviewPlugin()) return;
+  }catch(e){ return; }
+  // Пауза: пусть человек сначала увидит созданную задачу.
+  setTimeout(function(){
+    if(state.paywall||state.recording||document.querySelector('.overlay')) return;
+    var p=reviewPlugin(); if(!p||!p.requestReview) return;
+    try{ localStorage.setItem(REVIEW_DONE_KEY,new Date().toISOString()); }catch(e){}
+    try{ Promise.resolve(p.requestReview()).catch(function(){}); }catch(e){}
+  }, 2500);
+}
+
 function callAi(prompt, cb){
   if(!isGoogleSignedIn()){ handleAuthFailure(function(){ callAi(prompt, cb); }, cb); return; }
   if(!canUseAi()){ cb({limit:true},null); return; }
@@ -1678,6 +1707,7 @@ function callAi(prompt, cb){
     try{ parsed=JSON.parse(text.slice(start,end+1)); }catch(pe){ done(new Error('bad-json'),null); return; }
     incrementAiUsage();
     done(null,parsed);
+    noteAiSuccessForReview();
   })
   // offline — только настоящий сетевой сбой fetch (TypeError); для сообщения «нет связи» (аудит 11.10.2026)
   .catch(function(e){ if(e&&typeof e==='object'&&e.name==='TypeError') e.offline=true; done(e,null); });
