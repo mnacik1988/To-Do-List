@@ -158,6 +158,13 @@ body { background:var(--screen); transition:background-color .3s; }
   padding-right:env(safe-area-inset-right);
 }
 
+/* Планшеты и раскрытые складные телефоны (1.0.5, требования Google Play к большим
+   экранам): колонка шире, чем у телефона, окна-шторки по центру и не во всю ширину.
+   На телефонах (уже 700px) ничего не меняется. */
+@media (min-width:700px){
+  #app { max-width:720px; }
+  .sheet { width:100%; max-width:620px; margin:0 auto; }
+}
 .screen-header { padding:14px 18px 12px; flex:none; display:flex; align-items:center; justify-content:space-between; }
 .screen-title   { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-.02em; }
 .screen-subtitle{ font-size:13px; color:var(--muted); margin-top:2px; font-weight:600; }
@@ -1142,7 +1149,7 @@ function initGoogleSignIn(){
   });
 }
 window.addEventListener('load', function(){ setTimeout(initGoogleSignIn, 300); });
-var APP_VERSION = '1.179';
+var APP_VERSION = '1.180';
 var VAPID_PUBLIC_KEY = 'BAvR2FKlBVlxqD-nxMCmCHtXEFh_sBjVKdVAkmmW7JEuafxWCM_dsK-00oFuE9Tf5r3wBBr2gEIiYhAmHlANSzg';
 
 /* ── Helpers ── */
